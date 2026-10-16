@@ -171,6 +171,23 @@
               <h3>空白</h3>
               <p>Forward Scratchの空白セルは、フェーダーを切ったままレコードを戻す時間です。線もスクラッチ音もありません。</p>
             </section>
+            <section class="guide-item guide-wide">
+              <h3>符号の一覧</h3>
+              <table class="symbol-table">
+                <thead><tr><th>符号</th><th>表記</th><th>意味</th></tr></thead>
+                <tbody>
+                  <tr><td><code>F</code></td><td><svg viewBox="0 0 40 32" width="64" height="48" aria-hidden="true"><path d="M4 26 L36 6" stroke="#6fe4ff" stroke-width="3" fill="none" stroke-linecap="round" /></svg></td><td>前進</td></tr>
+                  <tr><td><code>B</code></td><td><svg viewBox="0 0 40 32" width="64" height="48" aria-hidden="true"><path d="M4 6 L36 26" stroke="#6fe4ff" stroke-width="3" fill="none" stroke-linecap="round" /></svg></td><td>後進</td></tr>
+                  <tr><td><code>-</code></td><td><svg viewBox="0 0 40 32" width="64" height="48" aria-hidden="true"><path d="M4 24 L36 8" stroke="#6fe4ff" stroke-width="3" fill="none" stroke-linecap="round" stroke-dasharray="4 3" /></svg></td><td>直前の方向を継続</td></tr>
+                  <tr><td><code>FO</code></td><td><svg viewBox="0 0 40 32" width="64" height="48" aria-hidden="true"><path d="M14 26 L36 6" stroke="#6fe4ff" stroke-width="3" fill="none" stroke-linecap="round" /><path d="M4 28 H14" stroke="#ffa94d" stroke-width="3" fill="none" stroke-linecap="round" /></svg></td><td>前進（フェーダーOFF→ON）</td></tr>
+                  <tr><td><code>BM</code></td><td><svg viewBox="0 0 40 32" width="64" height="48" aria-hidden="true"><path d="M4 28 H36" stroke="#ffa94d" stroke-width="3" fill="none" stroke-linecap="round" /></svg></td><td>後進（フェーダーON→OFF、無音）</td></tr>
+                  <tr><td><code>FC</code></td><td><svg viewBox="0 0 40 32" width="64" height="48" aria-hidden="true"><path d="M4 26 L16 14" stroke="#6fe4ff" stroke-width="3" fill="none" stroke-linecap="round" /><path d="M18 28 H36" stroke="#ffa94d" stroke-width="3" fill="none" stroke-linecap="round" /></svg></td><td>前進チョップ（1音だけ鳴らして残りをミュート）</td></tr>
+                  <tr><td><code>FF</code></td><td><svg viewBox="0 0 40 32" width="64" height="48" aria-hidden="true"><path d="M16 22 L36 6" stroke="#6fe4ff" stroke-width="3" fill="none" stroke-linecap="round" /><path d="M4 28 H16" stroke="#ffa94d" stroke-width="3" fill="none" stroke-linecap="round" /></svg></td><td>前進フレア（短い無音の後、1音を終端まで伸ばす）</td></tr>
+                  <tr><td><code>BC3</code></td><td><svg viewBox="0 0 40 32" width="64" height="48" aria-hidden="true"><path d="M4 6 L10 14 M16 6 L22 14 M28 6 L34 14" stroke="#6fe4ff" stroke-width="3" fill="none" stroke-linecap="round" /></svg></td><td>後進チョップ×3（区間を3等分）</td></tr>
+                </tbody>
+              </table>
+              <p>青い斜線が音を出すストローク（上が前進、下が後進）、橙の横棒はフェーダー操作です。</p>
+            </section>
           </div>
 
         </section>

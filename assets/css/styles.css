@@ -847,3 +847,70 @@ button {
     transition: none;
   }
 }
+
+.guide-wide {
+  grid-column: 1 / -1;
+}
+
+.symbol-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 10px;
+}
+
+.symbol-table th,
+.symbol-table td {
+  padding: 6px 12px;
+  text-align: left;
+  border-bottom: 1px solid rgba(210, 230, 246, 0.16);
+  vertical-align: middle;
+}
+
+.rhythm-staff line,
+.rhythm-staff .rhythm-flag {
+  stroke: rgba(210, 230, 246, 0.75);
+  stroke-width: 1.2;
+  fill: none;
+}
+
+.rhythm-staff .rhythm-staff-line {
+  stroke: rgba(210, 230, 246, 0.5);
+}
+
+.rhythm-staff .rhythm-barline {
+  stroke: rgba(210, 230, 246, 0.4);
+}
+
+.rhythm-head,
+.rhythm-dot,
+.rhythm-rest {
+  fill: rgba(235, 245, 255, 0.9);
+}
+
+.rhythm-head.hollow {
+  fill: none;
+  stroke: rgba(235, 245, 255, 0.9);
+  stroke-width: 1.2;
+}
+
+.rhythm-tuplet {
+  fill: rgba(210, 230, 246, 0.8);
+  font-size: 9px;
+}
+
+.rhythm-staff .rhythm-beam {
+  stroke: rgba(235, 245, 255, 0.9);
+  stroke-width: 3;
+}
+
+.rhythm-staff .rhythm-tie {
+  stroke: rgba(235, 245, 255, 0.8);
+  stroke-width: 1.2;
+  fill: none;
+}
+
+.rhythm-staff .rhythm-rest-line {
+  stroke: rgba(235, 245, 255, 0.9);
+  stroke-width: 1.4;
+  fill: none;
+}

@@ -730,7 +730,10 @@ async function connectMIDI() {
     });
   } catch (error) {
     midiStatusEl.textContent = "MIDI接続に失敗しました";
-    midiLogEl.textContent = error.message;
+    const denied = error.name === "SecurityError" || error.name === "NotAllowedError" || /permission/i.test(error.message);
+    midiLogEl.textContent = denied
+      ? `${error.message}\nVS Code内蔵ブラウザではWeb MIDIの権限が許可されません。Chrome/Edgeで http://localhost などから開いて、MIDIの許可を「許可」にしてください。`
+      : error.message;
   }
 }
 
