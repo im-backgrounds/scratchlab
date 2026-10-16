@@ -89,19 +89,8 @@ function reduceState(state, action) {
       return { builderJsonDirty: action.value };
     case "builder/set-state":
       return action.values;
-    case "builder/set-step": {
-      const builderSteps = [...state.builderSteps];
-      const builderDirections = [...state.builderDirections];
-      builderSteps[action.index] = action.stepType;
-      if (action.stepType === "L") builderDirections[action.index] = "F";
-      if (action.stepType === "R") builderDirections[action.index] = "B";
-      return { builderSteps, builderDirections };
-    }
-    case "builder/resize-steps":
-      return {
-        builderSteps: [...action.steps],
-        builderDirections: [...action.directions],
-      };
+    case "builder/edit":
+      return action.values;
     case "playback/set-state":
       return action.values;
     case "audio/set-resources":

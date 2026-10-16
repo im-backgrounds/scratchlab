@@ -1,5 +1,6 @@
 import { chartCatalog as chartDefinitions } from "./data/chart-catalog.js";
 import { compileScoreData, deriveBuilderDirections } from "./domain/score-compiler.js";
+import { legacyStepsToScore } from "./domain/builder-score.js";
 import { createScratchAudio } from "./audio/scratch-audio.js";
 import { createActions } from "./state/actions.js";
 import { createInitialState, createStore } from "./state/store.js";
@@ -101,9 +102,7 @@ function renderBuilder() {
     scoreDocument: createBuilderScoreDocument(),
     scoreData: state.builderScoreData || compileScoreData(createBuilderScoreDocument()),
     onStepClick: (index) => {
-      actions.setBuilderStep(index, state.builderSelectedType);
-      recompileBuilderScore();
-      actions.setBuilderJsonDirty(false);
+      actions.editBuilderStep(index, state.builderSelectedType);
       renderBuilder();
     },
   });
@@ -114,63 +113,6 @@ function renderBuilderScore() {
   visualizer.renderBuilderScore(getBuilderChart(), state);
 }
 
-function legacyStepsToScore(chart, steps) {
-  if (chart.scoreMode === "transformer") {
-    return [["FC3", "BC3"], ["FC3", "BC3"]];
-  }
-
-  let lastDirection = chart.scoreMode === "backward" ? "B" : "F";
-  let faderOpen = true;
-  const tokens = steps.map((step, index) => {
-    if (step === "L") {
-      lastDirection = "F";
-      if (!faderOpen) {
-        faderOpen = true;
-        return "FO";
-      }
-      return "F";
-    }
-    if (step === "R") {
-      lastDirection = "B";
-      if (!faderOpen) {
-        faderOpen = true;
-        return "BO";
-      }
-      return "B";
-    }
-    if (step === "M") {
-      const direction = state.builderDirections[index] || lastDirection;
-      if (direction) lastDirection = direction;
-      faderOpen = false;
-      return `${lastDirection}M`;
-    }
-    if (step === "C") {
-      faderOpen = true;
-      return `${lastDirection}C`;
-    }
-    if (step === "S") {
-      faderOpen = true;
-      return `${lastDirection}C3`;
-    }
-    if (step === "P") {
-      faderOpen = true;
-      return `${lastDirection}F`;
-    }
-    if (step === "K") {
-      return "K";
-    }
-    const token = faderOpen ? lastDirection : `${lastDirection}O`;
-    faderOpen = true;
-    return token;
-  });
-
-  const score = [];
-  for (let index = 0; index < tokens.length; index += state.builderTicksPerBar) {
-    score.push(tokens.slice(index, index + state.builderTicksPerBar));
-  }
-  return score;
-}
-
 function createBuilderScoreDocument() {
   if (state.builderScoreData) return state.builderScoreData.source;
 
@@ -179,27 +121,12 @@ function createBuilderScoreDocument() {
     name: state.builderMetadata.name,
     difficulty: state.builderMetadata.difficulty,
     beat: state.builderBeat,
-    score: legacyStepsToScore(chart, state.builderSteps),
+    score: legacyStepsToScore(state.builderSteps, {
+      directions: state.builderDirections,
+      ticksPerBar: state.builderTicksPerBar,
+      scoreMode: chart.scoreMode,
+    }),
   };
-}
-
-function recompileBuilderScore() {
-  const chart = getSelectedChart();
-  const source = {
-    name: state.builderMetadata.name,
-    difficulty: state.builderMetadata.difficulty,
-    beat: state.builderBeat,
-    score: legacyStepsToScore({ ...chart, scoreMode: null }, state.builderSteps),
-  };
-  const compiled = compileScoreData(source);
-  actions.setBuilderState({
-    builderScoreMode: null,
-    builderScoreData: compiled,
-    builderSteps: compiled.steps,
-    builderDirections: compiled.directions,
-    builderTicksPerBar: compiled.ticksPerBar,
-    builderBeat: compiled.beat,
-  });
 }
 
 function render() {
@@ -433,6 +360,7 @@ function loadChartJson(parsed) {
       builderTicksPerBar: compiled.ticksPerBar,
       builderScoreMode: null,
       builderMetadata: { name: parsed.name, difficulty: parsed.difficulty },
+      builderJsonDirty: false,
     });
   } else if (parsed && Array.isArray(parsed.steps)) {
     actions.setBuilderState({
@@ -446,11 +374,11 @@ function loadChartJson(parsed) {
         name: parsed.name || getSelectedChart().name,
         difficulty: parsed.difficulty || getSelectedChart().difficulty,
       },
+      builderJsonDirty: false,
     });
   } else {
     throw new Error("score配列を持つ譜面データが必要です。");
   }
-  actions.setBuilderJsonDirty(false);
   renderBuilder();
   editor.setJsonStatus("JSONを譜面に反映しました。", false);
 }
@@ -568,9 +496,7 @@ editorUi = editor.bindEditor({
     editor.renderBuilderToolHint(stepType);
   },
   onPatternLengthChange: (barCount) => {
-    actions.resizeBuilderSteps(barCount * state.builderTicksPerBar);
-    recompileBuilderScore();
-    actions.setBuilderJsonDirty(false);
+    actions.resizeBuilderPattern(barCount);
     renderBuilder();
   },
   onRandomPattern: (options) => {
@@ -580,8 +506,6 @@ editorUi = editor.bindEditor({
   },
   onManualFill: () => {
     actions.fillBuilderAlternating();
-    recompileBuilderScore();
-    actions.setBuilderJsonDirty(false);
     renderBuilder();
   },
   onImportJson: () => importChartJson(editorUi.getJsonText()),

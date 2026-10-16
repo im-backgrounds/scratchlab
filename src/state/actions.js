@@ -1,9 +1,31 @@
-import { compileScoreData, deriveBuilderDirections } from "../domain/score-compiler.js";
+import { alternatingSteps, compileBuilderSteps, replaceBuilderStep, resizeSteps } from "../domain/builder-score.js";
+import { compileScoreData } from "../domain/score-compiler.js";
 
 export function createActions(store) {
   const state = store.getState();
   const dispatch = (type, values = {}) => store.dispatch({ type, ...values });
   const replaceBuilderState = (values) => dispatch("builder/set-state", { values });
+  const commitBuilderEdit = ({ steps, directions }) => {
+    const compiled = compileBuilderSteps({
+      name: state.builderMetadata.name,
+      difficulty: state.builderMetadata.difficulty,
+      beat: state.builderBeat,
+      ticksPerBar: state.builderTicksPerBar,
+      steps,
+      directions,
+    });
+    dispatch("builder/edit", {
+      values: {
+        builderScoreMode: null,
+        builderScoreData: compiled,
+        builderSteps: compiled.steps,
+        builderDirections: compiled.directions,
+        builderTicksPerBar: compiled.ticksPerBar,
+        builderBeat: compiled.beat,
+        builderJsonDirty: false,
+      },
+    });
+  };
 
   return {
     selectChart: (chartId) => dispatch("chart/select", { chartId }),
@@ -18,26 +40,13 @@ export function createActions(store) {
     setBuilderSelectedType: (stepType) => dispatch("builder/set-selected-type", { stepType }),
     setBuilderJsonDirty: (value) => dispatch("builder/set-json-dirty", { value }),
     setBuilderState: replaceBuilderState,
-    setBuilderStep: (index, stepType) => dispatch("builder/set-step", { index, stepType }),
-    resizeBuilderSteps: (nextLength) => {
-      const steps = [...state.builderSteps];
-      if (steps.length < nextLength) {
-        while (steps.length < nextLength) steps.push("L");
-      } else {
-        steps.length = nextLength;
-      }
-      dispatch("builder/resize-steps", {
-        steps,
-        directions: deriveBuilderDirections(steps),
-      });
-    },
-    fillBuilderAlternating: () => {
-      const steps = Array.from({ length: state.builderSteps.length }, (_, index) => (index % 2 === 0 ? "L" : "R"));
-      dispatch("builder/resize-steps", {
-        steps,
-        directions: deriveBuilderDirections(steps),
-      });
-    },
+    editBuilderStep: (index, stepType) => commitBuilderEdit(
+      replaceBuilderStep(state.builderSteps, state.builderDirections, index, stepType),
+    ),
+    resizeBuilderPattern: (barCount) => commitBuilderEdit(
+      resizeSteps(state.builderSteps, barCount * state.builderTicksPerBar),
+    ),
+    fillBuilderAlternating: () => commitBuilderEdit(alternatingSteps(state.builderSteps.length)),
     generateRandomPattern: ({ difficulty, minimumBeat, includeTriplets, includeSyncopation, includeChops, includeFlares, includeKeeps }) => {
       const [numerator, denominator] = state.builderBeat.split("/").map(Number);
       const beatsPerBar = numerator * 4 / denominator;
