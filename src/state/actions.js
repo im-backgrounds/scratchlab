@@ -219,6 +219,7 @@ export function createActions(store) {
     setAudioResources: (values) => dispatch("audio/set-resources", { values }),
     setMidiState: (values) => dispatch("midi/set-state", { values }),
     recordMidiEvent: (event) => dispatch("midi/record-event", { event }),
+    recordMidiAction: (event) => dispatch("midi/record-action", { event }),
     clearMidiRecord: () => dispatch("midi/clear-record"),
   };
 }

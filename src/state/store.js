@@ -32,20 +32,22 @@ export function createInitialState(chartCatalog) {
     midiAccess: null,
     midiConnected: false,
     midiRecord: [],
+    midiActionRecord: [],
     recordingMidi: false,
   });
 }
 
 function protectCollections(values) {
   const protectedValues = { ...values };
-  ["builderSteps", "builderDirections", "midiRecord"].forEach((key) => {
-    if (
-      Array.isArray(protectedValues[key]) &&
-      !Object.isFrozen(protectedValues[key])
-    ) {
-      Object.freeze(protectedValues[key]);
-    }
-  });
+  ["builderSteps", "builderDirections", "midiRecord", "midiActionRecord"]
+    .forEach((key) => {
+      if (
+        Array.isArray(protectedValues[key]) &&
+        !Object.isFrozen(protectedValues[key])
+      ) {
+        Object.freeze(protectedValues[key]);
+      }
+    });
   if (
     protectedValues.builderMetadata &&
     !Object.isFrozen(protectedValues.builderMetadata)
@@ -77,6 +79,7 @@ function reduceState(state, action) {
         builderSavedChartId: null,
         builderDraftActive: false,
         midiRecord: [],
+        midiActionRecord: [],
         recordingMidi: false,
       };
     case "transport/set-bpm":
@@ -107,8 +110,12 @@ function reduceState(state, action) {
       return action.values;
     case "midi/record-event":
       return { midiRecord: [...state.midiRecord, action.event] };
+    case "midi/record-action":
+      return {
+        midiActionRecord: [...state.midiActionRecord, action.event],
+      };
     case "midi/clear-record":
-      return { midiRecord: [] };
+      return { midiRecord: [], midiActionRecord: [] };
     default:
       throw new Error(`Unknown state action: ${action.type}`);
   }

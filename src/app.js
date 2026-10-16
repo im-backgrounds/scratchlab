@@ -9,6 +9,13 @@ import {
   getBrowserStorage,
   MAX_SAVED_CHARTS,
 } from "./domain/chart-storage.js";
+import {
+  assignMapping,
+  clearMapping,
+  createMidiMappingRepository,
+  MIDI_ACTION_LABELS,
+  routeMidiMessage,
+} from "./domain/midi-mapping.js";
 import { createPlaybackController } from "./domain/playback-controller.js";
 import {
   getClickActions,
@@ -23,6 +30,7 @@ import { createInitialState, createStore } from "./state/store.js";
 import * as controls from "./ui/controls.js";
 import * as transport from "./ui/transport.js";
 import * as editor from "./ui/editor.js";
+import * as midiMappingUi from "./ui/midi-mapping.js";
 import * as savedCharts from "./ui/saved-charts.js";
 import * as visualizer from "./ui/visualizer.js";
 
@@ -44,6 +52,11 @@ const repository = createChartRepository(getBrowserStorage());
 let editorUi;
 let currentView = "practice";
 let renamingChartId = null;
+const midiMappingRepository = createMidiMappingRepository();
+const MIDI_EVENT_LOG_LIMIT = 50;
+let midiMapping = midiMappingRepository.load();
+let midiLearnAction = null;
+let midiEventLog = [];
 
 function getSelectedChart() {
   return chartCatalog.find((chart) => chart.id === state.selectedChartId) ||
@@ -550,6 +563,85 @@ function markJsonEdited() {
   );
 }
 
+function renderMidiMappingPanel() {
+  midiMappingUi.renderMidiMapping(midiMapping, midiLearnAction, {
+    onLearn: toggleMidiLearn,
+    onClear: clearMidiMapping,
+  });
+}
+
+function saveMidiMapping() {
+  const result = midiMappingRepository.save(midiMapping);
+  if (result.ok) return "";
+  return result.reason === "future-version"
+    ? "（新しい形式のデータがあるため、割り当てはこのブラウザーに保存されません）"
+    : "（割り当てをブラウザーに保存できませんでした）";
+}
+
+function toggleMidiLearn(action) {
+  midiLearnAction = midiLearnAction === action ? null : action;
+  renderMidiMappingPanel();
+  midiMappingUi.renderMidiMappingStatus(
+    midiLearnAction
+      ? state.midiConnected
+        ? `${
+          MIDI_ACTION_LABELS[action]
+        }: 割り当てたいボタンやつまみを操作してください。`
+        : `${
+          MIDI_ACTION_LABELS[action]
+        }: 「MIDI接続」を押してから操作してください。`
+      : "Learnをキャンセルしました。",
+  );
+}
+
+function clearMidiMapping(action) {
+  midiMapping = clearMapping(midiMapping, action);
+  const warning = saveMidiMapping();
+  renderMidiMappingPanel();
+  midiMappingUi.renderMidiMappingStatus(
+    `${MIDI_ACTION_LABELS[action]} の割り当てを解除しました。${warning}`,
+  );
+}
+
+function handleMidiMessage(data) {
+  const [status, note, velocity] = data;
+  const time = Date.now();
+  const routed = routeMidiMessage(data, {
+    mapping: midiMapping,
+    learnAction: midiLearnAction,
+    time,
+  });
+
+  if (routed.kind === "learned") {
+    midiMapping = assignMapping(midiMapping, routed.action, routed.signature);
+    midiLearnAction = null;
+    const warning = saveMidiMapping();
+    renderMidiMappingPanel();
+    midiMappingUi.renderMidiMappingStatus(
+      `${MIDI_ACTION_LABELS[routed.action]} を割り当てました。${warning}`,
+    );
+    return;
+  }
+  if (midiLearnAction) return;
+
+  const log = `status=${status}, note=${note}, velocity=${velocity}`;
+  actions.recordMidiEvent({ status, note, velocity, time });
+
+  if (routed.kind === "event") {
+    midiEventLog = [...midiEventLog, routed.event].slice(
+      -MIDI_EVENT_LOG_LIMIT,
+    );
+    midiMappingUi.renderMidiEventLog(midiEventLog);
+    if (state.recordingMidi) actions.recordMidiAction(routed.event);
+  }
+
+  if (state.recordingMidi) {
+    controls.renderMidiLog(`${log}\n記録中... ${state.midiRecord.length}件`);
+  } else {
+    controls.renderMidiLog(`MIDI入力: ${log}`);
+  }
+}
+
 async function connectMIDI() {
   if (!navigator.requestMIDIAccess) {
     controls.renderMidiStatus(
@@ -565,19 +657,7 @@ async function connectMIDI() {
     controls.renderMidiConnectionStatus("MIDI接続済み");
 
     access.inputs.forEach((input) => {
-      input.onmidimessage = (event) => {
-        const [status, note, velocity] = event.data;
-        const log = `status=${status}, note=${note}, velocity=${velocity}`;
-        actions.recordMidiEvent({ status, note, velocity, time: Date.now() });
-
-        if (state.recordingMidi) {
-          controls.renderMidiLog(
-            `${log}\n記録中... ${state.midiRecord.length}件`,
-          );
-        } else {
-          controls.renderMidiLog(`MIDI入力: ${log}`);
-        }
-      };
+      input.onmidimessage = (event) => handleMidiMessage(event.data);
     });
   } catch (error) {
     const denied = error.name === "SecurityError" ||
@@ -695,4 +775,5 @@ savedCharts.bindSavedCharts({ onSave: saveCurrentChart });
 controls.renderInitialControls(state, getBuilderBarCount());
 render();
 restoreLastSession();
+renderMidiMappingPanel();
 renderSavedChartList();

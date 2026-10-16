@@ -158,6 +158,20 @@
             <div id="midi-status" class="status-box">MIDI未接続</div>
             <div id="midi-log"
               class="log-box">記録データはまだありません。</div>
+
+            <div class="midi-mapping">
+              <h4>MIDIマッピング</h4>
+              <p class="midi-mapping-help">
+                「Learn」を押して、割り当てたいボタンやつまみを操作してください。次のMIDI入力が割り当てられます。
+              </p>
+              <ul id="midi-mapping-list" class="midi-mapping-list"></ul>
+              <div id="midi-mapping-status" class="status-box" role="status">
+                操作を割り当てると、入力がスクラッチとフェーダーのイベントに変換されます。
+              </div>
+              <h4>イベントログ</h4>
+              <div id="midi-event-log" class="log-box" role="log"
+                aria-live="polite">変換されたイベントはまだありません。</div>
+            </div>
           </section>
         </div>
 
