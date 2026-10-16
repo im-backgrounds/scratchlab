@@ -1,7 +1,7 @@
 # ScratchLab
 
-[![Deno CI](https://github.com/im-backgrounds/suport_music/actions/workflows/deno-ci.yml/badge.svg)](https://github.com/im-backgrounds/suport_music/actions/workflows/deno-ci.yml)
-[![GitHub Pages](https://github.com/im-backgrounds/suport_music/actions/workflows/github-pages.yml/badge.svg)](https://github.com/im-backgrounds/suport_music/actions/workflows/github-pages.yml)
+[![Deno CI](https://github.com/im-backgrounds/scratchlab/actions/workflows/deno-ci.yml/badge.svg)](https://github.com/im-backgrounds/scratchlab/actions/workflows/deno-ci.yml)
+[![GitHub Pages](https://github.com/im-backgrounds/scratchlab/actions/workflows/github-pages.yml/badge.svg)](https://github.com/im-backgrounds/scratchlab/actions/workflows/github-pages.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 
 **ScratchLab
@@ -15,7 +15,7 @@
 
 インストール不要で、次のURLからすぐに試せます。
 
-**<https://im-backgrounds.github.io/suport_music/>**
+**<https://im-backgrounds.github.io/scratchlab/>**
 
 ## こんな方におすすめ
 
