@@ -1246,6 +1246,73 @@ button {
   color: #ff9a8d;
 }
 
+.saved-chart-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.saved-chart-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(8, 15, 24, 0.6);
+}
+
+.saved-chart-item.active {
+  border-color: rgba(111, 228, 255, 0.55);
+  background: rgba(111, 228, 255, 0.08);
+}
+
+.saved-chart-info {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.saved-chart-name {
+  overflow-wrap: anywhere;
+}
+
+.saved-chart-meta {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.saved-chart-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.saved-chart-actions .primary-button,
+.saved-chart-actions .secondary-button {
+  padding: 8px 12px;
+  font-size: 0.82rem;
+}
+
+.saved-chart-rename {
+  width: min(100%, 260px);
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(8, 15, 24, 0.82);
+  color: var(--text);
+}
+
+.saved-chart-empty {
+  padding: 14px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
 @media (max-width: 860px) {
   .app-shell {
     grid-template-columns: minmax(0, 1fr);
@@ -1371,7 +1438,7 @@ button {
 
   .builder-mode-tabs {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     width: 100%;
   }
 

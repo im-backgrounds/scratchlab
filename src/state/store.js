@@ -25,6 +25,8 @@ export function createInitialState(chartCatalog) {
     builderTicksPerBar: 8,
     builderDirections: chart.steps.map((step) => (step === "R" ? "B" : "F")),
     builderSelectedType: "L",
+    builderSavedChartId: null,
+    builderDraftActive: false,
     isBuilderPlayback: false,
     midiStatus: "MIDI未接続",
     midiAccess: null,
@@ -72,6 +74,8 @@ function reduceState(state, action) {
         builderTicksPerBar: action.chart.scoreData.ticksPerBar,
         builderDirections: [...action.chart.scoreData.directions],
         builderSelectedType: "L",
+        builderSavedChartId: null,
+        builderDraftActive: false,
         midiRecord: [],
         recordingMidi: false,
       };

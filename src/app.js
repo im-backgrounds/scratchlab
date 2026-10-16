@@ -4,6 +4,11 @@ import {
   deriveBuilderDirections,
 } from "./domain/score-compiler.js";
 import { legacyStepsToScore } from "./domain/builder-score.js";
+import {
+  createChartRepository,
+  getBrowserStorage,
+  MAX_SAVED_CHARTS,
+} from "./domain/chart-storage.js";
 import { createPlaybackController } from "./domain/playback-controller.js";
 import {
   getClickActions,
@@ -18,6 +23,7 @@ import { createInitialState, createStore } from "./state/store.js";
 import * as controls from "./ui/controls.js";
 import * as transport from "./ui/transport.js";
 import * as editor from "./ui/editor.js";
+import * as savedCharts from "./ui/saved-charts.js";
 import * as visualizer from "./ui/visualizer.js";
 
 const chartCatalog = chartDefinitions.map((chart) => {
@@ -34,7 +40,10 @@ const chartCatalog = chartDefinitions.map((chart) => {
 const store = createStore(createInitialState(chartCatalog));
 const actions = createActions(store);
 const state = store.getState();
+const repository = createChartRepository(getBrowserStorage());
 let editorUi;
+let currentView = "practice";
+let renamingChartId = null;
 
 function getSelectedChart() {
   return chartCatalog.find((chart) => chart.id === state.selectedChartId) ||
@@ -117,7 +126,7 @@ function renderBuilder() {
       compileScoreData(createBuilderScoreDocument()),
     onStepClick: (index) => {
       actions.editBuilderStep(index, state.builderSelectedType);
-      renderBuilder();
+      afterBuilderEdit();
     },
   });
   renderBuilderScore();
@@ -146,6 +155,8 @@ function render() {
     actions.selectChart(chartId);
     showPracticeView();
     resetPageState();
+    currentView = "practice";
+    persistSession();
   });
   renderSelectedChart();
   renderBuilder();
@@ -252,6 +263,225 @@ function startPlayback(isBuilderPlayback = false) {
   playbackController.start(noteLengthMs, advancePlayback);
 }
 
+const storageErrorMessages = {
+  unavailable: "このブラウザーでは保存機能を使えません。",
+  "future-version":
+    "新しいバージョンで保存されたデータがあるため、保存できません。",
+  "write-failed":
+    "保存に失敗しました。ブラウザーの保存容量や設定を確認してください。",
+  "limit-reached": `保存できる譜面は${MAX_SAVED_CHARTS}件までです。`,
+  "not-found": "譜面が見つかりません。",
+  "invalid-name": "譜面名を入力してください。",
+  "invalid-chart": "この譜面は保存できません。",
+};
+
+function reportStorageError(result) {
+  const message = storageErrorMessages[result.reason] ||
+    "保存に失敗しました。";
+  savedCharts.setSavedChartStatus(
+    result.message ? `${message} ${result.message}` : message,
+    true,
+  );
+}
+
+function renderSavedChartList() {
+  savedCharts.renderSavedCharts(repository.list(), {
+    activeId: state.builderSavedChartId,
+    renamingId: renamingChartId,
+    available: repository.available,
+  }, {
+    onLoad: loadSavedChart,
+    onStartRename: (id) => {
+      renamingChartId = id;
+      renderSavedChartList();
+    },
+    onRename: renameSavedChart,
+    onCancelRename: () => {
+      renamingChartId = null;
+      renderSavedChartList();
+    },
+    onDelete: deleteSavedChart,
+  });
+}
+
+/**
+ * Stores the view, selected chart and (optionally) the builder draft so the
+ * next visit can resume. Omitting `draft` keeps the previously stored one.
+ * @param {{chart: object, savedChartId: string|null}|null} [draft]
+ */
+function persistSession(draft) {
+  if (!repository.available) return;
+  repository.saveSession({
+    view: currentView,
+    selectedChartId: state.selectedChartId,
+    draft: draft === undefined ? repository.getSession()?.draft ?? null : draft,
+  });
+}
+
+/**
+ * Saves the builder chart as the session draft, and into its saved chart
+ * when one is linked.
+ */
+function autosaveBuilder() {
+  if (!repository.available) {
+    actions.setBuilderPersistence({
+      savedChartId: null,
+      draftActive: true,
+    });
+    return;
+  }
+  const chart = createBuilderScoreDocument();
+  let savedChartId = state.builderSavedChartId;
+  if (savedChartId) {
+    const result = repository.save({ id: savedChartId, chart });
+    if (!result.ok) {
+      if (result.reason === "not-found") savedChartId = null;
+      reportStorageError(result);
+    }
+  }
+  actions.setBuilderPersistence({ savedChartId, draftActive: true });
+  persistSession({ chart, savedChartId });
+}
+
+/**
+ * Persists a completed builder edit, then re-renders the builder.
+ */
+function afterBuilderEdit() {
+  autosaveBuilder();
+  renderBuilder();
+  renderSavedChartList();
+}
+
+function saveCurrentChart() {
+  const result = repository.save({ chart: createBuilderScoreDocument() });
+  if (!result.ok) return reportStorageError(result);
+  actions.setBuilderPersistence({
+    savedChartId: result.entry.id,
+    draftActive: true,
+  });
+  persistSession({ chart: result.entry.chart, savedChartId: result.entry.id });
+  renderBuilder();
+  renderSavedChartList();
+  savedCharts.setSavedChartStatus(
+    `「${result.entry.chart.name}」を保存しました。以降の編集は自動で保存されます。`,
+    false,
+  );
+}
+
+function loadSavedChart(id) {
+  const entry = repository.get(id);
+  if (!entry) {
+    renderSavedChartList();
+    return savedCharts.setSavedChartStatus(
+      storageErrorMessages["not-found"],
+      true,
+    );
+  }
+  try {
+    actions.loadBuilderChart(entry.chart);
+  } catch (error) {
+    return savedCharts.setSavedChartStatus(
+      `読み込めません: ${error.message}`,
+      true,
+    );
+  }
+  renamingChartId = null;
+  actions.setBuilderPersistence({ savedChartId: id, draftActive: true });
+  persistSession({ chart: entry.chart, savedChartId: id });
+  renderBuilder();
+  renderSavedChartList();
+  savedCharts.setSavedChartStatus(
+    `「${entry.chart.name}」を読み込みました。`,
+    false,
+  );
+}
+
+function renameSavedChart(id, name) {
+  const result = repository.rename(id, name);
+  if (!result.ok) return reportStorageError(result);
+  renamingChartId = null;
+  if (id === state.builderSavedChartId) {
+    actions.loadBuilderChart(result.entry.chart);
+    afterBuilderEdit();
+  } else {
+    renderSavedChartList();
+  }
+  savedCharts.setSavedChartStatus(
+    `譜面名を「${result.entry.chart.name}」に変更しました。`,
+    false,
+  );
+}
+
+function deleteSavedChart(id) {
+  const entry = repository.get(id);
+  if (!entry) return renderSavedChartList();
+  if (!globalThis.confirm(`「${entry.chart.name}」を削除しますか？`)) return;
+  const result = repository.remove(id);
+  if (!result.ok) return reportStorageError(result);
+  if (id === state.builderSavedChartId) {
+    actions.setBuilderPersistence({
+      savedChartId: null,
+      draftActive: state.builderDraftActive,
+    });
+  }
+  renamingChartId = null;
+  renderBuilder();
+  renderSavedChartList();
+  savedCharts.setSavedChartStatus(
+    `「${entry.chart.name}」を削除しました。`,
+    false,
+  );
+}
+
+/**
+ * Switches away from the current page. A builder draft is kept; otherwise the
+ * page state is reset to the selected chart as before.
+ */
+function prepareViewSwitch() {
+  if (state.builderDraftActive) stopPlayback();
+  else resetPageState();
+}
+
+function restoreLastSession() {
+  const { status } = repository.load();
+  if (status === "future" || status === "corrupt") {
+    savedCharts.setSavedChartStatus(
+      status === "future"
+        ? "新しいバージョンで保存されたデータのため、保存機能は無効です。"
+        : "保存データを読み込めませんでした。次回の保存時に新しいデータで置き換えます。",
+      true,
+    );
+  }
+  const session = repository.getSession();
+  if (!session) return;
+
+  const chartExists = chartCatalog.some((chart) =>
+    chart.id === session.selectedChartId
+  );
+  if (chartExists && session.selectedChartId !== state.selectedChartId) {
+    actions.selectChart(session.selectedChartId);
+    resetPageState();
+  }
+  if (session.draft) {
+    try {
+      actions.loadBuilderChart(session.draft.chart);
+      const linkedId = repository.get(session.draft.savedChartId)
+        ? session.draft.savedChartId
+        : null;
+      actions.setBuilderPersistence({
+        savedChartId: linkedId,
+        draftActive: true,
+      });
+      renderBuilder();
+    } catch {
+      // An unreadable draft is ignored; the stored data is left untouched.
+    }
+  }
+  currentView = session.view;
+  if (currentView === "builder") showBuilderPage();
+  else if (currentView === "guide") controls.renderGuideView();
+}
+
 function syncChartJson() {
   editorUi.setJsonText(JSON.stringify(createBuilderScoreDocument(), null, 2));
   editor.setJsonStatus(
@@ -284,19 +514,29 @@ function exportChartJson() {
   editor.setJsonStatus("譜面JSONをファイルに保存しました。", false);
 }
 
-function loadChartJson(parsed) {
+function loadChartJson(parsed, { unlinkSavedChart = false } = {}) {
   const selectedChart = getSelectedChart();
   actions.loadBuilderChart(parsed, {
     name: selectedChart.name,
     difficulty: selectedChart.difficulty,
   });
-  renderBuilder();
+  if (unlinkSavedChart) {
+    actions.setBuilderPersistence({
+      savedChartId: null,
+      draftActive: true,
+    });
+  }
+  afterBuilderEdit();
   editor.setJsonStatus("JSONを譜面に反映しました。", false);
 }
 
-function importChartJson(jsonText, errorPrefix = "JSONエラー") {
+function importChartJson(
+  jsonText,
+  errorPrefix = "JSONエラー",
+  options = undefined,
+) {
   try {
-    loadChartJson(JSON.parse(jsonText));
+    loadChartJson(JSON.parse(jsonText), options);
   } catch (error) {
     editor.setJsonStatus(`${errorPrefix}: ${error.message}`, true);
   }
@@ -380,13 +620,16 @@ function compareMidiRecording() {
 
 controls.bindControls({
   onShowGuide: () => {
-    resetPageState();
-    if (state.isPlaying) stopPlayback();
+    prepareViewSwitch();
     controls.renderGuideView();
+    currentView = "guide";
+    persistSession();
   },
   onShowBuilder: () => {
-    resetPageState();
+    prepareViewSwitch();
     showBuilderPage();
+    currentView = "builder";
+    persistSession();
   },
   onConnectMidi: connectMIDI,
   onToggleMidiRecording: toggleMidiRecording,
@@ -425,24 +668,31 @@ editorUi = editor.bindEditor({
   },
   onPatternLengthChange: (barCount) => {
     actions.resizeBuilderPattern(barCount);
-    renderBuilder();
+    afterBuilderEdit();
   },
   onRandomPattern: (options) => {
     actions.generateRandomPattern(options);
-    renderBuilder();
+    actions.setBuilderPersistence({ savedChartId: null, draftActive: true });
+    afterBuilderEdit();
     setBuilderMode("manual");
   },
   onManualFill: () => {
     actions.fillBuilderAlternating();
-    renderBuilder();
+    afterBuilderEdit();
   },
   onImportJson: () => importChartJson(editorUi.getJsonText()),
   onExportJson: exportChartJson,
   onJsonEdit: markJsonEdited,
-  onJsonFileText: (text) => importChartJson(text, "JSONファイル読み込みエラー"),
+  onJsonFileText: (text) =>
+    importChartJson(text, "JSONファイル読み込みエラー", {
+      unlinkSavedChart: true,
+    }),
   onJsonFileReadError: (error) =>
     editor.setJsonStatus(`JSONファイル読み込みエラー: ${error.message}`, true),
 });
 
+savedCharts.bindSavedCharts({ onSave: saveCurrentChart });
 controls.renderInitialControls(state, getBuilderBarCount());
 render();
+restoreLastSession();
+renderSavedChartList();

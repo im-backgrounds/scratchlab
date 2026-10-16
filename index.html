@@ -341,6 +341,9 @@
             <button id="builder-json-tab" class="builder-mode-tab" type="button"
               role="tab" aria-selected="false"
               aria-controls="builder-json-panel">JSON</button>
+            <button id="builder-saved-tab" class="builder-mode-tab"
+              type="button" role="tab" aria-selected="false"
+              aria-controls="builder-saved-panel">保存済み</button>
           </div>
 
           <section id="builder-random-panel" class="builder-mode-panel"
@@ -453,6 +456,22 @@
               aria-label="譜面JSON"></textarea>
             <p id="json-status" class="json-status"
               aria-live="polite">編集内容を反映すると、譜面プレビューに適用されます。</p>
+          </section>
+
+          <section id="builder-saved-panel" class="builder-mode-panel"
+            role="tabpanel" aria-labelledby="builder-saved-tab" hidden>
+            <div class="builder-panel-heading">
+              <div>
+                <p class="eyebrow">SAVED CHARTS</p>
+                <h3>保存した譜面</h3>
+                <p>譜面はこのブラウザーに保存されます。保存した譜面を編集すると自動で更新されます。</p>
+              </div>
+              <button id="save-chart" class="primary-button"
+                type="button">新しい譜面として保存</button>
+            </div>
+            <ul id="saved-chart-list" class="saved-chart-list"></ul>
+            <p id="saved-chart-status" class="json-status"
+              aria-live="polite"></p>
           </section>
         </section>
       </main>

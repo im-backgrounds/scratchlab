@@ -67,6 +67,13 @@ export function createActions(store) {
       dispatch("builder/set-selected-type", { stepType }),
     setBuilderJsonDirty: (value) =>
       dispatch("builder/set-json-dirty", { value }),
+    setBuilderPersistence: ({ savedChartId, draftActive }) =>
+      dispatch("builder/set-state", {
+        values: {
+          builderSavedChartId: savedChartId,
+          builderDraftActive: draftActive,
+        },
+      }),
     editBuilderStep: (index, stepType) => {
       const { steps, directions } = replaceBuilderStep(
         state.builderSteps,
