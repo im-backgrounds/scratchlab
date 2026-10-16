@@ -12,7 +12,10 @@ function initializeAudio(state, setAudioResources) {
     scratchBuffers = createScratchBuffers(audioContext);
   }
 
-  if (audioContext !== state.audioContext || scratchBuffers !== state.scratchBuffers) {
+  if (
+    audioContext !== state.audioContext ||
+    scratchBuffers !== state.scratchBuffers
+  ) {
     setAudioResources({ audioContext, scratchBuffers });
   }
 
@@ -37,8 +40,8 @@ function createScratchBuffers(audioContext) {
 
     for (let harmonic = 1; harmonic <= 18; harmonic += 1) {
       const frequency = fundamental * harmonic;
-      const formant = Math.exp(-Math.pow((frequency - 720) / 340, 2))
-        + 0.65 * Math.exp(-Math.pow((frequency - 1450) / 520, 2));
+      const formant = Math.exp(-Math.pow((frequency - 720) / 340, 2)) +
+        0.65 * Math.exp(-Math.pow((frequency - 1450) / 520, 2));
       voice += Math.sin(phase * harmonic) * formant / harmonic;
     }
 
@@ -53,7 +56,11 @@ function createScratchBuffers(audioContext) {
     reversed[index] = phrase[frameCount - index - 1];
   }
 
-  const noiseBuffer = audioContext.createBuffer(1, Math.floor(sampleRate * 0.5), sampleRate);
+  const noiseBuffer = audioContext.createBuffer(
+    1,
+    Math.floor(sampleRate * 0.5),
+    sampleRate,
+  );
   const noise = noiseBuffer.getChannelData(0);
   for (let index = 0; index < noise.length; index += 1) {
     noise[index] = (Math.random() * 2 - 1) * 0.6;
@@ -75,7 +82,10 @@ function playClickSound(state, isDownbeat = false) {
   oscillator.frequency.value = isDownbeat ? 1250 : 1100;
 
   gainNode.gain.setValueAtTime(0.0001, now);
-  gainNode.gain.exponentialRampToValueAtTime(state.clickVolume * (isDownbeat ? 0.29 : 0.24), now + 0.01);
+  gainNode.gain.exponentialRampToValueAtTime(
+    state.clickVolume * (isDownbeat ? 0.29 : 0.24),
+    now + 0.01,
+  );
   gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
 
   oscillator.connect(gainNode);
@@ -87,7 +97,9 @@ function playClickSound(state, isDownbeat = false) {
 
 function trackScratchGain(source, gain, activeScratchGains) {
   activeScratchGains.add(gain);
-  source.addEventListener("ended", () => activeScratchGains.delete(gain), { once: true });
+  source.addEventListener("ended", () => activeScratchGains.delete(gain), {
+    once: true,
+  });
 }
 
 function silenceActiveScratch(state, activeScratchGains) {
@@ -150,33 +162,49 @@ function scheduleFlare(gain, now, duration, peakGain) {
   gain.linearRampToValueAtTime(0.0001, now + duration);
 }
 
-function playScratch(state, getPlaybackChart, activeScratchGains, type, stepIndex, strokeRunLength = 1, options = {}) {
-  if (!state.audioContext || !state.scratchBuffers || type === "-" || type === "M") {
+function playScratch(
+  state,
+  getPlaybackChart,
+  activeScratchGains,
+  type,
+  stepIndex,
+  strokeRunLength = 1,
+  options = {},
+) {
+  if (
+    !state.audioContext || !state.scratchBuffers || type === "-" || type === "M"
+  ) {
     return;
   }
 
   const audioContext = state.audioContext;
-  const direction = options.direction ?? getScratchDirection(state, getPlaybackChart().steps, stepIndex);
+  const direction = options.direction ??
+    getScratchDirection(state, getPlaybackChart().steps, stepIndex);
   const playbackChart = getPlaybackChart();
   const slotDuration = options.durationSeconds
     ? options.durationSeconds
     : playbackChart.scoreGrid
-      ? (60 / state.bpm) * playbackChart.scoreGrid.beatsPerBar / playbackChart.scoreGrid.ticksPerBar
-      : Math.max(0.12, (60000 / state.bpm) / 2000);
+    ? (60 / state.bpm) * playbackChart.scoreGrid.beatsPerBar /
+      playbackChart.scoreGrid.ticksPerBar
+    : Math.max(0.12, (60000 / state.bpm) / 2000);
   const isTransformerStroke = type === "S" && strokeRunLength > 1;
-  const duration = options.durationSeconds ?? (type === "C" || type === "F"
-    ? 0.055
-    : isTransformerStroke
+  const duration = options.durationSeconds ??
+    (type === "C" || type === "F"
+      ? 0.055
+      : isTransformerStroke
       ? Math.min(1.6, slotDuration * strokeRunLength * 0.82)
       : type === "S"
-        ? Math.min(0.18, slotDuration * 0.68)
-        : Math.min(0.8, Math.max(0.12, slotDuration * strokeRunLength * 0.68)));
-  const buffer = direction < 0 ? state.scratchBuffers.forward : state.scratchBuffers.reverse;
+      ? Math.min(0.18, slotDuration * 0.68)
+      : Math.min(0.8, Math.max(0.12, slotDuration * strokeRunLength * 0.68)));
+  const buffer = direction < 0
+    ? state.scratchBuffers.forward
+    : state.scratchBuffers.reverse;
   const source = audioContext.createBufferSource();
   const directionFilter = audioContext.createBiquadFilter();
   const gainNode = state.audioContext.createGain();
   const now = audioContext.currentTime;
-  const offset = (stepIndex * 0.11) % Math.max(0.01, buffer.duration - duration * 3.4);
+  const offset = (stepIndex * 0.11) %
+    Math.max(0.01, buffer.duration - duration * 3.4);
 
   source.buffer = buffer;
   source.playbackRate.setValueAtTime(direction < 0 ? 1.12 : 0.82, now);
@@ -189,11 +217,20 @@ function playScratch(state, getPlaybackChart, activeScratchGains, type, stepInde
   trackScratchGain(source, gainNode.gain, activeScratchGains);
 
   gainNode.gain.setValueAtTime(0.0001, now);
-  const cutCount = options.cutCount ?? (type === "C" || type === "F" ? 1 : type === "S" ? 3 : 0);
+  const cutCount = options.cutCount ??
+    (type === "C" || type === "F" ? 1 : type === "S" ? 3 : 0);
   if (cutCount > 0) {
-    if (type === "C") scheduleChop(gainNode.gain, now, duration, state.volume * 0.4);
-    else if (type === "F") scheduleFlare(gainNode.gain, now, duration, state.volume * 0.4);
-    else scheduleFaderCuts(gainNode.gain, now, duration, cutCount, state.volume * 0.4);
+    if (type === "C") {
+      scheduleChop(gainNode.gain, now, duration, state.volume * 0.4);
+    } else if (type === "F") {
+      scheduleFlare(gainNode.gain, now, duration, state.volume * 0.4);
+    } else {scheduleFaderCuts(
+        gainNode.gain,
+        now,
+        duration,
+        cutCount,
+        state.volume * 0.4,
+      );}
   } else {
     const strokeLevel = Math.max(0.0001, state.volume * 0.3);
     gainNode.gain.linearRampToValueAtTime(strokeLevel, now + 0.006);
@@ -218,11 +255,22 @@ function playScratch(state, getPlaybackChart, activeScratchGains, type, stepInde
   filter.Q.value = direction < 0 ? 0.8 : 1.3;
   frictionGain.gain.setValueAtTime(0.0001, now);
   if (cutCount > 0) {
-    if (type === "C") scheduleChop(frictionGain.gain, now, duration, state.volume * 0.012);
-    else if (type === "F") scheduleFlare(frictionGain.gain, now, duration, state.volume * 0.012);
-    else scheduleFaderCuts(frictionGain.gain, now, duration, cutCount, state.volume * 0.012);
+    if (type === "C") {
+      scheduleChop(frictionGain.gain, now, duration, state.volume * 0.012);
+    } else if (type === "F") {
+      scheduleFlare(frictionGain.gain, now, duration, state.volume * 0.012);
+    } else {scheduleFaderCuts(
+        frictionGain.gain,
+        now,
+        duration,
+        cutCount,
+        state.volume * 0.012,
+      );}
   } else {
-    frictionGain.gain.linearRampToValueAtTime(Math.max(0.0001, state.volume * 0.025), now + 0.008);
+    frictionGain.gain.linearRampToValueAtTime(
+      Math.max(0.0001, state.volume * 0.025),
+      now + 0.008,
+    );
     frictionGain.gain.linearRampToValueAtTime(0.0001, now + duration * 0.65);
   }
   friction.connect(filter);
@@ -238,7 +286,16 @@ export function createScratchAudio(state, getPlaybackChart, setAudioResources) {
   return {
     initializeAudio: () => initializeAudio(state, setAudioResources),
     playClickSound: (isDownbeat) => playClickSound(state, isDownbeat),
-    playScratch: (type, stepIndex, strokeRunLength, options) => playScratch(state, getPlaybackChart, activeScratchGains, type, stepIndex, strokeRunLength, options),
+    playScratch: (type, stepIndex, strokeRunLength, options) =>
+      playScratch(
+        state,
+        getPlaybackChart,
+        activeScratchGains,
+        type,
+        stepIndex,
+        strokeRunLength,
+        options,
+      ),
     silenceActiveScratch: () => silenceActiveScratch(state, activeScratchGains),
   };
 }

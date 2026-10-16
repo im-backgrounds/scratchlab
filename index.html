@@ -8,7 +8,9 @@
   </head>
   <body>
     <div class="app-shell">
-      <button id="mobile-menu-toggle" class="mobile-menu-toggle" type="button" aria-label="メニューを開く" aria-controls="sidebar" aria-expanded="false">
+      <button id="mobile-menu-toggle" class="mobile-menu-toggle" type="button"
+        aria-label="メニューを開く" aria-controls="sidebar"
+        aria-expanded="false">
         <span></span>
         <span></span>
         <span></span>
@@ -25,7 +27,8 @@
 
         <div class="sidebar-scroll">
           <div class="nav-group guide-link-group">
-            <button id="notation-guide-tab" class="chart-item nav-page-button">譜面の読み方</button>
+            <button id="notation-guide-tab"
+              class="chart-item nav-page-button">譜面の読み方</button>
           </div>
 
           <nav class="nav-group">
@@ -34,119 +37,132 @@
           </nav>
 
           <div class="nav-group builder-link-group">
-            <button id="builder-tab" class="chart-item nav-page-button" type="button">譜面作成</button>
+            <button id="builder-tab" class="chart-item nav-page-button"
+              type="button">譜面作成</button>
           </div>
         </div>
       </aside>
 
       <main class="main-panel">
         <div id="practice-view">
-        <header class="topbar">
-          <div>
-            <p class="eyebrow">DJスクラッチ練習</p>
-            <h2 id="chart-title">Warm Up Scratch</h2>
-          </div>
-          <div class="status-pill" id="chart-difficulty">Easy</div>
-        </header>
+          <header class="topbar">
+            <div>
+              <p class="eyebrow">DJスクラッチ練習</p>
+              <h2 id="chart-title">Warm Up Scratch</h2>
+            </div>
+            <div class="status-pill" id="chart-difficulty">Easy</div>
+          </header>
 
-        <section class="card">
-          <div class="section-header">
-            <div class="section-heading-group">
-              <div>
-                <h3>譜面</h3>
-              </div>
-              <div class="section-description-row">
-                <button id="chart-help-toggle" class="help-button" type="button" aria-label="譜面の見方を表示" aria-expanded="false" aria-controls="chart-help-panel" title="譜面の見方">?</button>
-                <p id="chart-description">基本の左右スクラッチを練習する</p>
+          <section class="card">
+            <div class="section-header">
+              <div class="section-heading-group">
+                <div>
+                  <h3>譜面</h3>
+                </div>
+                <div class="section-description-row">
+                  <button id="chart-help-toggle" class="help-button"
+                    type="button" aria-label="譜面の見方を表示"
+                    aria-expanded="false" aria-controls="chart-help-panel"
+                    title="譜面の見方">?</button>
+                  <p id="chart-description">基本の左右スクラッチを練習する</p>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div id="chart-steps" class="chart-grid" aria-live="polite"></div>
+            <div id="chart-steps" class="chart-grid" aria-live="polite"></div>
 
-          <section id="chart-help-panel" class="chart-help-panel" hidden aria-labelledby="chart-help-title">
-            <h4 id="chart-help-title"></h4>
-            <p id="chart-help-text"></p>
-          </section>
+            <section id="chart-help-panel" class="chart-help-panel" hidden
+              aria-labelledby="chart-help-title">
+              <h4 id="chart-help-title"></h4>
+              <p id="chart-help-text"></p>
+            </section>
 
-          <div id="practice-transport-slot">
-          <div id="transport-panel" class="transport-panel">
-            <div class="button-row">
-              <button id="play-toggle" class="primary-button" type="button" aria-pressed="false">再生</button>
-            </div>
+            <div id="practice-transport-slot">
+              <div id="transport-panel" class="transport-panel">
+                <div class="button-row">
+                  <button id="play-toggle" class="primary-button" type="button"
+                    aria-pressed="false">再生</button>
+                </div>
 
-            <div class="controls-grid">
-              <label class="control">
-                <span>BPM</span>
-                <input id="bpm-slider" type="range" min="60" max="180" step="1" value="110" />
-                <strong id="bpm-value">110</strong>
-              </label>
-
-              <label class="control">
-                <span>ボリューム</span>
-                <input id="volume-slider" type="range" min="0" max="100" step="1" value="80" />
-                <strong id="volume-value">80%</strong>
-              </label>
-
-              <label class="toggle-row">
-                <input id="repeat-toggle" type="checkbox" checked />
-                <span>リピート再生</span>
-              </label>
-
-              <label class="toggle-row">
-                <input id="click-toggle" type="checkbox" checked />
-                <span>クリック音</span>
-              </label>
-
-              <fieldset class="control click-division-control">
-                <legend>クリック間隔</legend>
-                <div class="segmented-control">
-                  <label>
-                    <input type="radio" name="click-division" value="1" />
-                    <span>8分音符</span>
+                <div class="controls-grid">
+                  <label class="control">
+                    <span>BPM</span>
+                    <input id="bpm-slider" type="range" min="60" max="180"
+                      step="1" value="110" />
+                    <strong id="bpm-value">110</strong>
                   </label>
-                  <label>
-                    <input type="radio" name="click-division" value="2" checked />
-                    <span>4分音符</span>
+
+                  <label class="control">
+                    <span>ボリューム</span>
+                    <input id="volume-slider" type="range" min="0" max="100"
+                      step="1" value="80" />
+                    <strong id="volume-value">80%</strong>
                   </label>
-                  <label>
-                    <input type="radio" name="click-division" value="4" />
-                    <span>2分音符</span>
+
+                  <label class="toggle-row">
+                    <input id="repeat-toggle" type="checkbox" checked />
+                    <span>リピート再生</span>
+                  </label>
+
+                  <label class="toggle-row">
+                    <input id="click-toggle" type="checkbox" checked />
+                    <span>クリック音</span>
+                  </label>
+
+                  <fieldset class="control click-division-control">
+                    <legend>クリック間隔</legend>
+                    <div class="segmented-control">
+                      <label>
+                        <input type="radio" name="click-division" value="1" />
+                        <span>8分音符</span>
+                      </label>
+                      <label>
+                        <input type="radio" name="click-division" value="2"
+                          checked />
+                        <span>4分音符</span>
+                      </label>
+                      <label>
+                        <input type="radio" name="click-division" value="4" />
+                        <span>2分音符</span>
+                      </label>
+                    </div>
+                  </fieldset>
+
+                  <label class="control">
+                    <span>クリック音量</span>
+                    <input id="click-volume-slider" type="range" min="0"
+                      max="100" step="1" value="50" />
+                    <strong id="click-volume-value">50%</strong>
                   </label>
                 </div>
-              </fieldset>
-
-              <label class="control">
-                <span>クリック音量</span>
-                <input id="click-volume-slider" type="range" min="0" max="100" step="1" value="50" />
-                <strong id="click-volume-value">50%</strong>
-              </label>
+              </div>
             </div>
-          </div>
-          </div>
-        </section>
+          </section>
 
-        <section class="card secondary-card">
-          <div class="section-header">
-            <div>
-              <h3>MIDI入力</h3>
-              <p>DJコントローラ入力を記録して比較できます</p>
+          <section class="card secondary-card">
+            <div class="section-header">
+              <div>
+                <h3>MIDI入力</h3>
+                <p>DJコントローラ入力を記録して比較できます</p>
+              </div>
             </div>
-          </div>
 
-          <div class="midi-actions">
-            <button id="midi-connect" class="secondary-button">MIDI接続</button>
-            <button id="record-midi" class="secondary-button">記録開始</button>
-            <button id="compare-midi" class="secondary-button">比較</button>
-          </div>
+            <div class="midi-actions">
+              <button id="midi-connect"
+                class="secondary-button">MIDI接続</button>
+              <button id="record-midi"
+                class="secondary-button">記録開始</button>
+              <button id="compare-midi" class="secondary-button">比較</button>
+            </div>
 
-          <div id="midi-status" class="status-box">MIDI未接続</div>
-          <div id="midi-log" class="log-box">記録データはまだありません。</div>
-        </section>
-
+            <div id="midi-status" class="status-box">MIDI未接続</div>
+            <div id="midi-log"
+              class="log-box">記録データはまだありません。</div>
+          </section>
         </div>
 
-        <section id="notation-guide-page" class="guide-page" hidden aria-labelledby="notation-guide-title">
+        <section id="notation-guide-page" class="guide-page" hidden
+          aria-labelledby="notation-guide-title">
           <header class="guide-page-header">
             <p class="eyebrow">SCRATCH NOTATION</p>
             <h2 id="notation-guide-title">譜面の読み方</h2>
@@ -159,22 +175,28 @@
               <h3>譜面は左から右へ読みます</h3>
               <p>横の位置が時間です。再生すると左端から進みます。線の向きでレコードを動かす方向を、線や記号で音の出し方を確認します。</p>
               <figure class="notation-example">
-                <svg viewBox="0 0 640 190" role="img" aria-labelledby="guide-diagram-title guide-diagram-desc">
-                  <title id="guide-diagram-title">前進、後進、ミュートを表す譜面の例</title>
-                  <desc id="guide-diagram-desc">時間は左から右へ進みます。上向きの線は前進、下向きの線は後進、横棒の付いたミュート区間は音が出ません。</desc>
+                <svg viewBox="0 0 640 190" role="img"
+                  aria-labelledby="guide-diagram-title guide-diagram-desc">
+                  <title
+                    id="guide-diagram-title">前進、後進、ミュートを表す譜面の例</title>
+                  <desc
+                    id="guide-diagram-desc">時間は左から右へ進みます。上向きの線は前進、下向きの線は後進、横棒の付いたミュート区間は音が出ません。</desc>
                   <g class="guide-diagram-grid">
                     <path d="M70 24V156 M236 24V156 M402 24V156 M568 24V156" />
                     <path d="M54 42H584 M54 95H584 M54 148H584" />
                   </g>
-                  <path class="guide-stroke" d="M70 148L236 42 M236 42L402 148" />
-                  <rect class="guide-muted-area" x="402" y="42" width="166" height="106" rx="8" />
+                  <path class="guide-stroke"
+                    d="M70 148L236 42 M236 42L402 148" />
+                  <rect class="guide-muted-area" x="402" y="42" width="166"
+                    height="106" rx="8" />
                   <path class="guide-fader-mark" d="M397 148H407" />
                   <text x="153" y="30">F 前進</text>
                   <text x="284" y="170">B 後進</text>
                   <text x="446" y="94">BM</text>
                   <text x="425" y="112">無音の区間</text>
                   <path class="guide-time-arrow" d="M70 178H568" />
-                  <path class="guide-time-arrow" d="M568 178L558 172M568 178L558 184" />
+                  <path class="guide-time-arrow"
+                    d="M568 178L558 172M568 178L558 184" />
                   <text x="43" y="184">時間</text>
                 </svg>
                 <figcaption>上向きの斜線が前進、下向きが後進。横棒はフェーダーの切り替え位置です。</figcaption>
@@ -212,19 +234,54 @@
               <p>記号は「方向」と「フェーダー操作」を組み合わせて読みます。たとえば <code>FC</code> は「前進しながらチョップ」です。</p>
               <div class="symbol-table-wrap">
                 <table class="symbol-table">
-                  <thead><tr><th scope="col">記号</th><th scope="col">読み方</th><th scope="col">動きと音</th></tr></thead>
-                <tbody>
-                  <tr><th scope="row"><code>F</code> / <code>B</code></th><td>前進 / 後進</td><td>フェーダーの状態を保ったまま、矢印の向きに動かします。</td></tr>
-                  <tr><th scope="row"><code>FO</code> / <code>BO</code></th><td>フェーダーを開いて動く</td><td>OFFからONに切り替え、その区間で音を出します。</td></tr>
-                  <tr><th scope="row"><code>FM</code> / <code>BM</code></th><td>フェーダーを閉じて動く</td><td>ONからOFFに切り替えます。時間は進みますが、音と斜線は表示されません。</td></tr>
-                  <tr><th scope="row"><code>FC</code> / <code>BC</code></th><td>チョップ</td><td>1回音を出し、残りの区間はミュートします。</td></tr>
-                  <tr><th scope="row"><code>FF</code> / <code>BF</code></th><td>フレア</td><td>短く音を切ってから再び開き、1音を区間の終わりまで伸ばします。</td></tr>
-                  <tr><th scope="row"><code>K</code></th><td>キープ</td><td>音を出さずに水平線でつなぎます。再生中のスクラッチ音はKの開始時に止まりますが、クリック音は続きます。</td></tr>
-                  <tr><th scope="row"><code>FC3</code> など</th><td>回数</td><td>末尾の数字は、その区間を均等に分けて繰り返す回数です。<code>FC3</code> は前進チョップを3回行います。</td></tr>
-                </tbody>
+                  <thead>
+                    <tr>
+                      <th scope="col">記号</th>
+                      <th scope="col">読み方</th>
+                      <th scope="col">動きと音</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <th scope="row"><code>F</code> / <code>B</code></th>
+                      <td>前進 / 後進</td>
+                      <td>フェーダーの状態を保ったまま、矢印の向きに動かします。</td>
+                    </tr>
+                    <tr>
+                      <th scope="row"><code>FO</code> / <code>BO</code></th>
+                      <td>フェーダーを開いて動く</td>
+                      <td>OFFからONに切り替え、その区間で音を出します。</td>
+                    </tr>
+                    <tr>
+                      <th scope="row"><code>FM</code> / <code>BM</code></th>
+                      <td>フェーダーを閉じて動く</td>
+                      <td>ONからOFFに切り替えます。時間は進みますが、音と斜線は表示されません。</td>
+                    </tr>
+                    <tr>
+                      <th scope="row"><code>FC</code> / <code>BC</code></th>
+                      <td>チョップ</td>
+                      <td>1回音を出し、残りの区間はミュートします。</td>
+                    </tr>
+                    <tr>
+                      <th scope="row"><code>FF</code> / <code>BF</code></th>
+                      <td>フレア</td>
+                      <td>短く音を切ってから再び開き、1音を区間の終わりまで伸ばします。</td>
+                    </tr>
+                    <tr>
+                      <th scope="row"><code>K</code></th>
+                      <td>キープ</td>
+                      <td>音を出さずに水平線でつなぎます。再生中のスクラッチ音はKの開始時に止まりますが、クリック音は続きます。</td>
+                    </tr>
+                    <tr>
+                      <th scope="row"><code>FC3</code> など</th>
+                      <td>回数</td>
+                      <td>末尾の数字は、その区間を均等に分けて繰り返す回数です。<code>FC3</code> は前進チョップを3回行います。</td>
+                    </tr>
+                  </tbody>
                 </table>
               </div>
-              <p class="guide-note">Kは単独で使う記号です。方向を表す符号に付けて <code>FK</code> や <code>BK</code> とは書きません。</p>
+              <p
+                class="guide-note">Kは単独で使う記号です。方向を表す符号に付けて <code>FK</code> や <code>BK</code> とは書きません。</p>
             </section>
 
             <section class="guide-card">
@@ -244,7 +301,8 @@
           </div>
         </section>
 
-        <section id="builder-page" class="builder-page" hidden aria-labelledby="builder-title">
+        <section id="builder-page" class="builder-page" hidden
+          aria-labelledby="builder-title">
           <header class="guide-page-header">
             <p class="eyebrow">CHART EDITOR</p>
             <h2 id="builder-title">スクラッチ譜面作成</h2>
@@ -266,25 +324,35 @@
             <div id="builder-chart-info" class="builder-chart-info"></div>
             <label class="builder-bar-control">
               <span>小節数</span>
-              <input id="pattern-length" type="range" min="1" max="8" step="1" value="2" />
+              <input id="pattern-length" type="range" min="1" max="8" step="1"
+                value="2" />
               <strong id="pattern-length-value">2</strong>
             </label>
           </section>
 
-          <div class="builder-mode-tabs" role="tablist" aria-label="譜面の作成方法">
-            <button id="builder-random-tab" class="builder-mode-tab active" type="button" role="tab" aria-selected="true" aria-controls="builder-random-panel">ランダム生成</button>
-            <button id="builder-manual-tab" class="builder-mode-tab" type="button" role="tab" aria-selected="false" aria-controls="builder-manual-panel">手動生成</button>
-            <button id="builder-json-tab" class="builder-mode-tab" type="button" role="tab" aria-selected="false" aria-controls="builder-json-panel">JSON</button>
+          <div class="builder-mode-tabs" role="tablist"
+            aria-label="譜面の作成方法">
+            <button id="builder-random-tab" class="builder-mode-tab active"
+              type="button" role="tab" aria-selected="true"
+              aria-controls="builder-random-panel">ランダム生成</button>
+            <button id="builder-manual-tab" class="builder-mode-tab"
+              type="button" role="tab" aria-selected="false"
+              aria-controls="builder-manual-panel">手動生成</button>
+            <button id="builder-json-tab" class="builder-mode-tab" type="button"
+              role="tab" aria-selected="false"
+              aria-controls="builder-json-panel">JSON</button>
           </div>
 
-          <section id="builder-random-panel" class="builder-mode-panel" role="tabpanel" aria-labelledby="builder-random-tab">
+          <section id="builder-random-panel" class="builder-mode-panel"
+            role="tabpanel" aria-labelledby="builder-random-tab">
             <div class="builder-panel-heading">
               <div>
                 <p class="eyebrow">PATTERN GENERATOR</p>
                 <h3>生成オプション</h3>
                 <p>難易度や使いたいテクニックを選んで譜面を作成します。</p>
               </div>
-              <button id="random-pattern" class="primary-button" type="button">この条件で生成</button>
+              <button id="random-pattern" class="primary-button"
+                type="button">この条件で生成</button>
             </div>
             <div class="generator-options">
               <label class="generator-select">
@@ -326,32 +394,44 @@
             </div>
           </section>
 
-          <section id="builder-manual-panel" class="builder-mode-panel" role="tabpanel" aria-labelledby="builder-manual-tab" hidden>
+          <section id="builder-manual-panel" class="builder-mode-panel"
+            role="tabpanel" aria-labelledby="builder-manual-tab" hidden>
             <div class="builder-panel-heading">
               <div>
                 <p class="eyebrow">MANUAL EDITOR</p>
                 <h3>譜面を手動で編集</h3>
                 <p>記号を選んで、下の時間セルをクリックするとその位置を変更できます。</p>
               </div>
-              <button id="manual-fill" class="secondary-button" type="button">交互パターンを作る</button>
+              <button id="manual-fill" class="secondary-button"
+                type="button">交互パターンを作る</button>
             </div>
             <div id="builder-manual-info" class="manual-chart-summary"></div>
             <div class="manual-editor">
               <div class="step-actions" aria-label="配置する記号">
-                <button data-step-type="L" class="step-type active" type="button" title="前進">前進 <span class="step-code">F</span></button>
-                <button data-step-type="R" class="step-type" type="button" title="後進">後進 <span class="step-code">B</span></button>
-                <button data-step-type="M" class="step-type" type="button" title="ミュート">ミュート <span class="step-code">FM</span></button>
-                <button data-step-type="C" class="step-type" type="button" title="1クリックのチョップ">チョップ <span class="step-code">FC</span></button>
-                <button data-step-type="P" class="step-type" type="button" title="フレア">フレア <span class="step-code">FF</span></button>
-                <button data-step-type="K" class="step-type" type="button" title="キープ">キープ <span class="step-code">K</span></button>
-                <button data-step-type="S" class="step-type" type="button" title="3クリック">3クリック <span class="step-code">C3</span></button>
+                <button data-step-type="L" class="step-type active"
+                  type="button"
+                  title="前進">前進 <span class="step-code">F</span></button>
+                <button data-step-type="R" class="step-type" type="button"
+                  title="後進">後進 <span class="step-code">B</span></button>
+                <button data-step-type="M" class="step-type" type="button"
+                  title="ミュート">ミュート <span class="step-code">FM</span></button>
+                <button data-step-type="C" class="step-type" type="button"
+                  title="1クリックのチョップ">チョップ <span class="step-code">FC</span></button>
+                <button data-step-type="P" class="step-type" type="button"
+                  title="フレア">フレア <span class="step-code">FF</span></button>
+                <button data-step-type="K" class="step-type" type="button"
+                  title="キープ">キープ <span class="step-code">K</span></button>
+                <button data-step-type="S" class="step-type" type="button"
+                  title="3クリック">3クリック <span class="step-code">C3</span></button>
               </div>
-              <p id="builder-tool-hint" class="builder-tool-hint" aria-live="polite">前進を選択中。時間セルをクリックして配置します。</p>
+              <p id="builder-tool-hint" class="builder-tool-hint"
+                aria-live="polite">前進を選択中。時間セルをクリックして配置します。</p>
               <div id="builder-steps" class="builder-steps"></div>
             </div>
           </section>
 
-          <section id="builder-json-panel" class="builder-mode-panel" role="tabpanel" aria-labelledby="builder-json-tab" hidden>
+          <section id="builder-json-panel" class="builder-mode-panel"
+            role="tabpanel" aria-labelledby="builder-json-tab" hidden>
             <div class="builder-panel-heading">
               <div>
                 <p class="eyebrow">CHART DATA</p>
@@ -359,14 +439,20 @@
                 <p>現在の譜面データを直接編集するか、ファイルとして保存できます。</p>
               </div>
               <div class="json-actions">
-                <button id="import-json" class="secondary-button" type="button">編集内容を反映</button>
-                <button id="json-load-file" class="secondary-button" type="button">ファイルを開く</button>
-                <button id="export-json" class="primary-button" type="button">JSONを保存</button>
-                <input id="chart-json-file" type="file" accept=".json,application/json" hidden />
+                <button id="import-json" class="secondary-button"
+                  type="button">編集内容を反映</button>
+                <button id="json-load-file" class="secondary-button"
+                  type="button">ファイルを開く</button>
+                <button id="export-json" class="primary-button"
+                  type="button">JSONを保存</button>
+                <input id="chart-json-file" type="file"
+                  accept=".json,application/json" hidden />
               </div>
             </div>
-            <textarea id="chart-json" class="json-editor" spellcheck="false" aria-label="譜面JSON"></textarea>
-            <p id="json-status" class="json-status" aria-live="polite">編集内容を反映すると、譜面プレビューに適用されます。</p>
+            <textarea id="chart-json" class="json-editor" spellcheck="false"
+              aria-label="譜面JSON"></textarea>
+            <p id="json-status" class="json-status"
+              aria-live="polite">編集内容を反映すると、譜面プレビューに適用されます。</p>
           </section>
         </section>
       </main>

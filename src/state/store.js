@@ -37,11 +37,17 @@ export function createInitialState(chartCatalog) {
 function protectCollections(values) {
   const protectedValues = { ...values };
   ["builderSteps", "builderDirections", "midiRecord"].forEach((key) => {
-    if (Array.isArray(protectedValues[key]) && !Object.isFrozen(protectedValues[key])) {
+    if (
+      Array.isArray(protectedValues[key]) &&
+      !Object.isFrozen(protectedValues[key])
+    ) {
       Object.freeze(protectedValues[key]);
     }
   });
-  if (protectedValues.builderMetadata && !Object.isFrozen(protectedValues.builderMetadata)) {
+  if (
+    protectedValues.builderMetadata &&
+    !Object.isFrozen(protectedValues.builderMetadata)
+  ) {
     Object.freeze(protectedValues.builderMetadata);
   }
   return protectedValues;
@@ -56,7 +62,10 @@ function reduceState(state, action) {
         ...initialTransportState,
         builderSteps: [...action.chart.steps],
         builderScoreData: action.chart.scoreData,
-        builderMetadata: { name: action.chart.name, difficulty: action.chart.difficulty },
+        builderMetadata: {
+          name: action.chart.name,
+          difficulty: action.chart.difficulty,
+        },
         builderJsonDirty: false,
         builderActiveMode: "random",
         builderBeat: action.chart.beat,

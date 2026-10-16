@@ -2,8 +2,8 @@
 
 ## 概要
 
-DJスクラッチ練習用のwebサービス。
-html + javascript(native)で動くシンプルな機能。
+DJスクラッチ練習用のwebサービス。 html +
+javascript(native)で動くシンプルな機能。
 
 ## 機能
 

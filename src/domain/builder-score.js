@@ -53,7 +53,9 @@ export function legacyStepsToScore(steps, { directions, ticksPerBar }) {
   return score;
 }
 
-export function compileBuilderSteps({ name, difficulty, beat, ticksPerBar, steps, directions }) {
+export function compileBuilderSteps(
+  { name, difficulty, beat, ticksPerBar, steps, directions },
+) {
   return compileScoreData({
     name,
     difficulty,
@@ -82,6 +84,9 @@ export function resizeSteps(steps, nextLength) {
 }
 
 export function alternatingSteps(length) {
-  const steps = Array.from({ length }, (_, index) => (index % 2 === 0 ? "L" : "R"));
+  const steps = Array.from(
+    { length },
+    (_, index) => (index % 2 === 0 ? "L" : "R"),
+  );
   return { steps, directions: deriveBuilderDirections(steps) };
 }

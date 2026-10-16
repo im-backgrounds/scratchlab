@@ -28,11 +28,19 @@ export function parseScoreToken(value, inheritedDirection) {
     if (!Number.isInteger(repeat) || repeat < 1 || repeat > 128) {
       throw new Error(`繰り返し数が範囲外です: ${value}`);
     }
-    return { direction: inheritedDirection, modifier: "", repeat, cutCount: 0, keep: true };
+    return {
+      direction: inheritedDirection,
+      modifier: "",
+      repeat,
+      cutCount: 0,
+      keep: true,
+    };
   }
 
   if (token === "-") {
-    throw new Error("継続用の符号は廃止されています。FまたはBなどを指定してください。");
+    throw new Error(
+      "継続用の符号は廃止されています。FまたはBなどを指定してください。",
+    );
   }
 
   const match = /^([FB])([OMCF]?)(\d*)$/.exec(token);
@@ -56,11 +64,15 @@ export function parseScoreToken(value, inheritedDirection) {
 }
 
 export function compileScoreData(data) {
-  if (!data || typeof data !== "object" || typeof data.name !== "string" || !Array.isArray(data.score) || !data.score.length) {
+  if (
+    !data || typeof data !== "object" || typeof data.name !== "string" ||
+    !Array.isArray(data.score) || !data.score.length
+  ) {
     throw new Error("nameとscore配列が必要です。");
   }
 
-  const beatMatch = typeof data.beat === "string" && /^(\d+)\/(\d+)$/.exec(data.beat);
+  const beatMatch = typeof data.beat === "string" &&
+    /^(\d+)\/(\d+)$/.exec(data.beat);
   if (!beatMatch || Number(beatMatch[1]) < 1 || Number(beatMatch[2]) < 1) {
     throw new Error("beatは4/4のような拍子で指定してください。");
   }
@@ -84,7 +96,9 @@ export function compileScoreData(data) {
       node.forEach((child) => collectDivisions(child, division));
       return;
     }
-    if (typeof node !== "string") throw new Error("scoreは文字列または入れ子配列で指定してください。");
+    if (typeof node !== "string") {
+      throw new Error("scoreは文字列または入れ子配列で指定してください。");
+    }
     const parsed = parseScoreToken(node, lastDirection);
     lastDirection = parsed.direction;
     divisions.push(parentDivision * parsed.repeat);
@@ -106,7 +120,9 @@ export function compileScoreData(data) {
         throw new Error("小節内の配列を等分できません。");
       }
       const childDuration = durationTicks / node.length;
-      node.forEach((child, index) => expandNode(child, startTick + index * childDuration, childDuration));
+      node.forEach((child, index) =>
+        expandNode(child, startTick + index * childDuration, childDuration)
+      );
       return;
     }
 
@@ -141,13 +157,24 @@ export function compileScoreData(data) {
   const steps = Array(totalTicks).fill("-");
   const directions = Array(totalTicks).fill("F");
   events.forEach((event) => {
-    const step = event.keep ? "K" : !event.faderOpen ? "M" : event.direction === "F" ? "L" : "R";
-    for (let tick = event.startTick; tick < event.startTick + event.durationTicks; tick += 1) {
+    const step = event.keep
+      ? "K"
+      : !event.faderOpen
+      ? "M"
+      : event.direction === "F"
+      ? "L"
+      : "R";
+    for (
+      let tick = event.startTick;
+      tick < event.startTick + event.durationTicks;
+      tick += 1
+    ) {
       steps[tick] = step;
       directions[tick] = event.direction;
     }
     for (let mark = 0; event.faderOpen && mark < event.cutCount; mark += 1) {
-      const cutTick = event.startTick + Math.floor(event.durationTicks * (mark + 1) / (event.cutCount + 1));
+      const cutTick = event.startTick +
+        Math.floor(event.durationTicks * (mark + 1) / (event.cutCount + 1));
       if (cutTick < event.startTick + event.durationTicks) steps[cutTick] = "C";
     }
   });

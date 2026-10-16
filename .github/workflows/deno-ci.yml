@@ -1,0 +1,30 @@
+name: Deno CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Format, check, and test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Check formatting
+        run: deno fmt --check --unstable-component --ignore='tests/ui/snapshots/*.svg' .
+
+      - name: Type-check app and tests
+        run: deno check src/app.js tests/domain/*.js tests/ui/scratch-visualizer_test.js
+
+      - name: Run tests
+        run: deno test --allow-read=tests/ui/snapshots
