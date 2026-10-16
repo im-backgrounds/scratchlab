@@ -47,12 +47,39 @@
 
 ## スクリーンショット
 
-スクリーンショットや操作GIFは、追加後に以下の場所へ掲載する予定です。画像は
-`docs/images/` にまとめます。
+### 1. 練習画面の全体像
 
-- `docs/images/scratchlab-practice.png` — 譜面選択と練習画面
-- `docs/images/scratchlab-builder.png` — 譜面作成画面
-- `docs/images/scratchlab-practice-demo.gif` — BPMを調整して練習する短い操作GIF
+![譜面一覧、譜面、再生ボタン、BPMスライダーが並ぶ練習画面](docs/images/scratchlab-practice-overview.png)
+
+左の一覧から譜面を選び、再生ボタンで練習を始めます。
+
+### 2. テンポを調整する
+
+![BPMを80に下げた練習画面](docs/images/scratchlab-tempo-controls.png)
+
+最初はBPMを下げ、クリック音に合わせてゆっくり練習しましょう。
+
+### 3. 譜面の読み方を知る
+
+![譜面の読み方ガイド](docs/images/scratchlab-notation-basics.png)
+
+線の向きが前後の動き、横棒がフェーダーの操作を表します。
+
+### 4. 自分でパターンを作る
+
+![手動生成で前進・後進を並べた譜面作成画面](docs/images/scratchlab-builder-manual.png)
+
+記号を選んで時間セルをクリックするだけで、オリジナルの譜面を作れます。
+
+### 5. 応用機能
+
+![譜面をJSONで編集・保存する画面](docs/images/scratchlab-advanced-json.png)
+
+譜面はJSONとして保存・読み込みできます。
+
+![MIDI入力の記録パネル](docs/images/scratchlab-advanced-midi.png)
+
+DJコントローラーを接続すると、演奏を記録して譜面と比較できます。
 
 ## 操作・コントロール
 
@@ -134,7 +161,7 @@ tests/                            ドメイン、再生、描画の回帰テス�
 
 以下は今後の改善候補です。実装時期や提供を確約するものではありません。
 
-- 練習画面や譜面エディターのスクリーンショット・操作GIFを追加
+- 練習の流れが分かる操作GIFを追加
 - 初心者向けのガイドや段階的な練習パターンを拡充
 - MIDI記録と譜面の比較を、入力数だけでなくタイミングも確認できる形に改善
 - 作成した譜面の画像出力など、共有しやすいエクスポート方法を検討
