@@ -1,6 +1,16 @@
 import { chartCatalog as chartDefinitions } from "./data/chart-catalog.js";
-import { compileScoreData, deriveBuilderDirections } from "./domain/score-compiler.js";
+import {
+  compileScoreData,
+  deriveBuilderDirections,
+} from "./domain/score-compiler.js";
 import { legacyStepsToScore } from "./domain/builder-score.js";
+import {
+  getClickActions,
+  getPlaybackEvent,
+  getScratchActions,
+  shouldSilenceScratch,
+  updatePlaybackCursor,
+} from "./domain/playback.js";
 import { createScratchAudio } from "./audio/scratch-audio.js";
 import { createActions } from "./state/actions.js";
 import { createInitialState, createStore } from "./state/store.js";
@@ -26,7 +36,8 @@ const state = store.getState();
 let editorUi;
 
 function getSelectedChart() {
-  return chartCatalog.find((chart) => chart.id === state.selectedChartId) || chartCatalog[0];
+  return chartCatalog.find((chart) => chart.id === state.selectedChartId) ||
+    chartCatalog[0];
 }
 
 function getBuilderChart() {
@@ -35,12 +46,11 @@ function getBuilderChart() {
     ...chart,
     ...state.builderMetadata,
     ...(state.builderScoreData?.source || {}),
-    scoreMode: state.builderScoreData ? "score-data" : state.builderScoreMode,
-    singleStrokePerStep: state.builderScoreMode === "forward" || state.builderScoreMode === "backward",
     steps: state.builderSteps,
     scoreData: state.builderScoreData,
     scoreGrid: {
-      beatsPerBar: Number(state.builderBeat.split("/")[0]) * 4 / Number(state.builderBeat.split("/")[1]),
+      beatsPerBar: Number(state.builderBeat.split("/")[0]) * 4 /
+        Number(state.builderBeat.split("/")[1]),
       ticksPerBar: state.builderTicksPerBar,
       totalTicks: state.builderSteps.length,
     },
@@ -51,11 +61,12 @@ function getPlaybackChart() {
   return state.isBuilderPlayback ? getBuilderChart() : getSelectedChart();
 }
 
-const { initializeAudio, playClickSound, playScratch, silenceActiveScratch } = createScratchAudio(
-  state,
-  getPlaybackChart,
-  actions.setAudioResources,
-);
+const { initializeAudio, playClickSound, playScratch, silenceActiveScratch } =
+  createScratchAudio(
+    state,
+    getPlaybackChart,
+    actions.setAudioResources,
+  );
 
 function renderSelectedChart() {
   visualizer.renderSelectedChart(getSelectedChart(), state);
@@ -85,8 +96,8 @@ function updateTransportValues() {
 }
 
 function getBuilderBarCount() {
-  return state.builderScoreData?.source.score.length
-    ?? Math.ceil(state.builderSteps.length / state.builderTicksPerBar);
+  return state.builderScoreData?.source.score.length ??
+    Math.ceil(state.builderSteps.length / state.builderTicksPerBar);
 }
 
 function setBuilderMode(mode) {
@@ -100,7 +111,8 @@ function renderBuilder() {
   editor.renderBuilderEditor(state, {
     barCount: getBuilderBarCount(),
     scoreDocument: createBuilderScoreDocument(),
-    scoreData: state.builderScoreData || compileScoreData(createBuilderScoreDocument()),
+    scoreData: state.builderScoreData ||
+      compileScoreData(createBuilderScoreDocument()),
     onStepClick: (index) => {
       actions.editBuilderStep(index, state.builderSelectedType);
       renderBuilder();
@@ -116,7 +128,6 @@ function renderBuilderScore() {
 function createBuilderScoreDocument() {
   if (state.builderScoreData) return state.builderScoreData.source;
 
-  const chart = getSelectedChart();
   return {
     name: state.builderMetadata.name,
     difficulty: state.builderMetadata.difficulty,
@@ -124,7 +135,6 @@ function createBuilderScoreDocument() {
     score: legacyStepsToScore(state.builderSteps, {
       directions: state.builderDirections,
       ticksPerBar: state.builderTicksPerBar,
-      scoreMode: chart.scoreMode,
     }),
   };
 }
@@ -140,140 +150,71 @@ function render() {
   updateTransportValues();
 }
 
-function getStrokeRunLength(steps, stepIndex) {
-  const stroke = steps[stepIndex];
-  if (stroke !== "L" && stroke !== "R") {
-    return 1;
-  }
-
-  let runLength = 1;
-  while (steps[stepIndex + runLength] === stroke) {
-    runLength += 1;
-  }
-  return runLength;
-}
-
-function advancePlayback() {
-  const chart = getPlaybackChart();
-  if (!chart.steps.length) {
-    return;
-  }
-
-  const currentType = chart.steps[state.currentStep];
+/**
+ * Performs audio and click actions for the current playback step.
+ * @param {object} chart Chart selected for this playback session.
+ */
+function playCurrentStep(chart) {
   const scoreData = chart.scoreData;
   const scoreGrid = scoreData || chart.scoreGrid;
-  const ticksPerQuarter = scoreGrid ? scoreGrid.ticksPerBar / scoreGrid.beatsPerBar : 2;
-  const clickInterval = scoreGrid
-    ? Math.max(1, Math.round(ticksPerQuarter * state.clickIntervalSteps / 2))
-    : state.clickIntervalSteps;
-  const isDownbeat = scoreGrid
-    ? state.currentStep % scoreGrid.ticksPerBar === 0
-    : state.currentStep % 8 === 0;
-  const scoreEvent = scoreData?.events.find((event) => (
-    event.startTick <= state.currentStep
-    && state.currentStep < event.startTick + event.durationTicks
-  ));
-  const isKeepInterval = scoreEvent?.keep === true;
-  if (isKeepInterval) silenceActiveScratch();
-  if (state.clickEnabled && state.currentStep % clickInterval === 0) {
-    playClickSound(isDownbeat);
+  const clickActions = getClickActions(
+    scoreGrid,
+    state.currentStep,
+    state.clickIntervalSteps,
+    state.clickEnabled,
+  );
+  const { activeEvent, eventIndex } = getPlaybackEvent(
+    scoreData,
+    state.currentStep,
+  );
+  if (shouldSilenceScratch(activeEvent)) silenceActiveScratch();
+  if (clickActions.shouldPlay) playClickSound(clickActions.isDownbeat);
+
+  const scratchActions = getScratchActions(
+    scoreData,
+    chart.steps,
+    state.currentStep,
+    state.bpm,
+    eventIndex,
+  );
+  if (scratchActions) {
+    playScratch(
+      scratchActions.soundType,
+      scratchActions.startTick,
+      scratchActions.strokeRunLength,
+      scratchActions.options,
+    );
   }
-  if (scoreData) {
-    const events = scoreData.events;
-    const eventIndex = events.findIndex((scoreEvent) => scoreEvent.startTick === state.currentStep);
-    if (eventIndex >= 0) {
-      const event = events[eventIndex];
-      if (event.faderOpen && !event.keep) {
-        const canMerge = (candidate) => candidate.faderOpen && !candidate.keep && candidate.cutCount === 0;
-        let runStartIndex = eventIndex;
-        let runEndIndex = eventIndex;
-        let runStartTick = event.startTick;
-        let runEndTick = event.startTick + event.durationTicks;
+}
 
-        const continuesFlareTail = (candidate) => candidate.modifier === "";
-        let followsFlare = false;
-        if (continuesFlareTail(event)) {
-          let previousIndex = eventIndex - 1;
-          let previousEndTick = event.startTick;
-          while (previousIndex >= 0) {
-            const previous = events[previousIndex];
-            if (!previous.faderOpen || previous.keep || previous.direction !== event.direction || previous.startTick + previous.durationTicks !== previousEndTick) break;
-            if (previous.modifier === "F") {
-              followsFlare = true;
-              break;
-            }
-            if (!continuesFlareTail(previous)) break;
-            previousEndTick = previous.startTick;
-            previousIndex -= 1;
-          }
-        }
-
-        if (event.modifier === "F") {
-          while (runEndIndex + 1 < events.length) {
-            const next = events[runEndIndex + 1];
-            if (next.keep || !continuesFlareTail(next) || !next.faderOpen || next.direction !== event.direction || next.startTick !== runEndTick) break;
-            runEndIndex += 1;
-            runEndTick = next.startTick + next.durationTicks;
-          }
-        } else if (!followsFlare && canMerge(event)) {
-          while (runStartIndex > 0) {
-            const previous = events[runStartIndex - 1];
-            if (!canMerge(previous) || previous.direction !== event.direction || previous.startTick + previous.durationTicks !== runStartTick) break;
-            runStartIndex -= 1;
-            runStartTick = previous.startTick;
-          }
-          while (runEndIndex + 1 < events.length) {
-            const next = events[runEndIndex + 1];
-            if (!canMerge(next) || next.direction !== event.direction || next.startTick !== runEndTick) break;
-            runEndIndex += 1;
-            runEndTick = next.startTick + next.durationTicks;
-          }
-        }
-
-        if (!followsFlare && eventIndex === runStartIndex) {
-          const direction = event.direction === "F" ? -1 : 1;
-          const soundType = event.modifier === "C" ? "C" : event.modifier === "F" ? "F" : direction < 0 ? "L" : "R";
-          const durationTicks = runEndTick - runStartTick;
-          const durationSeconds = durationTicks * scoreData.tickDurationSeconds * 60 / state.bpm;
-          playScratch(soundType, runStartTick, 1, {
-            direction,
-            durationSeconds,
-            cutCount: event.cutCount,
-            suppressFriction: runEndIndex > eventIndex,
-          });
-        }
-      }
-    }
-  } else if (chart.scoreMode === "transformer") {
-    const strokeLength = chart.strokeLength || 4;
-    if (state.currentStep % strokeLength === 0) {
-      playScratch("S", state.currentStep, strokeLength);
-    }
-  } else {
-    const previousType = chart.steps[state.currentStep - 1];
-    const continuesStroke = !chart.singleStrokePerStep && (currentType === "L" || currentType === "R") && currentType === previousType;
-    if (!continuesStroke) {
-      const runLength = chart.singleStrokePerStep ? 1 : getStrokeRunLength(chart.steps, state.currentStep);
-      playScratch(currentType, state.currentStep, runLength);
-    }
-  }
-
+/**
+ * Refreshes the visible score after the current playback tick.
+ */
+function renderPlaybackProgress() {
   if (state.isBuilderPlayback) {
     renderBuilderScore();
   } else {
     renderSelectedChart();
   }
+}
 
-  if (state.currentStep >= chart.steps.length - 1) {
-    if (state.repeat) {
-      actions.setPlaybackState({ currentStep: 0 });
-    } else {
-      stopPlayback();
-      return;
-    }
-  } else {
-    actions.setPlaybackState({ currentStep: state.currentStep + 1 });
-  }
+/**
+ * Processes one playback tick, then renders and advances or ends the cursor.
+ */
+function advancePlayback() {
+  const chart = getPlaybackChart();
+  if (!chart.steps.length) return;
+
+  playCurrentStep(chart);
+  renderPlaybackProgress();
+
+  const cursor = updatePlaybackCursor(
+    state.currentStep,
+    chart.steps.length,
+    state.repeat,
+  );
+  if (cursor.shouldStop) return stopPlayback();
+  actions.setPlaybackState({ currentStep: cursor.currentStep });
 }
 
 function stopPlayback() {
@@ -309,8 +250,9 @@ function startPlayback(isBuilderPlayback = false) {
   const noteLengthMs = chart.scoreData
     ? chart.scoreData.tickDurationSeconds * (60000 / state.bpm)
     : chart.scoreGrid
-      ? (60 / state.bpm) * chart.scoreGrid.beatsPerBar / chart.scoreGrid.ticksPerBar * 1000
-      : (60000 / state.bpm) / 2;
+    ? (60 / state.bpm) * chart.scoreGrid.beatsPerBar /
+      chart.scoreGrid.ticksPerBar * 1000
+    : (60000 / state.bpm) / 2;
   const timer = setInterval(() => {
     advancePlayback();
   }, noteLengthMs);
@@ -321,8 +263,10 @@ function startPlayback(isBuilderPlayback = false) {
 
 function syncChartJson() {
   editorUi.setJsonText(JSON.stringify(createBuilderScoreDocument(), null, 2));
-  actions.setBuilderJsonDirty(false);
-  editor.setJsonStatus("現在の譜面JSONです。編集後は「編集内容を反映」またはファイル保存ができます。", false);
+  editor.setJsonStatus(
+    "現在の譜面JSONです。編集後は「編集内容を反映」またはファイル保存ができます。",
+    false,
+  );
 }
 
 function exportChartJson() {
@@ -350,35 +294,11 @@ function exportChartJson() {
 }
 
 function loadChartJson(parsed) {
-  if (parsed && Array.isArray(parsed.score)) {
-    const compiled = compileScoreData(parsed);
-    actions.setBuilderState({
-      builderScoreData: compiled,
-      builderSteps: compiled.steps,
-      builderDirections: compiled.directions,
-      builderBeat: compiled.beat,
-      builderTicksPerBar: compiled.ticksPerBar,
-      builderScoreMode: null,
-      builderMetadata: { name: parsed.name, difficulty: parsed.difficulty },
-      builderJsonDirty: false,
-    });
-  } else if (parsed && Array.isArray(parsed.steps)) {
-    actions.setBuilderState({
-      builderSteps: [...parsed.steps],
-      builderDirections: deriveBuilderDirections(parsed.steps),
-      builderBeat: "4/4",
-      builderTicksPerBar: 8,
-      builderScoreMode: null,
-      builderScoreData: null,
-      builderMetadata: {
-        name: parsed.name || getSelectedChart().name,
-        difficulty: parsed.difficulty || getSelectedChart().difficulty,
-      },
-      builderJsonDirty: false,
-    });
-  } else {
-    throw new Error("score配列を持つ譜面データが必要です。");
-  }
+  const selectedChart = getSelectedChart();
+  actions.loadBuilderChart(parsed, {
+    name: selectedChart.name,
+    difficulty: selectedChart.difficulty,
+  });
   renderBuilder();
   editor.setJsonStatus("JSONを譜面に反映しました。", false);
 }
@@ -393,12 +313,18 @@ function importChartJson(jsonText, errorPrefix = "JSONエラー") {
 
 function markJsonEdited() {
   actions.setBuilderJsonDirty(true);
-  editor.setJsonStatus("未反映の変更があります。反映してから保存すると最新データになります。", false);
+  editor.setJsonStatus(
+    "未反映の変更があります。反映してから保存すると最新データになります。",
+    false,
+  );
 }
 
 async function connectMIDI() {
   if (!navigator.requestMIDIAccess) {
-    controls.renderMidiStatus("このブラウザはWeb MIDI APIに対応していません。", "MIDIデバイスに接続できません。キーボード操作や手動生成で試してください。");
+    controls.renderMidiStatus(
+      "このブラウザはWeb MIDI APIに対応していません。",
+      "MIDIデバイスに接続できません。キーボード操作や手動生成で試してください。",
+    );
     return;
   }
 
@@ -414,14 +340,17 @@ async function connectMIDI() {
         actions.recordMidiEvent({ status, note, velocity, time: Date.now() });
 
         if (state.recordingMidi) {
-          controls.renderMidiLog(`${log}\n記録中... ${state.midiRecord.length}件`);
+          controls.renderMidiLog(
+            `${log}\n記録中... ${state.midiRecord.length}件`,
+          );
         } else {
           controls.renderMidiLog(`MIDI入力: ${log}`);
         }
       };
     });
   } catch (error) {
-    const denied = error.name === "SecurityError" || error.name === "NotAllowedError" || /permission/i.test(error.message);
+    const denied = error.name === "SecurityError" ||
+      error.name === "NotAllowedError" || /permission/i.test(error.message);
     const log = denied
       ? `${error.message}\nVS Code内蔵ブラウザではWeb MIDIの権限が許可されません。Chrome/Edgeで http://localhost などから開いて、MIDIの許可を「許可」にしてください。`
       : error.message;
@@ -433,9 +362,11 @@ function toggleMidiRecording() {
   actions.setMidiState({ recordingMidi: !state.recordingMidi });
   actions.clearMidiRecord();
   controls.renderMidiRecording(state.recordingMidi);
-  controls.renderMidiLog(state.recordingMidi
-    ? "MIDI記録を開始しました。DJコントローラの入力を4カウント後から記録します。"
-    : "記録を停止しました。");
+  controls.renderMidiLog(
+    state.recordingMidi
+      ? "MIDI記録を開始しました。DJコントローラの入力を4カウント後から記録します。"
+      : "記録を停止しました。",
+  );
 }
 
 function compareMidiRecording() {
@@ -444,10 +375,16 @@ function compareMidiRecording() {
     return;
   }
 
-  const recordedCount = state.midiRecord.filter((item) => item.status >= 144).length;
+  const recordedCount =
+    state.midiRecord.filter((item) => item.status >= 144).length;
   const expectedCount = getSelectedChart().steps.length;
-  const similarity = Math.min(100, Math.round((recordedCount / expectedCount) * 100));
-  controls.renderMidiLog(`MIDI比較結果: ${recordedCount} / ${expectedCount} パターン一致 (${similarity}%)\n記録数: ${state.midiRecord.length}`);
+  const similarity = Math.min(
+    100,
+    Math.round((recordedCount / expectedCount) * 100),
+  );
+  controls.renderMidiLog(
+    `MIDI比較結果: ${recordedCount} / ${expectedCount} パターン一致 (${similarity}%)\n記録数: ${state.midiRecord.length}`,
+  );
 }
 
 controls.bindControls({
@@ -512,7 +449,8 @@ editorUi = editor.bindEditor({
   onExportJson: exportChartJson,
   onJsonEdit: markJsonEdited,
   onJsonFileText: (text) => importChartJson(text, "JSONファイル読み込みエラー"),
-  onJsonFileReadError: (error) => editor.setJsonStatus(`JSONファイル読み込みエラー: ${error.message}`, true),
+  onJsonFileReadError: (error) =>
+    editor.setJsonStatus(`JSONファイル読み込みエラー: ${error.message}`, true),
 });
 
 controls.renderInitialControls(state, getBuilderBarCount());

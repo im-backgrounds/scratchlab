@@ -1,31 +1,40 @@
 import { alternatingSteps, compileBuilderSteps, replaceBuilderStep, resizeSteps } from "../domain/builder-score.js";
-import { compileScoreData } from "../domain/score-compiler.js";
+import { compileScoreData, deriveBuilderDirections } from "../domain/score-compiler.js";
 
 export function createActions(store) {
   const state = store.getState();
   const dispatch = (type, values = {}) => store.dispatch({ type, ...values });
-  const replaceBuilderState = (values) => dispatch("builder/set-state", { values });
-  const commitBuilderEdit = ({ steps, directions }) => {
-    const compiled = compileBuilderSteps({
-      name: state.builderMetadata.name,
-      difficulty: state.builderMetadata.difficulty,
-      beat: state.builderBeat,
-      ticksPerBar: state.builderTicksPerBar,
-      steps,
-      directions,
-    });
-    dispatch("builder/edit", {
+  const commitBuilderState = ({ scoreData, steps, directions, ticksPerBar, beat, metadata }) => {
+    dispatch("builder/set-state", {
       values: {
-        builderScoreMode: null,
-        builderScoreData: compiled,
-        builderSteps: compiled.steps,
-        builderDirections: compiled.directions,
-        builderTicksPerBar: compiled.ticksPerBar,
-        builderBeat: compiled.beat,
+        builderScoreData: scoreData,
+        builderSteps: steps,
+        builderDirections: directions,
+        builderTicksPerBar: ticksPerBar,
+        builderBeat: beat,
+        builderMetadata: metadata,
         builderJsonDirty: false,
       },
     });
   };
+  const commitCompiledBuilderState = (scoreData, metadata = state.builderMetadata) => {
+    commitBuilderState({
+      scoreData,
+      steps: scoreData.steps,
+      directions: scoreData.directions,
+      ticksPerBar: scoreData.ticksPerBar,
+      beat: scoreData.beat,
+      metadata,
+    });
+  };
+  const compileBuilderUpdate = (steps, directions) => compileBuilderSteps({
+    name: state.builderMetadata.name,
+    difficulty: state.builderMetadata.difficulty,
+    beat: state.builderBeat,
+    ticksPerBar: state.builderTicksPerBar,
+    steps,
+    directions,
+  });
 
   return {
     selectChart: (chartId) => dispatch("chart/select", { chartId }),
@@ -39,14 +48,45 @@ export function createActions(store) {
     setBuilderMode: (mode) => dispatch("builder/set-mode", { mode }),
     setBuilderSelectedType: (stepType) => dispatch("builder/set-selected-type", { stepType }),
     setBuilderJsonDirty: (value) => dispatch("builder/set-json-dirty", { value }),
-    setBuilderState: replaceBuilderState,
-    editBuilderStep: (index, stepType) => commitBuilderEdit(
-      replaceBuilderStep(state.builderSteps, state.builderDirections, index, stepType),
-    ),
-    resizeBuilderPattern: (barCount) => commitBuilderEdit(
-      resizeSteps(state.builderSteps, barCount * state.builderTicksPerBar),
-    ),
-    fillBuilderAlternating: () => commitBuilderEdit(alternatingSteps(state.builderSteps.length)),
+    editBuilderStep: (index, stepType) => {
+      const { steps, directions } = replaceBuilderStep(state.builderSteps, state.builderDirections, index, stepType);
+      commitCompiledBuilderState(compileBuilderUpdate(steps, directions));
+    },
+    resizeBuilderPattern: (barCount) => {
+      const { steps, directions } = resizeSteps(state.builderSteps, barCount * state.builderTicksPerBar);
+      commitCompiledBuilderState(compileBuilderUpdate(steps, directions));
+    },
+    fillBuilderAlternating: () => {
+      const { steps, directions } = alternatingSteps(state.builderSteps.length);
+      commitCompiledBuilderState(compileBuilderUpdate(steps, directions));
+    },
+    loadBuilderChart: (parsed, fallbackMetadata = state.builderMetadata) => {
+      if (parsed && Array.isArray(parsed.score)) {
+        const scoreData = compileScoreData(parsed);
+        commitCompiledBuilderState(scoreData, { name: parsed.name, difficulty: parsed.difficulty });
+        return;
+      }
+      if (parsed && Array.isArray(parsed.steps)) {
+        if (!parsed.steps.length) {
+          throw new Error("steps配列を空にできません。");
+        }
+        const steps = [...parsed.steps];
+        const directions = deriveBuilderDirections(steps);
+        commitBuilderState({
+          scoreData: null,
+          steps,
+          directions,
+          ticksPerBar: 8,
+          beat: "4/4",
+          metadata: {
+            name: parsed.name || fallbackMetadata.name,
+            difficulty: parsed.difficulty || fallbackMetadata.difficulty,
+          },
+        });
+        return;
+      }
+      throw new Error("score配列を持つ譜面データが必要です。");
+    },
     generateRandomPattern: ({ difficulty, minimumBeat, includeTriplets, includeSyncopation, includeChops, includeFlares, includeKeeps }) => {
       const [numerator, denominator] = state.builderBeat.split("/").map(Number);
       const beatsPerBar = numerator * 4 / denominator;
@@ -104,16 +144,7 @@ export function createActions(store) {
         beat: state.builderBeat,
         score: bars,
       });
-      replaceBuilderState({
-        builderScoreData: generated,
-        builderSteps: generated.steps,
-        builderDirections: generated.directions,
-        builderTicksPerBar: generated.ticksPerBar,
-        builderBeat: generated.beat,
-        builderMetadata: { name: generated.source.name, difficulty },
-        builderScoreMode: null,
-        builderJsonDirty: false,
-      });
+      commitCompiledBuilderState(generated, { name: generated.source.name, difficulty });
       return generated;
     },
     setPlaybackState: (values) => dispatch("playback/set-state", { values }),

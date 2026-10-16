@@ -1,10 +1,8 @@
-export function deriveBuilderDirections(steps, initialDirection = "F", scoreMode = null) {
+export function deriveBuilderDirections(steps, initialDirection = "F") {
   let direction = initialDirection;
   return steps.map((step) => {
     if (step === "L") direction = "F";
     if (step === "R") direction = "B";
-    if (step === "M" && scoreMode === "forward") direction = "B";
-    if (step === "M" && scoreMode === "backward") direction = "F";
     return direction;
   });
 }

@@ -1,11 +1,7 @@
 import { compileScoreData, deriveBuilderDirections } from "./score-compiler.js";
 
-export function legacyStepsToScore(steps, { directions, ticksPerBar, scoreMode = null }) {
-  if (scoreMode === "transformer") {
-    return [["FC3", "BC3"], ["FC3", "BC3"]];
-  }
-
-  let lastDirection = scoreMode === "backward" ? "B" : "F";
+export function legacyStepsToScore(steps, { directions, ticksPerBar }) {
+  let lastDirection = "F";
   let faderOpen = true;
   const tokens = steps.map((step, index) => {
     if (step === "L") {

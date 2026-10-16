@@ -18,7 +18,6 @@ export function createInitialState(chartCatalog) {
     audioContext: null,
     scratchBuffers: null,
     builderSteps: [...chart.steps],
-    builderScoreMode: chart.scoreMode || null,
     builderScoreData: null,
     builderMetadata: { name: chart.name, difficulty: chart.difficulty },
     builderJsonDirty: false,
@@ -57,7 +56,6 @@ function reduceState(state, action) {
       return {
         ...initialTransportState,
         builderSteps: [...action.chart.steps],
-        builderScoreMode: action.chart.scoreMode || null,
         builderScoreData: action.chart.scoreData,
         builderMetadata: { name: action.chart.name, difficulty: action.chart.difficulty },
         builderJsonDirty: false,
@@ -88,8 +86,6 @@ function reduceState(state, action) {
     case "builder/set-json-dirty":
       return { builderJsonDirty: action.value };
     case "builder/set-state":
-      return action.values;
-    case "builder/edit":
       return action.values;
     case "playback/set-state":
       return action.values;
