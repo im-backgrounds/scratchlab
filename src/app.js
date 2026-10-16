@@ -41,6 +41,18 @@ import * as controls from "./ui/controls.js";
 import * as transport from "./ui/transport.js";
 import * as editor from "./ui/editor.js";
 import * as midiMappingUi from "./ui/midi-mapping.js";
+import {
+  analyzePerformance,
+  createExpectedEvents,
+} from "./domain/performance-analysis.js";
+import {
+  createChallengeRepository,
+  createChartKey,
+  deriveCurrentBpm,
+  describeChallenge,
+  getExpectedDurationMs,
+} from "./domain/bpm-challenge.js";
+import * as challengeUi from "./ui/challenge.js";
 import * as performanceUi from "./ui/performance.js";
 import * as savedCharts from "./ui/saved-charts.js";
 import * as visualizer from "./ui/visualizer.js";
@@ -71,6 +83,10 @@ let midiEventLog = [];
 const performanceRepository = createPerformanceRepository();
 let latestPerformance = performanceRepository.load();
 let performanceStartedAt = null;
+const challengeRepository = createChallengeRepository();
+// Only the challenged chart is kept; the BPM is derived from saved progress.
+let activeChallengeKey = null;
+let performanceBpm = null;
 
 function getSelectedChart() {
   return chartCatalog.find((chart) => chart.id === state.selectedChartId) ||
@@ -121,6 +137,7 @@ function showBuilderPage() {
 function resetPageState() {
   stopPlayback();
   abortPerformanceRecording();
+  abortChallenge();
   const selectedChart = getSelectedChart();
   actions.resetForChart(selectedChart);
 
@@ -189,6 +206,8 @@ function render() {
   renderSelectedChart();
   renderBuilder();
   updateTransportValues();
+  renderPerformanceAnalysis();
+  renderChallengePanel();
 }
 
 /**
@@ -452,6 +471,7 @@ function deleteSavedChart(id) {
       draftActive: state.builderDraftActive,
     });
   }
+  challengeRepository.remove(`saved:${id}`);
   renamingChartId = null;
   renderBuilder();
   renderSavedChartList();
@@ -764,14 +784,140 @@ async function connectMIDI() {
   }
 }
 
+function analyzeForChart(performance, chart) {
+  return analyzePerformance(
+    createExpectedEvents(chart.scoreData),
+    performance.events,
+  );
+}
+
+function renderPerformanceAnalysis() {
+  if (!latestPerformance) {
+    performanceUi.renderPerformanceAnalysis(null, "");
+    return;
+  }
+  const chart = getSelectedChart();
+  performanceUi.renderPerformanceAnalysis(
+    analyzeForChart(latestPerformance, chart),
+    chart.name,
+  );
+}
+
+// The practice view only offers built-in charts. Unsaved builder charts have
+// no key, so describeChallenge reports them as not eligible.
+function getChallengeChartKey() {
+  return createChartKey({ type: "builtin", id: getSelectedChart().id });
+}
+
+function renderChallengePanel() {
+  const chartKey = getChallengeChartKey();
+  const active = chartKey !== null && activeChallengeKey === chartKey;
+  const view = describeChallenge({
+    chartKey,
+    progress: chartKey ? challengeRepository.get(chartKey) : undefined,
+    active,
+  });
+  challengeUi.renderChallenge(view, getSelectedChart().name);
+  transport.setBpmLocked(active);
+  return view;
+}
+
+function setChallengeStatus(message) {
+  challengeUi.renderChallengeStatus(message);
+}
+
+function describeAttemptResult(outcome, bpm, accuracy) {
+  if (!outcome.ok) {
+    return outcome.reason === "unavailable"
+      ? "このブラウザーでは進捗を保存できません。"
+      : "進捗を保存できませんでした。";
+  }
+  const { result } = outcome;
+  if (result.status === "ignored") {
+    return result.reason === "no-accuracy"
+      ? "記録されたイベントがなかったため、この挑戦は数えません。"
+      : "この挑戦は数えません。";
+  }
+  const percent = `${accuracy.toFixed(1)}%`;
+  if (!result.valid) {
+    return `${bpm} BPM: 記録が長すぎます（譜面の長さの120%以内で演奏してください）。クリアになりません。`;
+  }
+  return result.cleared
+    ? `${bpm} BPM クリア！ 一致率 ${percent}。次は ${
+      deriveCurrentBpm(outcome.progress)
+    } BPM です。`
+    : `${bpm} BPM: 一致率 ${percent}。90%以上でクリアです。もう一度挑戦できます。`;
+}
+
+function evaluateChallengeAttempt(performance) {
+  const chartKey = activeChallengeKey;
+  activeChallengeKey = null;
+  const chart = getSelectedChart();
+  const bpm = performanceBpm;
+  if (chartKey === null || chartKey !== getChallengeChartKey() || !bpm) {
+    renderChallengePanel();
+    return;
+  }
+  const analysis = analyzeForChart(performance, chart);
+  const outcome = challengeRepository.recordAttempt(chartKey, {
+    bpm,
+    accuracy: analysis.accuracy,
+    actualDurationMs: performance.durationMs,
+    expectedDurationMs: getExpectedDurationMs(chart.scoreData, bpm),
+  });
+  setChallengeStatus(
+    describeAttemptResult(outcome, bpm, analysis.accuracy ?? 0),
+  );
+  renderChallengePanel();
+}
+
+function startChallenge() {
+  const view = renderChallengePanel();
+  if (!view.canStart) return;
+  if (state.recordingMidi) {
+    setChallengeStatus("記録を停止してからチャレンジを開始してください。");
+    return;
+  }
+  activeChallengeKey = getChallengeChartKey();
+  actions.setBpm(view.currentBpm);
+  updateTransportValues();
+  if (playbackController.isRunning) startPlayback(state.isBuilderPlayback);
+  renderChallengePanel();
+  setChallengeStatus(
+    `${view.currentBpm} BPM に固定しました。「記録を開始」で演奏を記録し、「記録を停止」で判定します。`,
+  );
+}
+
+function resetChallengeProgress() {
+  const chartKey = getChallengeChartKey();
+  if (!chartKey || !challengeUi.confirmReset(getSelectedChart().name)) return;
+  const result = challengeRepository.remove(chartKey);
+  renderChallengePanel();
+  setChallengeStatus(
+    result.ok ? "進捗をリセットしました。" : "進捗をリセットできませんでした。",
+  );
+}
+
+// Called when the page state is reset (chart switch): drop an unfinished
+// challenge and release the BPM slider.
+function abortChallenge() {
+  const wasActive = activeChallengeKey !== null;
+  activeChallengeKey = null;
+  setChallengeStatus(
+    wasActive ? "譜面の切り替えでチャレンジを中断しました。" : "",
+  );
+}
+
 function finishPerformanceRecording() {
   const performance = createPerformance(state.midiActionRecord, {
     startedAt: performanceStartedAt,
     endedAt: Date.now(),
   });
   performanceStartedAt = null;
+  const isChallengeTake = activeChallengeKey !== null;
   latestPerformance = performance;
   performanceUi.renderPerformance(performance);
+  renderPerformanceAnalysis();
   const saved = performanceRepository.save(performance);
   const note = saved.ok
     ? "最新の記録はこのブラウザーに保存されました。"
@@ -782,6 +928,7 @@ function finishPerformanceRecording() {
   performanceUi.renderPerformanceStatus(
     `${performance.events.length}件のイベントを記録しました。${truncated}${note}`,
   );
+  if (isChallengeTake) evaluateChallengeAttempt(performance);
 }
 
 // The page reset clears the MIDI recording state, so an unfinished
@@ -790,6 +937,7 @@ function abortPerformanceRecording() {
   if (!state.recordingMidi) return;
   stopDetector.cancel();
   performanceStartedAt = null;
+  performanceBpm = null;
   performanceUi.renderPerformanceRecording(false);
   performanceUi.renderPerformanceStatus(
     "譜面の切り替えで記録を中断しました。",
@@ -797,11 +945,13 @@ function abortPerformanceRecording() {
 }
 
 function toggleMidiRecording() {
-  stopDetector.cancel();
   if (state.recordingMidi) {
+    stopDetector.flush();
     finishPerformanceRecording();
   } else {
+    stopDetector.cancel();
     performanceStartedAt = Date.now();
+    performanceBpm = state.bpm;
     performanceUi.renderPerformanceStatus(
       "記録中… スクラッチとフェーダーの操作を記録しています。",
     );
@@ -873,6 +1023,10 @@ transport.bindTransport({
     else startPlayback(isBuilderPlayback);
   },
   onBpmChange: (value) => {
+    if (activeChallengeKey !== null) {
+      updateTransportValues();
+      return;
+    }
     actions.setBpm(value);
     updateTransportValues();
     if (playbackController.isRunning) startPlayback(state.isBuilderPlayback);
@@ -922,12 +1076,18 @@ editorUi = editor.bindEditor({
     editor.setJsonStatus(`JSONファイル読み込みエラー: ${error.message}`, true),
 });
 
+challengeUi.bindChallenge({
+  onStart: startChallenge,
+  onRetry: startChallenge,
+  onReset: resetChallengeProgress,
+});
 savedCharts.bindSavedCharts({ onSave: saveCurrentChart });
 controls.renderInitialControls(state, getBuilderBarCount());
 render();
 restoreLastSession();
 renderMidiMappingPanel();
 performanceUi.renderPerformance(latestPerformance);
+renderPerformanceAnalysis();
 if (latestPerformance) {
   performanceUi.renderPerformanceStatus("前回の記録を読み込みました。");
 }

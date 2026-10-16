@@ -174,6 +174,52 @@
             </div>
           </section>
 
+          <section id="challenge-panel" class="card secondary-card"
+            aria-labelledby="challenge-title">
+            <div class="section-header">
+              <div>
+                <h3 id="challenge-title">BPMチャレンジ</h3>
+                <p
+                  id="challenge-chart-name">選択中の譜面で、BPMを上げながら挑戦します</p>
+              </div>
+            </div>
+
+            <div class="button-row">
+              <button id="challenge-start" class="secondary-button"
+                type="button">チャレンジ開始</button>
+              <button id="challenge-retry" class="secondary-button"
+                type="button">リトライ</button>
+              <button id="challenge-reset" class="secondary-button"
+                type="button">進捗をリセット</button>
+            </div>
+
+            <div id="challenge-status" class="status-box" role="status"
+              aria-live="polite"></div>
+
+            <dl class="performance-counts challenge-stats">
+              <div class="performance-count">
+                <dt>挑戦BPM</dt>
+                <dd id="challenge-current-bpm">—</dd>
+              </div>
+              <div class="performance-count">
+                <dt>最高クリアBPM</dt>
+                <dd id="challenge-highest-bpm">—</dd>
+              </div>
+              <div class="performance-count">
+                <dt>ベスト一致率</dt>
+                <dd id="challenge-best-accuracy">—</dd>
+              </div>
+              <div class="performance-count">
+                <dt>挑戦回数</dt>
+                <dd id="challenge-attempts">0</dd>
+              </div>
+              <div class="performance-count">
+                <dt>クリア回数</dt>
+                <dd id="challenge-clears">0</dd>
+              </div>
+            </dl>
+          </section>
+
           <section id="performance-panel" class="card secondary-card"
             aria-labelledby="performance-title">
             <div class="section-header">
@@ -218,6 +264,29 @@
               <li class="performance-segment-open">Fader Open</li>
               <li class="performance-segment-closed">Fader Close</li>
             </ul>
+
+            <h4 class="performance-heading">譜面との比較</h4>
+            <p id="performance-analysis-chart"
+              class="performance-analysis-note"></p>
+            <div id="performance-analysis" class="performance-analysis">
+              <div class="performance-accuracy">
+                <span class="performance-accuracy-label">一致率</span>
+                <strong id="performance-accuracy" aria-live="polite">—</strong>
+              </div>
+              <dl id="performance-analysis-totals"
+                class="performance-analysis-totals"></dl>
+              <table class="performance-analysis-table">
+                <thead>
+                  <tr>
+                    <th scope="col">イベント</th>
+                    <th scope="col">一致</th>
+                    <th scope="col">不足</th>
+                    <th scope="col">余分</th>
+                  </tr>
+                </thead>
+                <tbody id="performance-analysis-rows"></tbody>
+              </table>
+            </div>
           </section>
         </div>
 

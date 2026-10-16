@@ -122,3 +122,65 @@ export function downloadPerformance(text, filename) {
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
+const ANALYSIS_TOTALS = [
+  ["matched", "一致 (matched)"],
+  ["missing", "不足 (missing)"],
+  ["extra", "余分 (extra)"],
+];
+
+/**
+ * Renders the comparison with the expected chart events.
+ * @param {object|null} analysis Result of analyzePerformance, or null.
+ * @param {string} chartName Name of the chart compared against.
+ */
+export function renderPerformanceAnalysis(analysis, chartName) {
+  const note = document.getElementById("performance-analysis-chart");
+  const accuracy = document.getElementById("performance-accuracy");
+  const totals = document.getElementById("performance-analysis-totals");
+  const rows = document.getElementById("performance-analysis-rows");
+  totals.replaceChildren();
+  rows.replaceChildren();
+  document.getElementById("performance-analysis").classList.toggle(
+    "is-empty",
+    !analysis,
+  );
+
+  if (!analysis) {
+    note.textContent = "記録すると、選択中の譜面と比較します。";
+    accuracy.textContent = "—";
+    return;
+  }
+
+  note.textContent =
+    `「${chartName}」の動作順と比較しています（タイミングは評価しません）。`;
+  accuracy.textContent = analysis.accuracy === null
+    ? "—"
+    : `${analysis.accuracy.toFixed(1)}%`;
+
+  for (const [key, label] of ANALYSIS_TOTALS) {
+    const item = document.createElement("div");
+    item.className = `performance-count performance-analysis-${key}`;
+    const term = document.createElement("dt");
+    term.textContent = label;
+    const value = document.createElement("dd");
+    value.textContent = String(analysis[key]);
+    item.append(term, value);
+    totals.append(item);
+  }
+
+  for (const key of COUNT_KEYS) {
+    const tally = analysis.byKind[key];
+    const row = document.createElement("tr");
+    const head = document.createElement("th");
+    head.scope = "row";
+    head.textContent = COUNT_LABELS[key];
+    row.append(head);
+    for (const field of ["matched", "missing", "extra"]) {
+      const cell = document.createElement("td");
+      cell.textContent = String(tally[field]);
+      row.append(cell);
+    }
+    rows.append(row);
+  }
+}

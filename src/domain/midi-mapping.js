@@ -282,24 +282,34 @@ export function createStopDetector({
   clearTimer = clearTimeout,
 }) {
   let timer = null;
+  let lastEvent = null;
   const cancel = () => {
     if (timer !== null) clearTimer(timer);
     timer = null;
+    lastEvent = null;
+  };
+  const emit = (time) => {
+    onStop({ type: "scratch", direction: "stop", time });
   };
   return {
     observe(event) {
       if (event.type !== "scratch") return;
       cancel();
+      lastEvent = event;
       timer = setTimer(() => {
         timer = null;
-        onStop({
-          type: "scratch",
-          direction: "stop",
-          time: event.time + timeoutMs,
-        });
+        lastEvent = null;
+        emit(event.time + timeoutMs);
       }, timeoutMs);
     },
     cancel,
+    /** Emits the pending stop immediately, never stamped after `now`. */
+    flush(now = Date.now()) {
+      if (timer === null) return;
+      const time = Math.min(lastEvent.time + timeoutMs, now);
+      cancel();
+      emit(time);
+    },
   };
 }
 

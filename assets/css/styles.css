@@ -1994,3 +1994,100 @@ button {
   stroke-width: 1.4;
   fill: none;
 }
+
+.performance-analysis-note {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.performance-analysis {
+  display: grid;
+  gap: 12px;
+}
+
+.performance-analysis.is-empty .performance-analysis-totals,
+.performance-analysis.is-empty .performance-analysis-table {
+  display: none;
+}
+
+.performance-accuracy {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.performance-accuracy-label {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.performance-accuracy strong {
+  color: var(--text);
+  font-size: 2rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.performance-analysis-totals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.performance-analysis-matched {
+  border-top: 3px solid var(--success, #7ff0b8);
+}
+
+.performance-analysis-missing {
+  border-top: 3px solid var(--warning, #f5d36c);
+}
+
+.performance-analysis-extra {
+  border-top: 3px solid var(--accent, #ff8c5a);
+}
+
+.performance-analysis-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.performance-analysis-table th,
+.performance-analysis-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+}
+
+.performance-analysis-table th:first-child {
+  text-align: left;
+}
+
+.performance-analysis-table thead th {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.challenge-stats {
+  margin-top: 12px;
+}
+
+.challenge-stats .performance-count {
+  border-top-color: var(--primary, #6fe3ff);
+}
+
+#challenge-panel.is-active {
+  border-color: var(--primary, #6fe3ff);
+}
+
+#challenge-panel button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.control input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

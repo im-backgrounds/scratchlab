@@ -1,5 +1,6 @@
 export function renderTransport(state, builderBarCount) {
   document.getElementById("bpm-value").textContent = `${state.bpm}`;
+  document.getElementById("bpm-slider").value = String(state.bpm);
   document.getElementById("volume-value").textContent = `${
     Math.round(state.volume * 100)
   }%`;
@@ -9,6 +10,11 @@ export function renderTransport(state, builderBarCount) {
   document.getElementById("pattern-length-value").textContent =
     `${builderBarCount}`;
   document.getElementById("pattern-length").value = String(builderBarCount);
+}
+
+/** Locks the BPM slider while a challenge fixes the tempo. */
+export function setBpmLocked(locked) {
+  document.getElementById("bpm-slider").disabled = locked;
 }
 
 export function bindTransport({
