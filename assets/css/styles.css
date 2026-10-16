@@ -465,6 +465,10 @@ button {
   gap: 28px 36px;
 }
 
+.guide-grid > * {
+  min-width: 0;
+}
+
 .guide-item {
   padding-top: 14px;
   border-top: 2px solid rgba(111, 228, 255, 0.38);
@@ -479,6 +483,147 @@ button {
   margin: 0;
   color: var(--muted);
   line-height: 1.75;
+}
+
+.guide-card {
+  position: relative;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.018));
+}
+
+.guide-card h3 {
+  margin: 0 0 10px;
+  font-size: 1.08rem;
+}
+
+.guide-card > p:not(.eyebrow) {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.75;
+}
+
+.guide-card .eyebrow {
+  margin: 0 0 7px;
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.guide-first-steps {
+  border-color: rgba(111, 228, 255, 0.28);
+  background: radial-gradient(ellipse at top left, rgba(111, 228, 255, 0.09), transparent 68%), rgba(255, 255, 255, 0.025);
+}
+
+.guide-step-number {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin-bottom: 12px;
+  border: 1px solid rgba(111, 228, 255, 0.36);
+  border-radius: 50%;
+  background: rgba(111, 228, 255, 0.09);
+  color: var(--primary);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.notation-example {
+  margin: 20px 0 0;
+  padding: 12px 12px 8px;
+  border: 1px solid rgba(210, 230, 246, 0.12);
+  border-radius: 12px;
+  background: rgba(4, 12, 20, 0.32);
+}
+
+.notation-example svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.notation-example figcaption {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.guide-diagram-grid path {
+  fill: none;
+  stroke: rgba(210, 230, 246, 0.16);
+  stroke-dasharray: 3 6;
+  stroke-width: 1;
+}
+
+.guide-stroke {
+  fill: none;
+  stroke: #6fe4ff;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 5;
+}
+
+.guide-muted-area {
+  fill: rgba(156, 180, 210, 0.08);
+  stroke: rgba(156, 180, 210, 0.4);
+  stroke-dasharray: 4 4;
+}
+
+.guide-fader-mark {
+  fill: none;
+  stroke: #ffa94d;
+  stroke-linecap: round;
+  stroke-width: 4;
+}
+
+.notation-example text {
+  fill: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.notation-example .guide-time-arrow {
+  fill: none;
+  stroke: var(--muted);
+  stroke-linecap: round;
+  stroke-width: 1.5;
+}
+
+.guide-code-example {
+  display: grid;
+  gap: 5px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(4, 12, 20, 0.38);
+}
+
+.guide-code-example code,
+.guide-card code {
+  color: var(--primary);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.guide-code-example span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.symbol-table-wrap {
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  margin-top: 16px;
+  border: 1px solid rgba(210, 230, 246, 0.13);
+  border-radius: 12px;
 }
 
 .guide-source {
@@ -1270,7 +1415,8 @@ button {
 .symbol-table {
   width: 100%;
   border-collapse: collapse;
-  margin-bottom: 10px;
+  margin: 0;
+  background: rgba(4, 12, 20, 0.2);
 }
 
 .symbol-table th,
@@ -1279,6 +1425,65 @@ button {
   text-align: left;
   border-bottom: 1px solid rgba(210, 230, 246, 0.16);
   vertical-align: middle;
+  line-height: 1.6;
+}
+
+.symbol-table thead th {
+  background: rgba(111, 228, 255, 0.07);
+  color: var(--text);
+  font-size: 0.8rem;
+}
+
+.symbol-table tbody th {
+  min-width: 118px;
+  color: var(--primary);
+  white-space: nowrap;
+}
+
+.symbol-table tbody td {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.symbol-table tbody tr:last-child th,
+.symbol-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.guide-note {
+  margin-top: 14px !important;
+}
+
+.guide-practice-steps {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0 0;
+  padding-left: 1.35rem;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.guide-practice-steps li::marker {
+  color: var(--primary);
+  font-weight: 800;
+}
+
+@media (max-width: 680px) {
+  .guide-card {
+    padding: 16px;
+  }
+
+  .notation-example {
+    padding: 8px;
+  }
+
+  .notation-example text {
+    font-size: 14px;
+  }
+
+  .symbol-table {
+    min-width: 620px;
+  }
 }
 
 .rhythm-staff line,

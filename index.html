@@ -150,45 +150,98 @@
           <header class="guide-page-header">
             <p class="eyebrow">SCRATCH NOTATION</p>
             <h2 id="notation-guide-title">譜面の読み方</h2>
-            <p>譜面は左から右へ読みます。横軸が時間、縦軸がレコードの動く方向です。</p>
+            <p>はじめてでも大丈夫。譜面は「いつ」「どちらへ動かすか」「音を出すか」を、左から右へ読めるようにできています。</p>
           </header>
 
           <div class="guide-grid">
-            <section class="guide-item">
-              <h3>レコードの動き</h3>
-              <p>斜線が一本のストロークです。上向きは前進、下向きは戻しを表します。同じ方向に続く線は一続きの動きとして読みます。</p>
+            <section class="guide-card guide-wide guide-first-steps">
+              <p class="eyebrow">まずはここだけ</p>
+              <h3>譜面は左から右へ読みます</h3>
+              <p>横の位置が時間です。再生すると左端から進みます。線の向きでレコードを動かす方向を、線や記号で音の出し方を確認します。</p>
+              <figure class="notation-example">
+                <svg viewBox="0 0 640 190" role="img" aria-labelledby="guide-diagram-title guide-diagram-desc">
+                  <title id="guide-diagram-title">前進、後進、ミュートを表す譜面の例</title>
+                  <desc id="guide-diagram-desc">時間は左から右へ進みます。上向きの線は前進、下向きの線は後進、横棒の付いたミュート区間は音が出ません。</desc>
+                  <g class="guide-diagram-grid">
+                    <path d="M70 24V156 M236 24V156 M402 24V156 M568 24V156" />
+                    <path d="M54 42H584 M54 95H584 M54 148H584" />
+                  </g>
+                  <path class="guide-stroke" d="M70 148L236 42 M236 42L402 148" />
+                  <rect class="guide-muted-area" x="402" y="42" width="166" height="106" rx="8" />
+                  <path class="guide-fader-mark" d="M397 148H407" />
+                  <text x="153" y="30">F 前進</text>
+                  <text x="284" y="170">B 後進</text>
+                  <text x="446" y="94">BM</text>
+                  <text x="425" y="112">無音の区間</text>
+                  <path class="guide-time-arrow" d="M70 178H568" />
+                  <path class="guide-time-arrow" d="M568 178L558 172M568 178L558 184" />
+                  <text x="43" y="184">時間</text>
+                </svg>
+                <figcaption>上向きの斜線が前進、下向きが後進。横棒はフェーダーの切り替え位置です。</figcaption>
+              </figure>
             </section>
-            <section class="guide-item">
-              <h3>フェーダー</h3>
-              <p>短い横棒はフェーダーを一度OFFにする記号です。譜面が続く場合は、すぐにONへ戻します。Forward Scratchでは緑がON、橙がOFFです。</p>
+
+            <section class="guide-card">
+              <span class="guide-step-number">1</span>
+              <h3>まず線の向きを見ます</h3>
+              <p><strong>F</strong> は前進、つまり手前から奥へ押す動き。<strong>B</strong> は後進、奥から手前へ戻す動きです。譜面の上向き線がF、下向き線がBです。同じ向きの動きが続くと、線はつながって見えます。</p>
             </section>
-            <section class="guide-item">
-              <h3>音の数</h3>
-              <p>基本は斜線の数で数えます。横棒は音数に含めません。Cは1クリック、Sは3クリックを表します。</p>
+
+            <section class="guide-card">
+              <span class="guide-step-number">2</span>
+              <h3>横棒でフェーダーの操作を見ます</h3>
+              <p>譜面上の短い横棒は、フェーダーを切り替える位置です。<strong>O</strong> は閉じた状態から開く、<strong>M</strong> は開いた状態から閉じる合図です。最初はONで、修飾記号のないF・Bはフェーダーの状態を保ちます。再生中は緑がON、橙がOFFを表します。</p>
             </section>
-            <section class="guide-item">
-              <h3>空白</h3>
-              <p>Forward Scratchの空白セルは、フェーダーを切ったままレコードを戻す時間です。線もスクラッチ音もありません。</p>
+
+            <section class="guide-card">
+              <span class="guide-step-number">3</span>
+              <h3>1つの区間にかかる時間を見ます</h3>
+              <p>小節の中は均等に分けられます。配列の区切りが増えると、1つずつの区間は短くなります。入れ子の区切りは、その区間をさらに分けます。</p>
+              <div class="guide-code-example">
+                <code>["F", "B", "F", "B"]</code>
+                <span>4つの動きを同じ長さで行う</span>
+              </div>
+              <div class="guide-code-example">
+                <code>["F", ["B", "B", "B"]]</code>
+                <span>前進のあと、残りの時間を後進3つに均等分割</span>
+              </div>
             </section>
-            <section class="guide-item guide-wide">
-              <h3>符号の一覧</h3>
-              <table class="symbol-table">
-                <thead><tr><th>符号</th><th>表記</th><th>意味</th></tr></thead>
+
+            <section class="guide-card guide-wide">
+              <h3>よく使う記号</h3>
+              <p>記号は「方向」と「フェーダー操作」を組み合わせて読みます。たとえば <code>FC</code> は「前進しながらチョップ」です。</p>
+              <div class="symbol-table-wrap">
+                <table class="symbol-table">
+                  <thead><tr><th scope="col">記号</th><th scope="col">読み方</th><th scope="col">動きと音</th></tr></thead>
                 <tbody>
-                  <tr><td><code>F</code></td><td><svg viewBox="0 0 40 32" width="64" height="48" aria-hidden="true"><path d="M4 26 L36 6" stroke="#6fe4ff" stroke-width="3" fill="none" stroke-linecap="round" /></svg></td><td>前進</td></tr>
-                  <tr><td><code>B</code></td><td><svg viewBox="0 0 40 32" width="64" height="48" aria-hidden="true"><path d="M4 6 L36 26" stroke="#6fe4ff" stroke-width="3" fill="none" stroke-linecap="round" /></svg></td><td>後進</td></tr>
-                  <tr><td><code>K</code></td><td><svg viewBox="0 0 40 32" width="64" height="48" aria-hidden="true"><path d="M4 16 H36" stroke="#6fe4ff" stroke-width="3" fill="none" stroke-linecap="round" /></svg></td><td>キープ（前後の符号の方向に応じて水平線を接続）</td></tr>
-                  <tr><td><code>FO</code></td><td><svg viewBox="0 0 40 32" width="64" height="48" aria-hidden="true"><path d="M14 26 L36 6" stroke="#6fe4ff" stroke-width="3" fill="none" stroke-linecap="round" /><path d="M4 28 H14" stroke="#ffa94d" stroke-width="3" fill="none" stroke-linecap="round" /></svg></td><td>前進（フェーダーOFF→ON）</td></tr>
-                  <tr><td><code>BM</code></td><td><svg viewBox="0 0 40 32" width="64" height="48" aria-hidden="true"><path d="M4 28 H36" stroke="#ffa94d" stroke-width="3" fill="none" stroke-linecap="round" /></svg></td><td>後進（フェーダーON→OFF、無音）</td></tr>
-                  <tr><td><code>FC</code></td><td><svg viewBox="0 0 40 32" width="64" height="48" aria-hidden="true"><path d="M4 26 L16 14" stroke="#6fe4ff" stroke-width="3" fill="none" stroke-linecap="round" /><path d="M18 28 H36" stroke="#ffa94d" stroke-width="3" fill="none" stroke-linecap="round" /></svg></td><td>前進チョップ（1音だけ鳴らして残りをミュート）</td></tr>
-                  <tr><td><code>FF</code></td><td><svg viewBox="0 0 40 32" width="64" height="48" aria-hidden="true"><path d="M16 22 L36 6" stroke="#6fe4ff" stroke-width="3" fill="none" stroke-linecap="round" /><path d="M4 28 H16" stroke="#ffa94d" stroke-width="3" fill="none" stroke-linecap="round" /></svg></td><td>前進フレア（短い無音の後、1音を終端まで伸ばす）</td></tr>
-                  <tr><td><code>BC3</code></td><td><svg viewBox="0 0 40 32" width="64" height="48" aria-hidden="true"><path d="M4 6 L10 14 M16 6 L22 14 M28 6 L34 14" stroke="#6fe4ff" stroke-width="3" fill="none" stroke-linecap="round" /></svg></td><td>後進チョップ×3（区間を3等分）</td></tr>
+                  <tr><th scope="row"><code>F</code> / <code>B</code></th><td>前進 / 後進</td><td>フェーダーの状態を保ったまま、矢印の向きに動かします。</td></tr>
+                  <tr><th scope="row"><code>FO</code> / <code>BO</code></th><td>フェーダーを開いて動く</td><td>OFFからONに切り替え、その区間で音を出します。</td></tr>
+                  <tr><th scope="row"><code>FM</code> / <code>BM</code></th><td>フェーダーを閉じて動く</td><td>ONからOFFに切り替えます。時間は進みますが、音と斜線は表示されません。</td></tr>
+                  <tr><th scope="row"><code>FC</code> / <code>BC</code></th><td>チョップ</td><td>1回音を出し、残りの区間はミュートします。</td></tr>
+                  <tr><th scope="row"><code>FF</code> / <code>BF</code></th><td>フレア</td><td>短く音を切ってから再び開き、1音を区間の終わりまで伸ばします。</td></tr>
+                  <tr><th scope="row"><code>K</code></th><td>キープ</td><td>音を出さずに水平線でつなぎます。再生中のスクラッチ音はKの開始時に止まりますが、クリック音は続きます。</td></tr>
+                  <tr><th scope="row"><code>FC3</code> など</th><td>回数</td><td>末尾の数字は、その区間を均等に分けて繰り返す回数です。<code>FC3</code> は前進チョップを3回行います。</td></tr>
                 </tbody>
-              </table>
-              <p>青い斜線が音を出すストローク（上が前進、下が後進）、橙の横棒はフェーダー操作です。</p>
+                </table>
+              </div>
+              <p class="guide-note">Kは単独で使う記号です。方向を表す符号に付けて <code>FK</code> や <code>BK</code> とは書きません。</p>
+            </section>
+
+            <section class="guide-card">
+              <h3>音が出ない区間も時間に含まれます</h3>
+              <p><code>M</code> は音を止める区間です。斜線が描かれなくても、その区間の時間は進みます。動きを止める記号ではありません。</p>
+            </section>
+
+            <section class="guide-card">
+              <h3>再生しながら少しずつ練習</h3>
+              <ol class="guide-practice-steps">
+                <li>譜面一覧から練習したいパターンを選びます。</li>
+                <li>「再生」を押し、クリック音に合わせて譜面を目で追います。</li>
+                <li>難しければBPMを下げ、FとBの向きだけを先に練習します。</li>
+                <li>慣れたらフェーダー記号やC・F・Kの違いを加えます。</li>
+              </ol>
             </section>
           </div>
-
         </section>
 
         <section id="builder-page" class="builder-page" hidden aria-labelledby="builder-title">
