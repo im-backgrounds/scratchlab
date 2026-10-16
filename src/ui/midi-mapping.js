@@ -171,14 +171,29 @@ function createRangeEditor(action, entry, handlers) {
   return form;
 }
 
+export function renderMidiEventCounts(rawCount, performanceCount) {
+  document.getElementById("midi-event-counts").textContent =
+    `受信 ${rawCount}件 → パフォーマンス ${performanceCount}件`;
+}
+
 export function renderMidiMappingStatus(message) {
   document.getElementById("midi-mapping-status").textContent = message;
 }
 
-export function renderMidiEventLog(events) {
-  const log = document.getElementById("midi-event-log");
+const EMPTY_LOG_MESSAGES = {
+  "midi-event-log": "変換されたイベントはまだありません。",
+  "midi-performance-log": "パフォーマンスイベントはまだありません。",
+};
+
+/**
+ * Renders one of the event logs: the raw converted events
+ * ("midi-event-log") or the compressed performance events
+ * ("midi-performance-log").
+ */
+export function renderMidiEventLog(events, id = "midi-event-log") {
+  const log = document.getElementById(id);
   if (!events.length) {
-    log.textContent = "変換されたイベントはまだありません。";
+    log.textContent = EMPTY_LOG_MESSAGES[id];
     return;
   }
   const start = events[0].time;

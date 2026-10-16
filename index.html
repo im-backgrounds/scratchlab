@@ -298,9 +298,20 @@
               <div id="midi-mapping-status" class="status-box" role="status">
                 操作を割り当てると、入力がスクラッチとフェーダーのイベントに変換されます。
               </div>
-              <h4>イベントログ</h4>
+              <h4>受信イベント（変換後・全件）</h4>
+              <p class="midi-mapping-help">
+                コントローラーが送る全メッセージを、スクラッチ／フェーダーのイベントに変換したものです。1回のストロークで何百件も届きます。
+              </p>
               <div id="midi-event-log" class="log-box" role="log"
                 aria-live="polite">変換されたイベントはまだありません。</div>
+              <h4>パフォーマンスイベント（方向が変わったものだけ）</h4>
+              <p class="midi-mapping-help">
+                同じ方向・状態が続く間は1件にまとめた、記録と採点に使われるイベントです。
+              </p>
+              <div id="midi-performance-log" class="log-box" role="log"
+                aria-live="polite">パフォーマンスイベントはまだありません。</div>
+              <p id="midi-event-counts" class="midi-mapping-help"
+                aria-live="polite">受信 0件 → パフォーマンス 0件</p>
             </div>
           </section>
         </section>

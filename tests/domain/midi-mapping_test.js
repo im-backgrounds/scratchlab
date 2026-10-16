@@ -4,6 +4,7 @@ import {
   clearMapping,
   convertMidiMessage,
   createEmptyMapping,
+  createEventCompressor,
   createMidiMappingRepository,
   createStopDetector,
   describeSignature,
@@ -642,4 +643,111 @@ Deno.test("event log lines show seconds since the first event", () => {
     formatMidiActionEvent({ type: "scratch", direction: "stop", time: 1000 }),
     "+0.000s scratch stop",
   );
+});
+
+const scratchEvent = (direction, time = 0) => ({
+  type: "scratch",
+  direction,
+  time,
+});
+const faderEvent = (state, time = 0) => ({ type: "fader", state, time });
+const compress = (events) => {
+  const compressor = createEventCompressor();
+  return events.map((event) => compressor.accept(event)).filter(Boolean);
+};
+const summary = (events) => events.map((e) => e.direction ?? e.state);
+
+Deno.test("consecutive identical scratch directions collapse into one event", () => {
+  const events = [
+    "forward",
+    "forward",
+    "forward",
+    "forward",
+    "backward",
+    "backward",
+  ]
+    .map((direction, index) => scratchEvent(direction, index));
+  assert.deepEqual(summary(compress(events)), ["forward", "backward"]);
+});
+
+Deno.test("the first event of each kind is always kept with its timestamp", () => {
+  const kept = compress([
+    scratchEvent("forward", 5),
+    scratchEvent("forward", 6),
+  ]);
+  assert.equal(kept.length, 1);
+  assert.equal(kept[0].time, 5);
+});
+
+Deno.test("a stop separates strokes, so the same direction is kept again", () => {
+  const kept = compress([
+    scratchEvent("forward"),
+    scratchEvent("forward"),
+    scratchEvent("stop"),
+    scratchEvent("forward"),
+  ]);
+  assert.deepEqual(summary(kept), ["forward", "stop", "forward"]);
+});
+
+Deno.test("fader movement collapses to state changes, independent of scratch", () => {
+  const kept = compress([
+    faderEvent("open"),
+    scratchEvent("forward"),
+    faderEvent("open"),
+    faderEvent("closed"),
+    scratchEvent("forward"),
+    faderEvent("closed"),
+    faderEvent("open"),
+  ]);
+  assert.deepEqual(summary(kept), ["open", "forward", "closed", "open"]);
+});
+
+Deno.test("reset forgets the previous direction", () => {
+  const compressor = createEventCompressor();
+  assert.ok(compressor.accept(scratchEvent("forward")));
+  assert.equal(compressor.accept(scratchEvent("forward")), null);
+  compressor.reset();
+  assert.ok(compressor.accept(scratchEvent("forward")));
+});
+
+Deno.test("a 800-message stroke stream becomes one event per stroke", () => {
+  const mapping = assignMapping(
+    assignMapping(
+      createEmptyMapping(),
+      "forward",
+      getMidiSignature([0x90, 36, 100]),
+    ),
+    "backward",
+    getMidiSignature([0x90, 36, 20]),
+  );
+  const compressor = createEventCompressor();
+  const timers = [];
+  const detector = createStopDetector({
+    onStop: (event) => {
+      const kept = compressor.accept(event);
+      if (kept) recorded.push(kept);
+    },
+    setTimer: (fn) => timers.push(fn) - 1,
+    clearTimer: (id) => (timers[id] = () => {}),
+  });
+  const recorded = [];
+  let raw = 0;
+  let time = 0;
+  for (let stroke = 0; stroke < 16; stroke += 1) {
+    const velocity = stroke % 2 === 0 ? 100 : 20;
+    for (let i = 0; i < 50; i += 1) {
+      time += 2;
+      const event = convertMidiMessage([0x90, 36, velocity], mapping, time);
+      raw += 1;
+      detector.observe(event);
+      const kept = compressor.accept(event);
+      if (kept) recorded.push(kept);
+    }
+  }
+  detector.flush(time + 1000);
+  assert.equal(raw, 800);
+  assert.deepEqual(summary(recorded), [
+    ...Array.from({ length: 8 }, () => ["forward", "backward"]).flat(),
+    "stop",
+  ]);
 });

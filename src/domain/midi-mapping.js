@@ -313,6 +313,38 @@ export function createStopDetector({
   };
 }
 
+/**
+ * Turns the stream of converted events into performance events. A controller
+ * sends many messages per stroke, so only changes are kept: a scratch event
+ * is dropped when the previous scratch event had the same direction, and a
+ * fader event when the previous one had the same state. A stop counts as a
+ * direction, so the next stroke after a stop is kept again.
+ * @returns {{accept: (event: object) => object|null, reset: () => void}}
+ */
+export function createEventCompressor() {
+  let lastDirection = null;
+  let lastFaderState = null;
+  return {
+    accept(event) {
+      if (event.type === "scratch") {
+        if (event.direction === lastDirection) return null;
+        lastDirection = event.direction;
+        return event;
+      }
+      if (event.type === "fader") {
+        if (event.state === lastFaderState) return null;
+        lastFaderState = event.state;
+        return event;
+      }
+      return null;
+    },
+    reset() {
+      lastDirection = null;
+      lastFaderState = null;
+    },
+  };
+}
+
 export function formatMidiActionEvent(event, startTime = event.time) {
   const seconds = ((event.time - startTime) / 1000).toFixed(3);
   const label = event.type === "scratch"

@@ -12,6 +12,7 @@ import {
 import {
   assignMapping,
   clearMapping,
+  createEventCompressor,
   createMidiMappingRepository,
   createStopDetector,
   FIXED_VELOCITY_ACTIONS,
@@ -90,6 +91,11 @@ const MIDI_EVENT_LOG_LIMIT = 50;
 let midiMapping = midiMappingRepository.load();
 let midiLearnAction = null;
 let midiEventLog = [];
+let performanceEventLog = [];
+let rawEventCount = 0;
+let performanceEventCount = 0;
+let recordedRawCount = 0;
+const eventCompressor = createEventCompressor();
 const performanceRepository = createPerformanceRepository();
 let latestPerformance = performanceRepository.load();
 const challengeRepository = createChallengeRepository();
@@ -639,10 +645,26 @@ function saveMidiMapping() {
     : "（割り当てをブラウザーに保存できませんでした）";
 }
 
+// Every converted message is logged as a raw event; only direction/state
+// changes become performance events (logged, and recorded while recording).
 function recordMidiActionEvent(event) {
+  rawEventCount += 1;
+  if (state.recordingMidi) recordedRawCount += 1;
   midiEventLog = [...midiEventLog, event].slice(-MIDI_EVENT_LOG_LIMIT);
   midiMappingUi.renderMidiEventLog(midiEventLog);
-  if (state.recordingMidi) actions.recordMidiAction(event);
+  const performanceEvent = eventCompressor.accept(event);
+  if (performanceEvent) {
+    performanceEventCount += 1;
+    performanceEventLog = [...performanceEventLog, performanceEvent].slice(
+      -MIDI_EVENT_LOG_LIMIT,
+    );
+    midiMappingUi.renderMidiEventLog(
+      performanceEventLog,
+      "midi-performance-log",
+    );
+    if (state.recordingMidi) actions.recordMidiAction(performanceEvent);
+  }
+  midiMappingUi.renderMidiEventCounts(rawEventCount, performanceEventCount);
 }
 
 const stopDetector = createStopDetector({ onStop: recordMidiActionEvent });
@@ -995,6 +1017,8 @@ function cancelChallenge(reason) {
 
 function beginChallengeRecording(now) {
   stopDetector.cancel();
+  eventCompressor.reset();
+  recordedRawCount = 0;
   actions.clearMidiRecord();
   actions.setMidiState({ recordingMidi: true });
   challengeRun.startedAt = now;
@@ -1026,7 +1050,7 @@ function finishChallengeRecording(run, now) {
     ? "イベント数が上限に達したため、後半は記録されていません。"
     : "";
   performanceUi.renderPerformanceStatus(
-    `${performance.events.length}件のイベントを記録しました。${truncated}${note}`,
+    `${performance.events.length}件のイベントを記録しました（受信${recordedRawCount}件を方向の変化だけに圧縮）。${truncated}${note}`,
   );
   return performance;
 }

@@ -4,6 +4,7 @@ import { compileScoreData } from "../../src/domain/score-compiler.js";
 import {
   assignMapping,
   createEmptyMapping,
+  createEventCompressor,
   createStopDetector,
   getMidiSignature,
   routeMidiMessage,
@@ -92,4 +93,26 @@ Deno.test("an inferred stop is recorded after the last forward event", () => {
     "stop",
   ]);
   assert.equal(app.state.midiActionRecord[1].time, 250);
+});
+
+Deno.test("only compressed events reach the performance record", () => {
+  const app = createTestApp();
+  const mapping = assignMapping(
+    createEmptyMapping(),
+    "forward",
+    getMidiSignature([0x90, 36, 100]),
+  );
+  const compressor = createEventCompressor();
+  app.actions.setMidiState({ recordingMidi: true });
+  for (let time = 0; time < 100; time += 1) {
+    const routed = routeMidiMessage([0x90, 36, 100], {
+      mapping,
+      learnAction: null,
+      time,
+    });
+    const kept = compressor.accept(routed.event);
+    if (kept) app.actions.recordMidiAction(kept);
+  }
+  assert.equal(app.state.midiActionRecord.length, 1);
+  assert.equal(app.state.midiActionRecord[0].direction, "forward");
 });
