@@ -14,7 +14,6 @@ export function createInitialState(chartCatalog) {
     ...initialTransportState,
     isPlaying: false,
     currentStep: 0,
-    timer: null,
     audioContext: null,
     scratchBuffers: null,
     builderSteps: [...chart.steps],

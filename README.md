@@ -33,3 +33,11 @@ docs/
 ```sh
 python3 -m http.server 8000
 ```
+
+## テスト
+
+Denoの組み込みテストランナーでドメイン処理、再生制御、SVG出力の回帰テストを実行します。
+
+```sh
+deno test --allow-read=tests/ui/snapshots
+```

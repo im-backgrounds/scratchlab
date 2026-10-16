@@ -4,6 +4,7 @@ import {
   deriveBuilderDirections,
 } from "./domain/score-compiler.js";
 import { legacyStepsToScore } from "./domain/builder-score.js";
+import { createPlaybackController } from "./domain/playback-controller.js";
 import {
   getClickActions,
   getPlaybackEvent,
@@ -67,6 +68,7 @@ const { initializeAudio, playClickSound, playScratch, silenceActiveScratch } =
     getPlaybackChart,
     actions.setAudioResources,
   );
+const playbackController = createPlaybackController();
 
 function renderSelectedChart() {
   visualizer.renderSelectedChart(getSelectedChart(), state);
@@ -219,10 +221,8 @@ function advancePlayback() {
 
 function stopPlayback() {
   const wasBuilderPlayback = state.isBuilderPlayback;
-  if (state.timer) {
-    clearInterval(state.timer);
-  }
-  actions.setPlaybackState({ isPlaying: false, currentStep: 0, timer: null });
+  playbackController.stop();
+  actions.setPlaybackState({ isPlaying: false, currentStep: 0 });
   controls.setPlaybackButton(false);
   if (wasBuilderPlayback) {
     renderBuilderScore();
@@ -243,22 +243,13 @@ function startPlayback(isBuilderPlayback = false) {
   actions.setPlaybackState({ isPlaying: true });
   controls.setPlaybackButton(true);
 
-  if (state.timer) {
-    clearInterval(state.timer);
-  }
-
   const noteLengthMs = chart.scoreData
     ? chart.scoreData.tickDurationSeconds * (60000 / state.bpm)
     : chart.scoreGrid
     ? (60 / state.bpm) * chart.scoreGrid.beatsPerBar /
       chart.scoreGrid.ticksPerBar * 1000
     : (60000 / state.bpm) / 2;
-  const timer = setInterval(() => {
-    advancePlayback();
-  }, noteLengthMs);
-  actions.setPlaybackState({ timer });
-
-  advancePlayback();
+  playbackController.start(noteLengthMs, advancePlayback);
 }
 
 function syncChartJson() {
@@ -404,13 +395,13 @@ controls.bindControls({
 
 transport.bindTransport({
   onPlay: (isBuilderPlayback) => {
-    if (state.isPlaying) stopPlayback();
+    if (playbackController.isRunning) stopPlayback();
     else startPlayback(isBuilderPlayback);
   },
   onBpmChange: (value) => {
     actions.setBpm(value);
     updateTransportValues();
-    if (state.isPlaying) startPlayback(state.isBuilderPlayback);
+    if (playbackController.isRunning) startPlayback(state.isBuilderPlayback);
   },
   onVolumeChange: (value) => {
     actions.setVolume(value);
