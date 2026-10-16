@@ -1,6 +1,7 @@
 # ScratchLab
 
 [![Deno CI](https://github.com/im-backgrounds/suport_music/actions/workflows/deno-ci.yml/badge.svg)](https://github.com/im-backgrounds/suport_music/actions/workflows/deno-ci.yml)
+[![GitHub Pages](https://github.com/im-backgrounds/suport_music/actions/workflows/github-pages.yml/badge.svg)](https://github.com/im-backgrounds/suport_music/actions/workflows/github-pages.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 
 **ScratchLab
@@ -9,6 +10,12 @@
 スクラッチは、レコードを前後に動かしながら、ミキサーのフェーダーで音を出したり止めたりしてリズムを作るDJの演奏方法です。ScratchLabでは、その動きや音の切り替えを譜面とサンプル音で確認できます。DJを始めたばかりの方も、基本の前進・後進から少しずつ練習できます。
 
 ブラウザーですぐに試せます。練習を始めるだけなら、DJ機材やMIDI機器は必要ありません。
+
+## ライブデモ
+
+インストール不要で、次のURLからすぐに試せます。
+
+**<https://im-backgrounds.github.io/suport_music/>**
 
 ## こんな方におすすめ
 
@@ -137,6 +144,15 @@ deno fmt --check --unstable-component --ignore='tests/ui/snapshots/*.svg' .
 
 GitHub Actionsでは、pushとpull
 requestのたびにフォーマット確認、型チェック、テストを実行します。
+
+### デプロイ
+
+`main` ブランチへのpushのたびに、GitHub
+Actions（`.github/workflows/github-pages.yml`）がリポジトリルートをそのままGitHub
+Pagesへ公開します。ビルド手順はありません。初回のみ、リポジトリの Settings →
+Pages → Build and deployment → Source を **GitHub Actions**
+に設定してください。手動で再デプロイする場合は、Actionsタブから「GitHub
+Pages」を実行します。
 
 ## アーキテクチャ概要
 
