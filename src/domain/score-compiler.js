@@ -33,13 +33,8 @@ export function parseScoreToken(value, inheritedDirection) {
     return { direction: inheritedDirection, modifier: "", repeat, cutCount: 0, keep: true };
   }
 
-  const sustainMatch = /^-(\d*)$/.exec(token);
-  if (sustainMatch) {
-    const repeat = sustainMatch[1] ? Number(sustainMatch[1]) : 1;
-    if (!Number.isInteger(repeat) || repeat < 1 || repeat > 128) {
-      throw new Error(`繰り返し数が範囲外です: ${value}`);
-    }
-    return { direction: inheritedDirection, modifier: "-", repeat, cutCount: 0 };
+  if (token === "-") {
+    throw new Error("継続用の符号は廃止されています。FまたはBなどを指定してください。");
   }
 
   const match = /^([FB])([OMCF]?)(\d*)$/.exec(token);
@@ -93,7 +88,7 @@ export function compileScoreData(data) {
     }
     if (typeof node !== "string") throw new Error("scoreは文字列または入れ子配列で指定してください。");
     const parsed = parseScoreToken(node, lastDirection);
-    if (node !== "-") lastDirection = parsed.direction;
+    lastDirection = parsed.direction;
     divisions.push(parentDivision * parsed.repeat);
   }
 
@@ -118,7 +113,7 @@ export function compileScoreData(data) {
     }
 
     const parsed = parseScoreToken(node, lastDirection);
-    if (node !== "-") lastDirection = parsed.direction;
+    lastDirection = parsed.direction;
     if (durationTicks % parsed.repeat !== 0) {
       throw new Error(`繰り返し数を時間分割できません: ${node}`);
     }
@@ -127,7 +122,7 @@ export function compileScoreData(data) {
     for (let repeat = 0; repeat < parsed.repeat; repeat += 1) {
       if (parsed.modifier === "M") faderOpen = false;
       else if (parsed.modifier === "O") faderOpen = true;
-      else if (parsed.modifier === "-" || parsed.cutCount > 0) faderOpen = true;
+      else if (parsed.cutCount > 0) faderOpen = true;
       events.push({
         startTick: startTick + repeat * repeatDuration,
         durationTicks: repeatDuration,

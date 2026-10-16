@@ -338,15 +338,11 @@ function updateBuilderEditor() {
   builderStepsEl.innerHTML = "";
 
   const cellsPerBar = state.builderTicksPerBar;
-  const stepLabels = { L: "前進", R: "後進", M: "無音", C: "チョップ", K: "キープ", S: "3クリック", "-": "継続" };
+  const stepLabels = { L: "前進", R: "後進", M: "無音", C: "チョップ", K: "キープ", S: "3クリック" };
   const compiledScore = state.builderScoreData || compileScoreData(createBuilderScoreDocument());
   const notationLabels = Array(compiledScore.totalTicks).fill("");
   compiledScore.events.forEach((event) => {
-    const notation = event.keep
-      ? "K"
-      : event.modifier === "-"
-        ? "–"
-        : `${event.direction}${event.modifier}`;
+    const notation = event.keep ? "K" : `${event.direction}${event.modifier}`;
     for (let tick = event.startTick; tick < event.startTick + event.durationTicks; tick += 1) {
       notationLabels[tick] = notation;
     }
@@ -366,7 +362,7 @@ function updateBuilderEditor() {
       button.type = "button";
       button.className = `builder-step step-${step === "-" ? "continue" : step.toLowerCase()} ${index === state.currentStep && state.isPlaying ? "active" : ""}`;
       const notation = notationLabels[index] || (step === "-" ? "–" : step);
-      button.setAttribute("aria-label", `小節 ${bar + 1}、位置 ${index - bar * cellsPerBar + 1}: ${notation}（${stepLabels[step] || step}）`);
+      button.setAttribute("aria-label", `小節 ${bar + 1}、位置 ${index - bar * cellsPerBar + 1}: ${notation || "空白"}（${stepLabels[step] || step}）`);
       button.innerHTML = `<span>${notation}</span><small>${index - bar * cellsPerBar + 1}</small>`;
       button.title = `${notation} · ${stepLabels[step] || step} · 小節 ${bar + 1} · ${index - bar * cellsPerBar + 1}セル目`;
       button.addEventListener("click", () => {
@@ -401,7 +397,6 @@ function updateToolHint() {
     P: "フレアを選択中。時間セルをクリックして配置します。",
     K: "キープを選択中。時間セルをクリックして配置します。",
     S: "3クリックを選択中。時間セルをクリックして配置します。",
-    "-": "継続を選択中。時間セルをクリックして配置します。",
   };
   builderToolHintEl.textContent = labels[state.builderSelectedType] || "";
 }
@@ -464,8 +459,9 @@ function legacyStepsToScore(chart, steps) {
     if (step === "K") {
       return "K";
     }
+    const token = faderOpen ? lastDirection : `${lastDirection}O`;
     faderOpen = true;
-    return "-";
+    return token;
   });
 
   const score = [];
@@ -561,7 +557,7 @@ function advancePlayback() {
         let runStartTick = event.startTick;
         let runEndTick = event.startTick + event.durationTicks;
 
-        const continuesFlareTail = (candidate) => candidate.modifier === "-" || candidate.modifier === "";
+        const continuesFlareTail = (candidate) => candidate.modifier === "";
         let followsFlare = false;
         if (continuesFlareTail(event)) {
           let previousIndex = eventIndex - 1;
