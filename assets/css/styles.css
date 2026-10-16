@@ -848,6 +848,143 @@ button {
   color: var(--muted);
 }
 
+.midi-range {
+  display: grid;
+  flex: 1 1 100%;
+  gap: 14px;
+  margin-top: 4px;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.midi-range-track {
+  position: relative;
+  height: 10px;
+  margin-bottom: 18px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.midi-range-track.is-invalid {
+  opacity: 0.35;
+}
+
+.midi-range-zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+
+.midi-range-zone-open {
+  background: var(--success);
+  border-radius: 999px 0 0 999px;
+}
+
+.midi-range-zone-closed {
+  background: var(--accent);
+  border-radius: 0 999px 999px 0;
+}
+
+.midi-range-marker {
+  position: absolute;
+  top: -4px;
+  width: 4px;
+  height: 18px;
+  margin-left: -2px;
+  border-radius: 2px;
+  background: var(--text);
+  box-shadow: 0 0 0 2px var(--bg-alt);
+}
+
+.midi-range-scale {
+  position: absolute;
+  top: 14px;
+  right: 0;
+  left: 0;
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.midi-range-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.midi-range-field {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.midi-range-open {
+  border-top-color: var(--success);
+}
+
+.midi-range-threshold {
+  border-top-color: var(--text);
+}
+
+.midi-range-closed {
+  border-top-color: var(--accent);
+}
+
+.midi-range-caption {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.midi-range-caption small {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.midi-range input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(6, 17, 29, 0.6);
+  color: var(--text);
+  font: inherit;
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.midi-range input:focus-visible {
+  border-color: var(--primary);
+  outline: 2px solid rgba(111, 228, 255, 0.35);
+  outline-offset: 1px;
+}
+
+.midi-range-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+@media (max-width: 520px) {
+  .midi-range-fields {
+    grid-template-columns: 1fr;
+  }
+}
+
 #midi-event-log {
   max-height: 180px;
   overflow-y: auto;

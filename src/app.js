@@ -13,8 +13,12 @@ import {
   assignMapping,
   clearMapping,
   createMidiMappingRepository,
+  createStopDetector,
+  FIXED_VELOCITY_ACTIONS,
   MIDI_ACTION_LABELS,
+  MidiMappingConflictError,
   routeMidiMessage,
+  swapFaderDirection,
 } from "./domain/midi-mapping.js";
 import { createPlaybackController } from "./domain/playback-controller.js";
 import {
@@ -567,6 +571,8 @@ function renderMidiMappingPanel() {
   midiMappingUi.renderMidiMapping(midiMapping, midiLearnAction, {
     onLearn: toggleMidiLearn,
     onClear: clearMidiMapping,
+    onRangeChange: setFaderRange,
+    onSwapFader: swapFader,
   });
 }
 
@@ -578,7 +584,68 @@ function saveMidiMapping() {
     : "（割り当てをブラウザーに保存できませんでした）";
 }
 
+function recordMidiActionEvent(event) {
+  midiEventLog = [...midiEventLog, event].slice(-MIDI_EVENT_LOG_LIMIT);
+  midiMappingUi.renderMidiEventLog(midiEventLog);
+  if (state.recordingMidi) actions.recordMidiAction(event);
+}
+
+const stopDetector = createStopDetector({ onStop: recordMidiActionEvent });
+
+function setFaderRange(action, values) {
+  try {
+    midiMapping = assignMapping(midiMapping, action, {
+      ...midiMapping[action],
+      ...values,
+    });
+  } catch (error) {
+    midiMappingUi.renderMidiMappingStatus(
+      error instanceof MidiMappingConflictError
+        ? conflictMessage(error)
+        : "開・閾値・閉は0〜127の整数で、開から閉へ向かう間に閾値が入るように指定してください（開と閉は同じ値にできません）。",
+    );
+    return;
+  }
+  const warning = saveMidiMapping();
+  renderMidiMappingPanel();
+  midiMappingUi.renderMidiMappingStatus(
+    `${MIDI_ACTION_LABELS[action]} の設定を更新しました。${warning}`,
+  );
+}
+
+function conflictMessage(error) {
+  return `その入力は ${
+    MIDI_ACTION_LABELS[error.conflictAction]
+  } に割り当て済みのため、変更しませんでした。`;
+}
+
+function swapFader(action) {
+  const current = midiMapping[action];
+  if (!current) return;
+  try {
+    midiMapping = assignMapping(
+      midiMapping,
+      action,
+      swapFaderDirection(current),
+    );
+  } catch (error) {
+    midiMappingUi.renderMidiMappingStatus(
+      error instanceof MidiMappingConflictError
+        ? conflictMessage(error)
+        : "開閉を入れ替えられませんでした。",
+    );
+    return;
+  }
+  const warning = saveMidiMapping();
+  renderMidiMappingPanel();
+  const { open, threshold, closed } = midiMapping[action];
+  midiMappingUi.renderMidiMappingStatus(
+    `開と閉を入れ替えました（開 ${open} 〜 閾値 ${threshold} 〜 閉 ${closed}）。${warning}`,
+  );
+}
+
 function toggleMidiLearn(action) {
+  stopDetector.cancel();
   midiLearnAction = midiLearnAction === action ? null : action;
   renderMidiMappingPanel();
   midiMappingUi.renderMidiMappingStatus(
@@ -613,12 +680,32 @@ function handleMidiMessage(data) {
   });
 
   if (routed.kind === "learned") {
-    midiMapping = assignMapping(midiMapping, routed.action, routed.signature);
+    try {
+      midiMapping = assignMapping(
+        midiMapping,
+        routed.action,
+        routed.signature,
+      );
+    } catch (error) {
+      if (!(error instanceof MidiMappingConflictError)) throw error;
+      // Stay in Learn mode so the user can try another control.
+      midiMappingUi.renderMidiMappingStatus(
+        `この入力は ${
+          MIDI_ACTION_LABELS[error.conflictAction]
+        } に割り当て済みです。既存の割り当ては変更していません。別のボタンやつまみ、またはベロシティで操作してください。`,
+      );
+      return;
+    }
     midiLearnAction = null;
     const warning = saveMidiMapping();
     renderMidiMappingPanel();
+    const detail = FIXED_VELOCITY_ACTIONS.includes(routed.action)
+      ? `（ベロシティ ${routed.signature.velocity}）`
+      : "（開 0 〜 閾値 120 〜 閉 127 が初期値です。下の入力欄で調整できます）";
     midiMappingUi.renderMidiMappingStatus(
-      `${MIDI_ACTION_LABELS[routed.action]} を割り当てました。${warning}`,
+      `${
+        MIDI_ACTION_LABELS[routed.action]
+      } を割り当てました${detail}。${warning}`,
     );
     return;
   }
@@ -628,11 +715,8 @@ function handleMidiMessage(data) {
   actions.recordMidiEvent({ status, note, velocity, time });
 
   if (routed.kind === "event") {
-    midiEventLog = [...midiEventLog, routed.event].slice(
-      -MIDI_EVENT_LOG_LIMIT,
-    );
-    midiMappingUi.renderMidiEventLog(midiEventLog);
-    if (state.recordingMidi) actions.recordMidiAction(routed.event);
+    recordMidiActionEvent(routed.event);
+    stopDetector.observe(routed.event);
   }
 
   if (state.recordingMidi) {
@@ -670,6 +754,7 @@ async function connectMIDI() {
 }
 
 function toggleMidiRecording() {
+  stopDetector.cancel();
   actions.setMidiState({ recordingMidi: !state.recordingMidi });
   actions.clearMidiRecord();
   controls.renderMidiRecording(state.recordingMidi);

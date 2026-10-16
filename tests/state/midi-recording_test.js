@@ -4,6 +4,7 @@ import { compileScoreData } from "../../src/domain/score-compiler.js";
 import {
   assignMapping,
   createEmptyMapping,
+  createStopDetector,
   getMidiSignature,
   routeMidiMessage,
 } from "../../src/domain/midi-mapping.js";
@@ -39,18 +40,14 @@ Deno.test("recording keeps timestamped scratch and fader events in order", () =>
     "forward",
     getMidiSignature([0x90, 36, 100]),
   );
-  mapping = assignMapping(
-    mapping,
-    "fader-close",
-    getMidiSignature([0x90, 41, 100]),
-  );
+  mapping = assignMapping(mapping, "fader", getMidiSignature([0xb0, 7, 90]));
 
   feed(app, mapping, [0x90, 36, 100], 1);
   assert.equal(app.state.midiActionRecord.length, 0);
 
   app.actions.setMidiState({ recordingMidi: true });
   feed(app, mapping, [0x90, 36, 100], 100);
-  feed(app, mapping, [0x90, 41, 100], 250);
+  feed(app, mapping, [0xb0, 7, 125], 250);
   feed(app, mapping, [0x90, 99, 100], 300);
 
   assert.deepEqual(app.state.midiActionRecord, [
@@ -74,4 +71,25 @@ Deno.test("raw MIDI recording is unchanged by action recording", () => {
   app.actions.recordMidiAction({ type: "fader", state: "open", time: 2 });
   assert.equal(app.state.midiRecord.length, 1);
   assert.equal(app.state.midiActionRecord.length, 1);
+});
+
+Deno.test("an inferred stop is recorded after the last forward event", () => {
+  const app = createTestApp();
+  app.actions.setMidiState({ recordingMidi: true });
+  let fire;
+  const detector = createStopDetector({
+    onStop: (event) => app.actions.recordMidiAction(event),
+    timeoutMs: 150,
+    setTimer: (fn) => (fire = fn),
+    clearTimer: () => {},
+  });
+  const forward = { type: "scratch", direction: "forward", time: 100 };
+  app.actions.recordMidiAction(forward);
+  detector.observe(forward);
+  fire();
+  assert.deepEqual(app.state.midiActionRecord.map((e) => e.direction), [
+    "forward",
+    "stop",
+  ]);
+  assert.equal(app.state.midiActionRecord[1].time, 250);
 });
