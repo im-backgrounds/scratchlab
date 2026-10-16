@@ -985,6 +985,179 @@ button {
   }
 }
 
+.performance-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 14px 0 10px;
+}
+
+.performance-summary-item,
+.performance-count {
+  display: grid;
+  gap: 2px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.performance-summary-item {
+  flex: 1 1 140px;
+}
+
+.performance-summary dt,
+.performance-count dt {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.performance-summary dd,
+.performance-count dd {
+  margin: 0;
+  color: var(--text);
+  font-size: 1.35rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.performance-counts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.performance-count {
+  border-top: 3px solid var(--line);
+}
+
+.performance-count-forward {
+  border-top-color: var(--primary);
+}
+
+.performance-count-backward {
+  border-top-color: var(--warning);
+}
+
+.performance-count-stop {
+  border-top-color: var(--muted);
+}
+
+.performance-count-faderOpen {
+  border-top-color: var(--success);
+}
+
+.performance-count-faderClosed {
+  border-top-color: var(--accent);
+}
+
+.performance-heading {
+  margin: 16px 0 8px;
+}
+
+.performance-timeline {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.performance-timeline.is-empty {
+  color: var(--muted);
+}
+
+.performance-lane {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.performance-lane-label {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.performance-lane-track {
+  position: relative;
+  height: 22px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.performance-segment {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  min-width: 2px;
+  background: var(--segment-color);
+}
+
+.performance-segment-forward {
+  --segment-color: var(--primary);
+}
+
+.performance-segment-backward {
+  --segment-color: var(--warning);
+}
+
+.performance-segment-stop {
+  --segment-color: rgba(166, 189, 212, 0.25);
+}
+
+.performance-segment-open {
+  --segment-color: var(--success);
+}
+
+.performance-segment-closed {
+  --segment-color: var(--accent);
+}
+
+.performance-axis {
+  display: flex;
+  justify-content: space-between;
+  padding-left: calc(5.5rem + 10px);
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.performance-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 10px 0 0;
+  padding: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  list-style: none;
+}
+
+.performance-legend li {
+  position: relative;
+  padding-left: 16px;
+}
+
+.performance-legend li::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--segment-color);
+  content: "";
+  transform: translateY(-50%);
+}
+
+#performance-panel.is-recording {
+  border-color: var(--accent);
+}
+
 #midi-event-log {
   max-height: 180px;
   overflow-y: auto;

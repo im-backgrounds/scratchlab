@@ -20,6 +20,12 @@ import {
   routeMidiMessage,
   swapFaderDirection,
 } from "./domain/midi-mapping.js";
+import {
+  createPerformance,
+  createPerformanceFilename,
+  createPerformanceRepository,
+  serializePerformance,
+} from "./domain/performance.js";
 import { createPlaybackController } from "./domain/playback-controller.js";
 import {
   getClickActions,
@@ -35,6 +41,7 @@ import * as controls from "./ui/controls.js";
 import * as transport from "./ui/transport.js";
 import * as editor from "./ui/editor.js";
 import * as midiMappingUi from "./ui/midi-mapping.js";
+import * as performanceUi from "./ui/performance.js";
 import * as savedCharts from "./ui/saved-charts.js";
 import * as visualizer from "./ui/visualizer.js";
 
@@ -61,6 +68,9 @@ const MIDI_EVENT_LOG_LIMIT = 50;
 let midiMapping = midiMappingRepository.load();
 let midiLearnAction = null;
 let midiEventLog = [];
+const performanceRepository = createPerformanceRepository();
+let latestPerformance = performanceRepository.load();
+let performanceStartedAt = null;
 
 function getSelectedChart() {
   return chartCatalog.find((chart) => chart.id === state.selectedChartId) ||
@@ -110,6 +120,7 @@ function showBuilderPage() {
 
 function resetPageState() {
   stopPlayback();
+  abortPerformanceRecording();
   const selectedChart = getSelectedChart();
   actions.resetForChart(selectedChart);
 
@@ -753,16 +764,66 @@ async function connectMIDI() {
   }
 }
 
+function finishPerformanceRecording() {
+  const performance = createPerformance(state.midiActionRecord, {
+    startedAt: performanceStartedAt,
+    endedAt: Date.now(),
+  });
+  performanceStartedAt = null;
+  latestPerformance = performance;
+  performanceUi.renderPerformance(performance);
+  const saved = performanceRepository.save(performance);
+  const note = saved.ok
+    ? "最新の記録はこのブラウザーに保存されました。"
+    : "最新の記録をブラウザーに保存できませんでした。JSONで書き出してください。";
+  const truncated = performance.truncated
+    ? "イベント数が上限に達したため、後半は記録されていません。"
+    : "";
+  performanceUi.renderPerformanceStatus(
+    `${performance.events.length}件のイベントを記録しました。${truncated}${note}`,
+  );
+}
+
+// The page reset clears the MIDI recording state, so an unfinished
+// performance is discarded and the panel is brought back in sync.
+function abortPerformanceRecording() {
+  if (!state.recordingMidi) return;
+  stopDetector.cancel();
+  performanceStartedAt = null;
+  performanceUi.renderPerformanceRecording(false);
+  performanceUi.renderPerformanceStatus(
+    "譜面の切り替えで記録を中断しました。",
+  );
+}
+
 function toggleMidiRecording() {
   stopDetector.cancel();
+  if (state.recordingMidi) {
+    finishPerformanceRecording();
+  } else {
+    performanceStartedAt = Date.now();
+    performanceUi.renderPerformanceStatus(
+      "記録中… スクラッチとフェーダーの操作を記録しています。",
+    );
+  }
   actions.setMidiState({ recordingMidi: !state.recordingMidi });
   actions.clearMidiRecord();
   controls.renderMidiRecording(state.recordingMidi);
+  performanceUi.renderPerformanceRecording(state.recordingMidi);
   controls.renderMidiLog(
     state.recordingMidi
       ? "MIDI記録を開始しました。DJコントローラの入力を4カウント後から記録します。"
       : "記録を停止しました。",
   );
+}
+
+function exportPerformance() {
+  if (!latestPerformance) return;
+  performanceUi.downloadPerformance(
+    serializePerformance(latestPerformance),
+    createPerformanceFilename(latestPerformance),
+  );
+  performanceUi.renderPerformanceStatus("記録をJSONで書き出しました。");
 }
 
 function compareMidiRecording() {
@@ -799,6 +860,11 @@ controls.bindControls({
   onConnectMidi: connectMIDI,
   onToggleMidiRecording: toggleMidiRecording,
   onCompareMidi: compareMidiRecording,
+});
+
+performanceUi.bindPerformance({
+  onToggleRecording: toggleMidiRecording,
+  onExport: exportPerformance,
 });
 
 transport.bindTransport({
@@ -861,4 +927,8 @@ controls.renderInitialControls(state, getBuilderBarCount());
 render();
 restoreLastSession();
 renderMidiMappingPanel();
+performanceUi.renderPerformance(latestPerformance);
+if (latestPerformance) {
+  performanceUi.renderPerformanceStatus("前回の記録を読み込みました。");
+}
 renderSavedChartList();

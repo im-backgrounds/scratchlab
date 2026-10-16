@@ -173,6 +173,52 @@
                 aria-live="polite">変換されたイベントはまだありません。</div>
             </div>
           </section>
+
+          <section id="performance-panel" class="card secondary-card"
+            aria-labelledby="performance-title">
+            <div class="section-header">
+              <div>
+                <h3 id="performance-title">パフォーマンス</h3>
+                <p>スクラッチとフェーダーの操作を記録して、流れを確認できます</p>
+              </div>
+            </div>
+
+            <div class="midi-actions">
+              <button id="performance-record" class="secondary-button"
+                aria-pressed="false">記録を開始</button>
+              <button id="performance-export" class="secondary-button"
+                disabled>JSONで書き出し</button>
+            </div>
+
+            <div id="performance-status" class="status-box" role="status">
+              MIDIを接続してマッピングを設定し、「記録を開始」を押してください。
+            </div>
+
+            <dl class="performance-summary">
+              <div class="performance-summary-item">
+                <dt>記録時間</dt>
+                <dd id="performance-duration">0:00.000</dd>
+              </div>
+              <div class="performance-summary-item">
+                <dt>イベント数</dt>
+                <dd id="performance-total">0</dd>
+              </div>
+            </dl>
+            <dl id="performance-counts" class="performance-counts"></dl>
+
+            <h4 class="performance-heading">タイムライン</h4>
+            <div id="performance-timeline" class="performance-timeline is-empty"
+              role="img" aria-label="スクラッチとフェーダーのタイムライン">
+              記録されたイベントはまだありません。
+            </div>
+            <ul class="performance-legend" aria-hidden="true">
+              <li class="performance-segment-forward">Forward</li>
+              <li class="performance-segment-backward">Backward</li>
+              <li class="performance-segment-stop">Stop</li>
+              <li class="performance-segment-open">Fader Open</li>
+              <li class="performance-segment-closed">Fader Close</li>
+            </ul>
+          </section>
         </div>
 
         <section id="notation-guide-page" class="guide-page" hidden
