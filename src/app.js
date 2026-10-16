@@ -42,9 +42,19 @@ import * as transport from "./ui/transport.js";
 import * as editor from "./ui/editor.js";
 import * as midiMappingUi from "./ui/midi-mapping.js";
 import {
-  analyzePerformance,
+  analyzePerformanceLoops,
   createExpectedEvents,
 } from "./domain/performance-analysis.js";
+import {
+  CHALLENGE_EVENTS,
+  CHALLENGE_PHASES,
+  createChallengeSession,
+  describeSessionProgress,
+  describeSessionStatus,
+  isSessionRunning,
+  RECORDING_LOOPS,
+  transitionSession,
+} from "./domain/challenge-session.js";
 import {
   createChallengeRepository,
   createChartKey,
@@ -82,11 +92,13 @@ let midiLearnAction = null;
 let midiEventLog = [];
 const performanceRepository = createPerformanceRepository();
 let latestPerformance = performanceRepository.load();
-let performanceStartedAt = null;
 const challengeRepository = createChallengeRepository();
 // Only the challenged chart is kept; the BPM is derived from saved progress.
 let activeChallengeKey = null;
-let performanceBpm = null;
+let challengeSession = createChallengeSession();
+// {bpm, startedAt, loopEnds, tickSeen} of the attempt in progress.
+let challengeRun = null;
+const ANALYZE_DELAY_MS = 400;
 
 function getSelectedChart() {
   return chartCatalog.find((chart) => chart.id === state.selectedChartId) ||
@@ -265,13 +277,21 @@ function advancePlayback() {
   const chart = getPlaybackChart();
   if (!chart.steps.length) return;
 
+  const challengeLooping = isChallengeLooping();
+  if (challengeLooping && challengeRun.tickSeen && state.currentStep === 0) {
+    applyChallengeEvent(CHALLENGE_EVENTS.LOOP_END);
+    if (!playbackController.isRunning) return;
+  }
+  if (challengeLooping) challengeRun.tickSeen = true;
+
   playCurrentStep(chart);
   renderPlaybackProgress();
 
+  // A challenge always loops; it ends itself after the last recorded loop.
   const cursor = updatePlaybackCursor(
     state.currentStep,
     chart.steps.length,
-    state.repeat,
+    challengeLooping || state.repeat,
   );
   if (cursor.shouldStop) return stopPlayback();
   actions.setPlaybackState({ currentStep: cursor.currentStep });
@@ -486,6 +506,9 @@ function deleteSavedChart(id) {
  * page state is reset to the selected chart as before.
  */
 function prepareViewSwitch() {
+  if (isSessionRunning(challengeSession)) {
+    cancelChallenge("ページの切り替えでチャレンジを中断しました。");
+  }
   if (state.builderDraftActive) stopPlayback();
   else resetPageState();
 }
@@ -528,6 +551,7 @@ function restoreLastSession() {
   currentView = session.view;
   if (currentView === "builder") showBuilderPage();
   else if (currentView === "guide") controls.renderGuideView();
+  else if (currentView === "midi") controls.renderMidiSetupView();
 }
 
 function syncChartJson() {
@@ -742,19 +766,14 @@ function handleMidiMessage(data) {
   }
   if (midiLearnAction) return;
 
-  const log = `status=${status}, note=${note}, velocity=${velocity}`;
-  actions.recordMidiEvent({ status, note, velocity, time });
-
   if (routed.kind === "event") {
     recordMidiActionEvent(routed.event);
     stopDetector.observe(routed.event);
   }
 
-  if (state.recordingMidi) {
-    controls.renderMidiLog(`${log}\n記録中... ${state.midiRecord.length}件`);
-  } else {
-    controls.renderMidiLog(`MIDI入力: ${log}`);
-  }
+  controls.renderMidiLog(
+    `MIDI入力: status=${status}, note=${note}, velocity=${velocity}`,
+  );
 }
 
 async function connectMIDI() {
@@ -785,9 +804,10 @@ async function connectMIDI() {
 }
 
 function analyzeForChart(performance, chart) {
-  return analyzePerformance(
+  return analyzePerformanceLoops(
     createExpectedEvents(chart.scoreData),
     performance.events,
+    performance.loopEnds,
   );
 }
 
@@ -818,6 +838,9 @@ function renderChallengePanel() {
     active,
   });
   challengeUi.renderChallenge(view, getSelectedChart().name);
+  challengeUi.renderChallengeProgress(
+    describeSessionProgress(challengeSession),
+  );
   transport.setBpmLocked(active);
   return view;
 }
@@ -849,43 +872,95 @@ function describeAttemptResult(outcome, bpm, accuracy) {
     : `${bpm} BPM: 一致率 ${percent}。90%以上でクリアです。もう一度挑戦できます。`;
 }
 
-function evaluateChallengeAttempt(performance) {
+function isChallengeLooping() {
+  return challengeRun !== null && !state.isBuilderPlayback &&
+    (challengeSession.phase === CHALLENGE_PHASES.DEMO ||
+      challengeSession.phase === CHALLENGE_PHASES.RECORDING);
+}
+
+function evaluateChallengeAttempt(performance, run) {
   const chartKey = activeChallengeKey;
   activeChallengeKey = null;
   const chart = getSelectedChart();
-  const bpm = performanceBpm;
-  if (chartKey === null || chartKey !== getChallengeChartKey() || !bpm) {
+  if (chartKey === null || chartKey !== getChallengeChartKey()) {
     renderChallengePanel();
     return;
   }
   const analysis = analyzeForChart(performance, chart);
   const outcome = challengeRepository.recordAttempt(chartKey, {
-    bpm,
+    bpm: run.bpm,
     accuracy: analysis.accuracy,
     actualDurationMs: performance.durationMs,
-    expectedDurationMs: getExpectedDurationMs(chart.scoreData, bpm),
+    expectedDurationMs: getExpectedDurationMs(chart.scoreData, run.bpm) *
+      RECORDING_LOOPS,
   });
   setChallengeStatus(
-    describeAttemptResult(outcome, bpm, analysis.accuracy ?? 0),
+    describeAttemptResult(outcome, run.bpm, analysis.accuracy ?? 0),
   );
+}
+
+/**
+ * Feeds one event to the challenge state machine and performs the side
+ * effect of the transition it caused.
+ */
+function applyChallengeEvent(event, now = Date.now()) {
+  const { session, effect } = transitionSession(challengeSession, event);
+  challengeSession = session;
+  const message = describeSessionStatus(session, challengeRun?.bpm);
+  if (message) setChallengeStatus(message);
+  if (effect === "start-playback") {
+    stopPlayback();
+    startPlayback(false);
+  } else if (effect === "start-recording") {
+    beginChallengeRecording(now);
+  } else if (effect === "next-recording") {
+    stopDetector.flush(now);
+    challengeRun.loopEnds.push(now - challengeRun.startedAt);
+  } else if (effect === "finish-recording") {
+    const run = challengeRun;
+    const performance = finishChallengeRecording(run, now);
+    stopPlayback();
+    setTimeout(() => completeChallenge(performance, run), ANALYZE_DELAY_MS);
+  }
   renderChallengePanel();
+}
+
+function completeChallenge(performance, run) {
+  if (challengeSession.phase !== CHALLENGE_PHASES.ANALYZING) return;
+  evaluateChallengeAttempt(performance, run);
+  challengeRun = null;
+  applyChallengeEvent(CHALLENGE_EVENTS.ANALYZED);
 }
 
 function startChallenge() {
   const view = renderChallengePanel();
-  if (!view.canStart) return;
-  if (state.recordingMidi) {
-    setChallengeStatus("記録を停止してからチャレンジを開始してください。");
+  if (!view.canStart || isSessionRunning(challengeSession)) return;
+  if (!state.midiConnected) {
+    setChallengeStatus(
+      "「MIDIセットアップ」でMIDIを接続してから開始してください。",
+    );
     return;
   }
+  if (!midiMapping.forward || !midiMapping.backward) {
+    setChallengeStatus(
+      "「MIDIセットアップ」でForwardとBackwardを割り当ててから開始してください。",
+    );
+    return;
+  }
+  if (midiLearnAction) {
+    midiLearnAction = null;
+    renderMidiMappingPanel();
+  }
   activeChallengeKey = getChallengeChartKey();
+  challengeRun = {
+    bpm: view.currentBpm,
+    startedAt: null,
+    loopEnds: [],
+    tickSeen: false,
+  };
   actions.setBpm(view.currentBpm);
   updateTransportValues();
-  if (playbackController.isRunning) startPlayback(state.isBuilderPlayback);
-  renderChallengePanel();
-  setChallengeStatus(
-    `${view.currentBpm} BPM に固定しました。「記録を開始」で演奏を記録し、「記録を停止」で判定します。`,
-  );
+  applyChallengeEvent(CHALLENGE_EVENTS.START);
 }
 
 function resetChallengeProgress() {
@@ -898,24 +973,49 @@ function resetChallengeProgress() {
   );
 }
 
-// Called when the page state is reset (chart switch): drop an unfinished
-// challenge and release the BPM slider.
-function abortChallenge() {
-  const wasActive = activeChallengeKey !== null;
+// Drops an unfinished challenge and releases the BPM slider. Called when the
+// page state is reset (chart switch) or the user leaves the practice view.
+function abortChallenge(reason = "譜面の切り替えでチャレンジを中断しました。") {
+  const wasRunning = isSessionRunning(challengeSession);
   activeChallengeKey = null;
-  setChallengeStatus(
-    wasActive ? "譜面の切り替えでチャレンジを中断しました。" : "",
+  challengeRun = null;
+  challengeSession = transitionSession(
+    challengeSession,
+    CHALLENGE_EVENTS.ABORT,
+  ).session;
+  setChallengeStatus(wasRunning ? reason : "");
+}
+
+function cancelChallenge(reason) {
+  stopPlayback();
+  abortPerformanceRecording();
+  abortChallenge(reason);
+  renderChallengePanel();
+}
+
+function beginChallengeRecording(now) {
+  stopDetector.cancel();
+  actions.clearMidiRecord();
+  actions.setMidiState({ recordingMidi: true });
+  challengeRun.startedAt = now;
+  challengeRun.loopEnds = [];
+  performanceUi.renderPerformanceRecording(true);
+  performanceUi.renderPerformanceStatus(
+    "記録中… お手本のあとの2ループを自動で記録します。",
   );
 }
 
-function finishPerformanceRecording() {
+function finishChallengeRecording(run, now) {
+  stopDetector.flush(now);
   const performance = createPerformance(state.midiActionRecord, {
-    startedAt: performanceStartedAt,
-    endedAt: Date.now(),
+    startedAt: run.startedAt,
+    endedAt: now,
+    loopEnds: run.loopEnds,
   });
-  performanceStartedAt = null;
-  const isChallengeTake = activeChallengeKey !== null;
+  actions.setMidiState({ recordingMidi: false });
+  actions.clearMidiRecord();
   latestPerformance = performance;
+  performanceUi.renderPerformanceRecording(false);
   performanceUi.renderPerformance(performance);
   renderPerformanceAnalysis();
   const saved = performanceRepository.save(performance);
@@ -928,7 +1028,7 @@ function finishPerformanceRecording() {
   performanceUi.renderPerformanceStatus(
     `${performance.events.length}件のイベントを記録しました。${truncated}${note}`,
   );
-  if (isChallengeTake) evaluateChallengeAttempt(performance);
+  return performance;
 }
 
 // The page reset clears the MIDI recording state, so an unfinished
@@ -936,35 +1036,10 @@ function finishPerformanceRecording() {
 function abortPerformanceRecording() {
   if (!state.recordingMidi) return;
   stopDetector.cancel();
-  performanceStartedAt = null;
-  performanceBpm = null;
-  performanceUi.renderPerformanceRecording(false);
-  performanceUi.renderPerformanceStatus(
-    "譜面の切り替えで記録を中断しました。",
-  );
-}
-
-function toggleMidiRecording() {
-  if (state.recordingMidi) {
-    stopDetector.flush();
-    finishPerformanceRecording();
-  } else {
-    stopDetector.cancel();
-    performanceStartedAt = Date.now();
-    performanceBpm = state.bpm;
-    performanceUi.renderPerformanceStatus(
-      "記録中… スクラッチとフェーダーの操作を記録しています。",
-    );
-  }
-  actions.setMidiState({ recordingMidi: !state.recordingMidi });
+  actions.setMidiState({ recordingMidi: false });
   actions.clearMidiRecord();
-  controls.renderMidiRecording(state.recordingMidi);
-  performanceUi.renderPerformanceRecording(state.recordingMidi);
-  controls.renderMidiLog(
-    state.recordingMidi
-      ? "MIDI記録を開始しました。DJコントローラの入力を4カウント後から記録します。"
-      : "記録を停止しました。",
-  );
+  performanceUi.renderPerformanceRecording(false);
+  performanceUi.renderPerformanceStatus("記録を中断しました。");
 }
 
 function exportPerformance() {
@@ -974,24 +1049,6 @@ function exportPerformance() {
     createPerformanceFilename(latestPerformance),
   );
   performanceUi.renderPerformanceStatus("記録をJSONで書き出しました。");
-}
-
-function compareMidiRecording() {
-  if (!state.midiRecord.length) {
-    controls.renderMidiLog("比較するMIDI記録がありません。");
-    return;
-  }
-
-  const recordedCount =
-    state.midiRecord.filter((item) => item.status >= 144).length;
-  const expectedCount = getSelectedChart().steps.length;
-  const similarity = Math.min(
-    100,
-    Math.round((recordedCount / expectedCount) * 100),
-  );
-  controls.renderMidiLog(
-    `MIDI比較結果: ${recordedCount} / ${expectedCount} パターン一致 (${similarity}%)\n記録数: ${state.midiRecord.length}`,
-  );
 }
 
 controls.bindControls({
@@ -1007,20 +1064,25 @@ controls.bindControls({
     currentView = "builder";
     persistSession();
   },
+  onShowMidiSetup: () => {
+    prepareViewSwitch();
+    controls.renderMidiSetupView();
+    currentView = "midi";
+    persistSession();
+  },
   onConnectMidi: connectMIDI,
-  onToggleMidiRecording: toggleMidiRecording,
-  onCompareMidi: compareMidiRecording,
 });
 
 performanceUi.bindPerformance({
-  onToggleRecording: toggleMidiRecording,
   onExport: exportPerformance,
 });
 
 transport.bindTransport({
   onPlay: (isBuilderPlayback) => {
-    if (playbackController.isRunning) stopPlayback();
-    else startPlayback(isBuilderPlayback);
+    if (!playbackController.isRunning) startPlayback(isBuilderPlayback);
+    else if (isSessionRunning(challengeSession)) {
+      cancelChallenge("再生の停止でチャレンジを中断しました。");
+    } else stopPlayback();
   },
   onBpmChange: (value) => {
     if (activeChallengeKey !== null) {
@@ -1078,7 +1140,6 @@ editorUi = editor.bindEditor({
 
 challengeUi.bindChallenge({
   onStart: startChallenge,
-  onRetry: startChallenge,
   onReset: resetChallengeProgress,
 });
 savedCharts.bindSavedCharts({ onSave: saveCurrentChart });

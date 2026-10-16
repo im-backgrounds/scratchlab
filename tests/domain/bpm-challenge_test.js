@@ -434,7 +434,6 @@ Deno.test("the panel view derives the challenge BPM from progress", () => {
   assert.equal(fresh.bestAccuracy, null);
   assert.equal(fresh.attempts, 0);
   assert.equal(fresh.canStart, true);
-  assert.equal(fresh.canRetry, false);
   assert.equal(fresh.canReset, false);
 
   const cleared = describeChallenge({
@@ -450,13 +449,18 @@ Deno.test("the panel view derives the challenge BPM from progress", () => {
   assert.equal("currentBpm" in progressAt(90), false);
 });
 
-Deno.test("retry is offered only after a failed attempt", () => {
+Deno.test("start handles first attempt, retry after failure and next BPM", () => {
+  const first = describeChallenge({ chartKey: KEY });
+  assert.equal(first.canStart, true);
+  assert.equal(first.currentBpm, 80);
+
   const failed = evaluateAttempt(createEmptyProgress(), attempt(80, 50));
   const afterFail = describeChallenge({
     chartKey: KEY,
     progress: failed.progress,
   });
-  assert.equal(afterFail.canRetry, true);
+  assert.equal(afterFail.canStart, true);
+  assert.equal("canRetry" in afterFail, false);
   assert.equal(afterFail.currentBpm, 80);
 
   const passed = evaluateAttempt(createEmptyProgress(), attempt(80, 95));
@@ -464,12 +468,11 @@ Deno.test("retry is offered only after a failed attempt", () => {
     chartKey: KEY,
     progress: passed.progress,
   });
-  assert.equal(afterPass.canRetry, false);
   assert.equal(afterPass.canStart, true);
   assert.equal(afterPass.currentBpm, 85);
 });
 
-Deno.test("an active challenge disables start, retry and reset", () => {
+Deno.test("an active challenge disables start and reset", () => {
   const failed = evaluateAttempt(createEmptyProgress(), attempt(80, 50));
   const view = describeChallenge({
     chartKey: KEY,
@@ -478,7 +481,6 @@ Deno.test("an active challenge disables start, retry and reset", () => {
   });
   assert.equal(view.active, true);
   assert.equal(view.canStart, false);
-  assert.equal(view.canRetry, false);
   assert.equal(view.canReset, false);
 });
 
@@ -501,7 +503,6 @@ Deno.test("an unsaved chart asks to be saved and cannot start", () => {
   assert.equal(SAVE_CHART_MESSAGE, view.unavailableMessage);
   assert.equal(view.currentBpm, null);
   assert.equal(view.canStart, false);
-  assert.equal(view.canRetry, false);
   assert.equal(view.canReset, false);
   assert.equal(describeChallenge({ chartKey: KEY }).unavailableMessage, null);
 });

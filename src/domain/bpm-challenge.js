@@ -163,8 +163,6 @@ export function describeChallenge(
     clears: progress.clears,
     lastAttempt: last,
     canStart: eligible && !active && !complete,
-    canRetry: eligible && !active && !complete && last !== null &&
-      !last.cleared,
     canReset: eligible && !active &&
       (progress.attempts > 0 || progress.highestClearedBpm !== null),
   };

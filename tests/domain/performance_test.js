@@ -298,3 +298,21 @@ Deno.test("clear removes the stored performance", () => {
   assert.deepEqual(repository.clear(), { ok: true });
   assert.equal(repository.load(), null);
 });
+
+Deno.test("loop ends are stored and normalized only when present", () => {
+  const events = [{ type: "scratch", direction: "forward", time: 1100 }];
+  const plain = createPerformance(events, { startedAt: 1000, endedAt: 2000 });
+  assert.equal("loopEnds" in plain, false);
+
+  const looped = createPerformance(events, {
+    startedAt: 1000,
+    endedAt: 3000,
+    loopEnds: [1000, -5, Number.NaN, 1000],
+  });
+  assert.deepEqual(looped.loopEnds, [1000]);
+  assert.deepEqual(normalizePerformance(looped).loopEnds, [1000]);
+  assert.equal(
+    "loopEnds" in normalizePerformance({ ...looped, loopEnds: "x" }),
+    false,
+  );
+});

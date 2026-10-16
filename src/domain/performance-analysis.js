@@ -141,3 +141,49 @@ export function analyzePerformance(expectedEvents, actualEvents) {
       : Math.round((total.matched / denominator) * 1000) / 10,
   };
 }
+
+/**
+ * Analyzes a recording made of several loops. Each loop is compared with the
+ * expected events on its own and the tallies are added up, so a loop never
+ * borrows events from its neighbour.
+ * @param {object[]} expectedEvents Expected events of one loop.
+ * @param {object[]} actualEvents Events of a performance.
+ * @param {number[]} [loopEnds] Ascending offsets (ms) where a loop ends. An
+ *   event at exactly that offset still belongs to the loop that ends there.
+ */
+export function analyzePerformanceLoops(
+  expectedEvents,
+  actualEvents,
+  loopEnds = [],
+) {
+  const bounds = [...loopEnds, Infinity];
+  let previous = -Infinity;
+  const analyses = bounds.map((end) => {
+    const segment = actualEvents.filter((e) => e.t > previous && e.t <= end);
+    previous = end;
+    return analyzePerformance(expectedEvents, segment);
+  });
+
+  const byKind = Object.fromEntries(
+    COUNT_KEYS.map((key) => [key, createEmptyTally()]),
+  );
+  const total = createEmptyTally();
+  for (const analysis of analyses) {
+    for (const field of ["matched", "missing", "extra"]) {
+      total[field] += analysis[field];
+      for (const key of COUNT_KEYS) {
+        byKind[key][field] += analysis.byKind[key][field];
+      }
+    }
+  }
+  const denominator = total.matched + total.missing + total.extra;
+  return {
+    expectedCount: total.matched + total.missing,
+    actualCount: total.matched + total.extra,
+    ...total,
+    byKind,
+    accuracy: denominator === 0
+      ? null
+      : Math.round((total.matched / denominator) * 1000) / 10,
+  };
+}

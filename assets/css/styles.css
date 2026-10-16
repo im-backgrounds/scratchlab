@@ -2078,6 +2078,54 @@ button {
   border-top-color: var(--primary, #6fe3ff);
 }
 
+.challenge-help {
+  margin: 0 0 14px;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.challenge-progress {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin: 14px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.challenge-progress li {
+  padding: 10px 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.challenge-progress li[data-state="done"] {
+  border-color: rgba(126, 240, 187, 0.45);
+  color: var(--success);
+}
+
+.challenge-progress li[data-state="current"] {
+  border-color: var(--primary);
+  background: rgba(111, 228, 255, 0.12);
+  color: var(--text);
+}
+
+.challenge-progress li[data-state="current"][data-id^="recording"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+@media (max-width: 640px) {
+  .challenge-progress {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 #challenge-panel.is-active {
   border-color: var(--primary, #6fe3ff);
 }

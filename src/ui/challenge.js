@@ -2,9 +2,8 @@ function setText(id, text) {
   document.getElementById(id).textContent = text;
 }
 
-export function bindChallenge({ onStart, onRetry, onReset }) {
+export function bindChallenge({ onStart, onReset }) {
   document.getElementById("challenge-start").addEventListener("click", onStart);
-  document.getElementById("challenge-retry").addEventListener("click", onRetry);
   document.getElementById("challenge-reset").addEventListener("click", onReset);
 }
 
@@ -38,7 +37,6 @@ export function renderChallenge(view, chartName) {
   setText("challenge-attempts", String(view.attempts));
   setText("challenge-clears", String(view.clears));
   document.getElementById("challenge-start").disabled = !view.canStart;
-  document.getElementById("challenge-retry").disabled = !view.canRetry;
   document.getElementById("challenge-reset").disabled = !view.canReset;
 }
 
@@ -46,4 +44,21 @@ export function confirmReset(chartName) {
   return globalThis.confirm(
     `「${chartName}」のチャレンジ進捗をリセットしますか？`,
   );
+}
+
+/**
+ * Renders the Demo / Recording / Analyzing / Result progress indicator.
+ * @param {{id: string, label: string, state: string}[]} steps Output of
+ *   describeSessionProgress.
+ */
+export function renderChallengeProgress(steps) {
+  const list = document.getElementById("challenge-progress");
+  list.replaceChildren(...steps.map((step) => {
+    const item = document.createElement("li");
+    item.textContent = step.label;
+    item.dataset.id = step.id;
+    item.dataset.state = step.state;
+    if (step.state === "current") item.setAttribute("aria-current", "step");
+    return item;
+  }));
 }

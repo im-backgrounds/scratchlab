@@ -14,11 +14,7 @@ const LANE_KIND_LABELS = {
   closed: "Fader Close",
 };
 
-export function bindPerformance({ onToggleRecording, onExport }) {
-  document.getElementById("performance-record").addEventListener(
-    "click",
-    onToggleRecording,
-  );
+export function bindPerformance({ onExport }) {
   document.getElementById("performance-export").addEventListener(
     "click",
     onExport,
@@ -26,9 +22,6 @@ export function bindPerformance({ onToggleRecording, onExport }) {
 }
 
 export function renderPerformanceRecording(isRecording) {
-  const button = document.getElementById("performance-record");
-  button.textContent = isRecording ? "記録を停止" : "記録を開始";
-  button.setAttribute("aria-pressed", String(isRecording));
   document.getElementById("performance-panel").classList.toggle(
     "is-recording",
     isRecording,

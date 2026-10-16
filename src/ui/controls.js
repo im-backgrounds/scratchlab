@@ -1,9 +1,8 @@
 export function bindControls({
   onShowGuide,
   onShowBuilder,
+  onShowMidiSetup,
   onConnectMidi,
-  onToggleMidiRecording,
-  onCompareMidi,
 }) {
   const sidebar = document.getElementById("sidebar");
   const mobileMenuToggle = document.getElementById("mobile-menu-toggle");
@@ -13,8 +12,7 @@ export function bindControls({
   const chartHelpToggle = document.getElementById("chart-help-toggle");
   const chartHelpPanel = document.getElementById("chart-help-panel");
   const midiConnectButton = document.getElementById("midi-connect");
-  const recordMidiButton = document.getElementById("record-midi");
-  const compareMidiButton = document.getElementById("compare-midi");
+  const midiSetupTab = document.getElementById("midi-setup-tab");
 
   const setMobileMenuOpen = (isOpen, restoreFocus = false) => {
     document.body.classList.toggle("mobile-menu-open", isOpen);
@@ -48,6 +46,7 @@ export function bindControls({
 
   notationGuideTab.addEventListener("click", onShowGuide);
   builderTab.addEventListener("click", onShowBuilder);
+  midiSetupTab.addEventListener("click", onShowMidiSetup);
 
   chartHelpToggle.addEventListener("click", () => {
     chartHelpPanel.hidden = !chartHelpPanel.hidden;
@@ -61,8 +60,6 @@ export function bindControls({
   });
 
   midiConnectButton.addEventListener("click", onConnectMidi);
-  recordMidiButton.addEventListener("click", onToggleMidiRecording);
-  compareMidiButton.addEventListener("click", onCompareMidi);
 }
 
 export function renderResetControls(state) {
@@ -75,10 +72,9 @@ export function renderResetControls(state) {
   });
   document.getElementById("click-volume-slider").value = "50";
   setPlaybackButton(false);
-  renderMidiRecording(state.recordingMidi);
   renderMidiStatus(
     state.midiConnected ? "MIDI接続済み" : "MIDI未接続",
-    "記録データはまだありません。",
+    "MIDI入力はまだありません。",
   );
   renderChartHelp(false);
   document.querySelectorAll(".step-type").forEach((button) => {
@@ -107,12 +103,6 @@ export function setPlaybackButton(isPlaying) {
   button.setAttribute("aria-pressed", String(isPlaying));
 }
 
-export function renderMidiRecording(isRecording) {
-  document.getElementById("record-midi").textContent = isRecording
-    ? "記録中止"
-    : "記録開始";
-}
-
 export function renderMidiStatus(status, log) {
   document.getElementById("midi-status").textContent = status;
   document.getElementById("midi-log").textContent = log;
@@ -138,32 +128,39 @@ export function renderChartHelp(isVisible) {
   toggle.title = isVisible ? "譜面の見方を閉じる" : "譜面の見方";
 }
 
+const PAGE_IDS = [
+  "practice-view",
+  "notation-guide-page",
+  "builder-page",
+  "midi-setup-page",
+];
+const TAB_IDS = ["notation-guide-tab", "builder-tab", "midi-setup-tab"];
+
+function showPage(pageId, activeTabId) {
+  for (const id of PAGE_IDS) document.getElementById(id).hidden = id !== pageId;
+  for (const id of TAB_IDS) {
+    document.getElementById(id).classList.toggle("active", id === activeTabId);
+  }
+}
+
 export function renderGuideView() {
-  document.getElementById("practice-view").hidden = true;
-  document.getElementById("notation-guide-page").hidden = false;
-  document.getElementById("builder-page").hidden = true;
-  document.getElementById("notation-guide-tab").classList.add("active");
-  document.getElementById("builder-tab").classList.remove("active");
+  showPage("notation-guide-page", "notation-guide-tab");
 }
 
 export function renderPracticeView() {
   document.getElementById("practice-transport-slot").append(
     document.getElementById("transport-panel"),
   );
-  document.getElementById("practice-view").hidden = false;
-  document.getElementById("notation-guide-page").hidden = true;
-  document.getElementById("builder-page").hidden = true;
-  document.getElementById("notation-guide-tab").classList.remove("active");
-  document.getElementById("builder-tab").classList.remove("active");
+  showPage("practice-view", null);
 }
 
 export function renderBuilderView() {
   document.getElementById("builder-transport-slot").append(
     document.getElementById("transport-panel"),
   );
-  document.getElementById("practice-view").hidden = true;
-  document.getElementById("notation-guide-page").hidden = true;
-  document.getElementById("builder-page").hidden = false;
-  document.getElementById("notation-guide-tab").classList.remove("active");
-  document.getElementById("builder-tab").classList.add("active");
+  showPage("builder-page", "builder-tab");
+}
+
+export function renderMidiSetupView() {
+  showPage("midi-setup-page", "midi-setup-tab");
 }

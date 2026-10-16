@@ -40,6 +40,11 @@
             <button id="builder-tab" class="chart-item nav-page-button"
               type="button">譜面作成</button>
           </div>
+
+          <div class="nav-group builder-link-group">
+            <button id="midi-setup-tab" class="chart-item nav-page-button"
+              type="button">MIDIセットアップ</button>
+          </div>
         </div>
       </aside>
 
@@ -139,41 +144,6 @@
             </div>
           </section>
 
-          <section class="card secondary-card">
-            <div class="section-header">
-              <div>
-                <h3>MIDI入力</h3>
-                <p>DJコントローラ入力を記録して比較できます</p>
-              </div>
-            </div>
-
-            <div class="midi-actions">
-              <button id="midi-connect"
-                class="secondary-button">MIDI接続</button>
-              <button id="record-midi"
-                class="secondary-button">記録開始</button>
-              <button id="compare-midi" class="secondary-button">比較</button>
-            </div>
-
-            <div id="midi-status" class="status-box">MIDI未接続</div>
-            <div id="midi-log"
-              class="log-box">記録データはまだありません。</div>
-
-            <div class="midi-mapping">
-              <h4>MIDIマッピング</h4>
-              <p class="midi-mapping-help">
-                「Learn」を押して、割り当てたいボタンやつまみを操作してください。次のMIDI入力（操作の種類・番号・ベロシティ）が割り当てられます。Forward/Backwardは学習したベロシティと一致したとき、Faderは「開の値〜閾値〜閉の値」で判定します（初期値は 0・120・127。開側から閾値までが開、それを超えると閉）。「開閉を入れ替え」で開と閉が入れ替わり、閾値は127−閾値になります。他の操作に割り当て済みの入力は、既存の割り当てを変えずに拒否されます。Stopは割り当て不要で、Forward/Backwardが入力されない間に自動判定されます。
-              </p>
-              <ul id="midi-mapping-list" class="midi-mapping-list"></ul>
-              <div id="midi-mapping-status" class="status-box" role="status">
-                操作を割り当てると、入力がスクラッチとフェーダーのイベントに変換されます。
-              </div>
-              <h4>イベントログ</h4>
-              <div id="midi-event-log" class="log-box" role="log"
-                aria-live="polite">変換されたイベントはまだありません。</div>
-            </div>
-          </section>
-
           <section id="challenge-panel" class="card secondary-card"
             aria-labelledby="challenge-title">
             <div class="section-header">
@@ -184,14 +154,19 @@
               </div>
             </div>
 
+            <p class="challenge-help">
+              「チャレンジ開始」を押すと、お手本ループ → 記録ループ2回 → 判定まで自動で進みます。お手本ループは採点されません。MIDIの接続と割り当ては「MIDIセットアップ」で行います。
+            </p>
+
             <div class="button-row">
               <button id="challenge-start" class="secondary-button"
                 type="button">チャレンジ開始</button>
-              <button id="challenge-retry" class="secondary-button"
-                type="button">リトライ</button>
               <button id="challenge-reset" class="secondary-button"
                 type="button">進捗をリセット</button>
             </div>
+
+            <ol id="challenge-progress" class="challenge-progress"
+              aria-label="チャレンジの進行状況"></ol>
 
             <div id="challenge-status" class="status-box" role="status"
               aria-live="polite"></div>
@@ -225,19 +200,17 @@
             <div class="section-header">
               <div>
                 <h3 id="performance-title">パフォーマンス</h3>
-                <p>スクラッチとフェーダーの操作を記録して、流れを確認できます</p>
+                <p>BPMチャレンジで記録したスクラッチとフェーダーの操作を確認できます</p>
               </div>
             </div>
 
             <div class="midi-actions">
-              <button id="performance-record" class="secondary-button"
-                aria-pressed="false">記録を開始</button>
               <button id="performance-export" class="secondary-button"
                 disabled>JSONで書き出し</button>
             </div>
 
             <div id="performance-status" class="status-box" role="status">
-              MIDIを接続してマッピングを設定し、「記録を開始」を押してください。
+              BPMチャレンジで演奏すると、記録がここに表示されます。
             </div>
 
             <dl class="performance-summary">
@@ -289,6 +262,48 @@
             </div>
           </section>
         </div>
+
+        <section id="midi-setup-page" class="guide-page" hidden
+          aria-labelledby="midi-setup-title">
+          <header class="guide-page-header">
+            <p class="eyebrow">MIDI SETUP</p>
+            <h2 id="midi-setup-title">MIDIセットアップ</h2>
+            <p>DJコントローラを接続し、操作をスクラッチとフェーダーに割り当てます。設定はこのブラウザーに保存され、BPMチャレンジの自動記録で使われます。</p>
+          </header>
+
+          <section class="card secondary-card">
+            <div class="section-header">
+              <div>
+                <h3>接続と診断</h3>
+                <p>接続状態と、受信したMIDIメッセージを確認できます</p>
+              </div>
+            </div>
+
+            <div class="midi-actions">
+              <button id="midi-connect" class="secondary-button"
+                type="button">MIDI接続</button>
+            </div>
+
+            <div id="midi-status" class="status-box">MIDI未接続</div>
+            <div id="midi-log" class="log-box">MIDI入力はまだありません。</div>
+          </section>
+
+          <section class="card secondary-card">
+            <div class="midi-mapping">
+              <h4>MIDIマッピング</h4>
+              <p class="midi-mapping-help">
+                「Learn」を押して、割り当てたいボタンやつまみを操作してください。次のMIDI入力（操作の種類・番号・ベロシティ）が割り当てられます。Forward/Backwardは学習したベロシティと一致したとき、Faderは「開の値〜閾値〜閉の値」で判定します（初期値は 0・120・127。開側から閾値までが開、それを超えると閉）。「開閉を入れ替え」で開と閉が入れ替わり、閾値は127−閾値になります。他の操作に割り当て済みの入力は、既存の割り当てを変えずに拒否されます。Stopは割り当て不要で、Forward/Backwardが入力されない間に自動判定されます。
+              </p>
+              <ul id="midi-mapping-list" class="midi-mapping-list"></ul>
+              <div id="midi-mapping-status" class="status-box" role="status">
+                操作を割り当てると、入力がスクラッチとフェーダーのイベントに変換されます。
+              </div>
+              <h4>イベントログ</h4>
+              <div id="midi-event-log" class="log-box" role="log"
+                aria-live="polite">変換されたイベントはまだありません。</div>
+            </div>
+          </section>
+        </section>
 
         <section id="notation-guide-page" class="guide-page" hidden
           aria-labelledby="notation-guide-title">

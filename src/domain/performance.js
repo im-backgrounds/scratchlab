@@ -67,10 +67,15 @@ function copyEvent(event) {
  * Event times become offsets from the start so recordings are comparable.
  * Events are kept in time order and capped at {@link MAX_PERFORMANCE_EVENTS}.
  * @param {object[]} actionEvents `{type, direction|state, time}` in ms.
- * @param {{startedAt: number, endedAt: number}} range Recording range in ms.
+ * @param {{startedAt: number, endedAt: number, loopEnds?: number[]}} range
+ *   Recording range in ms. `loopEnds` are offsets from the start where one
+ *   recorded loop ends and the next begins.
  * @returns {object} A performance document.
  */
-export function createPerformance(actionEvents, { startedAt, endedAt }) {
+export function createPerformance(
+  actionEvents,
+  { startedAt, endedAt, loopEnds = [] },
+) {
   const events = [];
   for (const raw of actionEvents) {
     if (!raw || typeof raw !== "object") continue;
@@ -88,8 +93,19 @@ export function createPerformance(actionEvents, { startedAt, endedAt }) {
     durationMs: Math.max(0, Math.round(endedAt - startedAt), lastT),
     counts: countPerformanceEvents(kept),
     truncated,
+    ...toLoopEndsField(loopEnds),
     events: kept,
   };
+}
+
+// Optional field: only recordings made of several loops carry it.
+function toLoopEndsField(value) {
+  if (!Array.isArray(value)) return {};
+  const ends = [
+    ...new Set(value.filter((end) => Number.isFinite(end) && end >= 0)),
+  ]
+    .sort((a, b) => a - b);
+  return ends.length ? { loopEnds: ends } : {};
 }
 
 /**
@@ -115,6 +131,7 @@ export function normalizePerformance(value) {
     durationMs: Math.max(0, Math.round(duration), lastT),
     counts: countPerformanceEvents(events),
     truncated: value.truncated === true,
+    ...toLoopEndsField(value.loopEnds),
     events,
   };
 }

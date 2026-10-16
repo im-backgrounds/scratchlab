@@ -3,6 +3,7 @@ import { chartCatalog } from "../../src/data/chart-catalog.js";
 import { compileScoreData } from "../../src/domain/score-compiler.js";
 import {
   analyzePerformance,
+  analyzePerformanceLoops,
   createExpectedEvents,
   getEventKind,
 } from "../../src/domain/performance-analysis.js";
@@ -184,4 +185,35 @@ Deno.test("flush emits the pending stop immediately and only once", () => {
   detector.observe({ type: "scratch", direction: "forward", time: 900 });
   detector.flush(950);
   assert.equal(stops[1].time, 950);
+});
+
+Deno.test("loops are analyzed separately and the tallies are added up", () => {
+  const expected = createExpectedEvents(compile([["F", "B"]]));
+  const at = (t, direction) => ({ t, ...scratch(direction) });
+  // Loop 1 is perfect; loop 2 misses the backward stroke.
+  const events = [
+    at(0, "forward"),
+    at(100, "backward"),
+    at(200, "stop"),
+    at(300, "forward"),
+    at(400, "stop"),
+  ];
+  const result = analyzePerformanceLoops(expected, events, [200]);
+  assert.equal(result.matched, 5);
+  assert.equal(result.missing, 1);
+  assert.equal(result.extra, 0);
+  assert.equal(result.accuracy, 83.3);
+});
+
+Deno.test("an event at a loop end belongs to the loop that ends there", () => {
+  const expected = createExpectedEvents(compile([["F"]]));
+  const events = [
+    { t: 10, ...scratch("forward") },
+    { t: 100, ...scratch("stop") },
+    { t: 110, ...scratch("forward") },
+    { t: 200, ...scratch("stop") },
+  ];
+  assert.equal(analyzePerformanceLoops(expected, events, [100]).accuracy, 100);
+  // Without boundaries the same events count as one long loop with extras.
+  assert.ok(analyzePerformanceLoops(expected, events).accuracy < 100);
 });
