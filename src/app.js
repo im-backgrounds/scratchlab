@@ -73,7 +73,6 @@ const clickDivisionInputs = document.querySelectorAll('input[name="click-divisio
 const clickVolumeSlider = document.getElementById("click-volume-slider");
 const clickVolumeValueEl = document.getElementById("click-volume-value");
 const playToggle = document.getElementById("play-toggle");
-const stopButton = document.getElementById("stop-button");
 const builderTab = document.getElementById("builder-tab");
 const patternLengthInput = document.getElementById("pattern-length");
 const patternLengthValue = document.getElementById("pattern-length-value");
@@ -223,6 +222,7 @@ function resetPageState() {
   });
   clickVolumeSlider.value = "50";
   playToggle.textContent = "再生";
+  playToggle.setAttribute("aria-pressed", "false");
   recordMidiButton.textContent = "記録開始";
   midiStatusEl.textContent = state.midiConnected ? "MIDI接続済み" : "MIDI未接続";
   midiLogEl.textContent = "記録データはまだありません。";
@@ -262,7 +262,12 @@ function updateTransportValues() {
   bpmValueEl.textContent = `${state.bpm}`;
   volumeValueEl.textContent = `${Math.round(state.volume * 100)}%`;
   clickVolumeValueEl.textContent = `${Math.round(state.clickVolume * 100)}%`;
-  patternLengthValue.textContent = `${state.builderSteps.length}`;
+  patternLengthValue.textContent = `${getBuilderBarCount()}`;
+}
+
+function getBuilderBarCount() {
+  return state.builderScoreData?.source.score.length
+    ?? Math.ceil(state.builderSteps.length / state.builderTicksPerBar);
 }
 
 function updateBuilderEditor() {
@@ -288,8 +293,7 @@ function updateBuilderEditor() {
 }
 
 function renderBuilder() {
-  patternLengthInput.max = String(Math.max(32, state.builderSteps.length));
-  patternLengthInput.value = String(state.builderSteps.length);
+  patternLengthInput.value = String(getBuilderBarCount());
   updateTransportValues();
   updateBuilderEditor();
   renderBuilderScore();
@@ -524,6 +528,7 @@ function stopPlayback() {
     state.timer = null;
   }
   playToggle.textContent = "再生";
+  playToggle.setAttribute("aria-pressed", "false");
   if (wasBuilderPlayback) {
     renderBuilderScore();
   } else {
@@ -541,7 +546,8 @@ function startPlayback(isBuilderPlayback = false) {
   }
 
   state.isPlaying = true;
-  playToggle.textContent = "停止中...";
+  playToggle.textContent = "停止";
+  playToggle.setAttribute("aria-pressed", "true");
 
   if (state.timer) {
     clearInterval(state.timer);
@@ -565,10 +571,6 @@ playToggle.addEventListener("click", () => {
     return;
   }
   startPlayback(!builderPage.hidden);
-});
-
-stopButton.addEventListener("click", () => {
-  stopPlayback();
 });
 
 bpmSlider.addEventListener("input", (event) => {
@@ -606,7 +608,7 @@ clickVolumeSlider.addEventListener("input", (event) => {
 });
 
 patternLengthInput.addEventListener("input", (event) => {
-  const nextLength = Number(event.target.value);
+  const nextLength = Number(event.target.value) * state.builderTicksPerBar;
   const existing = state.builderSteps;
 
   if (existing.length < nextLength) {
@@ -763,5 +765,5 @@ volumeSlider.value = String(Math.round(state.volume * 100));
 clickVolumeSlider.value = String(Math.round(state.clickVolume * 100));
 repeatToggle.checked = true;
 clickToggle.checked = true;
-patternLengthInput.value = String(state.builderSteps.length);
+patternLengthInput.value = String(getBuilderBarCount());
 render();

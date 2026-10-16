@@ -72,8 +72,7 @@
           <div id="practice-transport-slot">
           <div id="transport-panel" class="transport-panel">
             <div class="button-row">
-              <button id="play-toggle" class="primary-button">再生</button>
-              <button id="stop-button" class="secondary-button">停止</button>
+              <button id="play-toggle" class="primary-button" type="button" aria-pressed="false">再生</button>
             </div>
 
             <div class="controls-grid">
@@ -212,9 +211,9 @@
 
           <div class="builder-controls">
             <label class="control slim">
-              <span>小節の長さ</span>
-              <input id="pattern-length" type="range" min="8" max="32" step="4" value="16" />
-              <strong id="pattern-length-value">16</strong>
+              <span>小節数</span>
+              <input id="pattern-length" type="range" min="1" max="8" step="1" value="2" />
+              <strong id="pattern-length-value">2</strong>
             </label>
 
             <div class="button-row compact-row">
