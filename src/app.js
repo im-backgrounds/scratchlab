@@ -31,6 +31,8 @@ const state = {
   builderScoreMode: chartCatalog[0].scoreMode || null,
   builderScoreData: null,
   builderMetadata: { name: chartCatalog[0].name, difficulty: chartCatalog[0].difficulty },
+  builderJsonDirty: false,
+  builderActiveMode: "random",
   builderBeat: "4/4",
   builderTicksPerBar: 8,
   builderDirections: chartCatalog[0].steps.map((step) => (step === "R" ? "B" : "F")),
@@ -78,6 +80,13 @@ const patternLengthInput = document.getElementById("pattern-length");
 const patternLengthValue = document.getElementById("pattern-length-value");
 const builderStepsEl = document.getElementById("builder-steps");
 const chartJsonEl = document.getElementById("chart-json");
+const builderChartInfoEl = document.getElementById("builder-chart-info");
+const builderManualInfoEl = document.getElementById("builder-manual-info");
+const builderToolHintEl = document.getElementById("builder-tool-hint");
+const jsonStatusEl = document.getElementById("json-status");
+const chartJsonFileInput = document.getElementById("chart-json-file");
+const builderModeTabs = [...document.querySelectorAll(".builder-mode-tab")];
+const builderModePanels = [...document.querySelectorAll(".builder-mode-panel")];
 const midiStatusEl = document.getElementById("midi-status");
 const midiLogEl = document.getElementById("midi-log");
 const midiConnectButton = document.getElementById("midi-connect");
@@ -206,6 +215,8 @@ function resetPageState() {
   state.builderScoreMode = selectedChart.scoreMode || null;
   state.builderScoreData = selectedChart.scoreData;
   state.builderMetadata = { name: selectedChart.name, difficulty: selectedChart.difficulty };
+  state.builderJsonDirty = false;
+  state.builderActiveMode = "random";
   state.builderBeat = selectedChart.beat;
   state.builderTicksPerBar = selectedChart.scoreData.ticksPerBar;
   state.builderDirections = [...selectedChart.scoreData.directions];
@@ -232,8 +243,11 @@ function resetPageState() {
   chartHelpToggle.setAttribute("aria-label", "譜面の見方を表示");
   chartHelpToggle.title = "譜面の見方";
   document.querySelectorAll(".step-type").forEach((button) => {
-    button.classList.toggle("active", button.dataset.stepType === "L");
+    const isSelected = button.dataset.stepType === "L";
+    button.classList.toggle("active", isSelected);
+    button.setAttribute("aria-pressed", String(isSelected));
   });
+  setBuilderMode("random");
 
   render();
 }
@@ -270,32 +284,133 @@ function getBuilderBarCount() {
     ?? Math.ceil(state.builderSteps.length / state.builderTicksPerBar);
 }
 
+function setBuilderMode(mode) {
+  state.builderActiveMode = mode;
+  builderModeTabs.forEach((tab) => {
+    const isActive = tab.id === `builder-${mode}-tab`;
+    tab.classList.toggle("active", isActive);
+    tab.setAttribute("aria-selected", String(isActive));
+    tab.tabIndex = isActive ? 0 : -1;
+  });
+  builderModePanels.forEach((panel) => {
+    panel.hidden = panel.id !== `builder-${mode}-panel`;
+  });
+  if (mode === "json" && !state.builderJsonDirty) syncChartJson();
+}
+
+builderModeTabs.forEach((tab) => {
+  tab.addEventListener("click", () => setBuilderMode(tab.id.replace("builder-", "").replace("-tab", "")));
+});
+
+function updateBuilderSummary() {
+  const details = [
+    ["譜面名", state.builderMetadata.name || "無題"],
+    ["難易度", state.builderMetadata.difficulty || "未設定"],
+    ["拍子", state.builderBeat],
+    ["小節", `${getBuilderBarCount()} 小節`],
+  ];
+  builderChartInfoEl.replaceChildren(...details.map(([label, value]) => {
+    const item = document.createElement("div");
+    item.className = "builder-info-item";
+    const caption = document.createElement("span");
+    caption.textContent = label;
+    const content = document.createElement("strong");
+    content.textContent = value;
+    item.append(caption, content);
+    return item;
+  }));
+
+  const manualItems = [
+    `${state.builderMetadata.name || "無題"}`,
+    state.builderMetadata.difficulty || "難易度未設定",
+    state.builderBeat,
+    `${getBuilderBarCount()} 小節`,
+    `${state.builderTicksPerBar} セル / 小節`,
+  ];
+  builderManualInfoEl.replaceChildren(...manualItems.map((value) => {
+    const item = document.createElement("span");
+    item.textContent = value;
+    return item;
+  }));
+}
+
 function updateBuilderEditor() {
   builderStepsEl.innerHTML = "";
 
-  state.builderSteps.forEach((step, index) => {
-    const button = document.createElement("button");
-    button.className = `builder-step ${index === state.currentStep && state.isPlaying ? "active" : ""}`;
-    button.textContent = step === "-" ? "休" : step;
-    button.title = `Step ${index + 1}`;
-    button.addEventListener("click", () => {
-      const nextType = state.builderSelectedType;
-      state.builderSteps[index] = nextType;
-      if (nextType === "L") state.builderDirections[index] = "F";
-      if (nextType === "R") state.builderDirections[index] = "B";
-      recompileBuilderScore();
-      renderBuilder();
-    });
-    builderStepsEl.appendChild(button);
+  const cellsPerBar = state.builderTicksPerBar;
+  const stepLabels = { L: "前進", R: "後進", M: "無音", C: "チョップ", K: "キープ", S: "3クリック", "-": "継続" };
+  const compiledScore = state.builderScoreData || compileScoreData(createBuilderScoreDocument());
+  const notationLabels = Array(compiledScore.totalTicks).fill("");
+  compiledScore.events.forEach((event) => {
+    const notation = event.keep
+      ? "K"
+      : event.modifier === "-"
+        ? "–"
+        : `${event.direction}${event.modifier}`;
+    for (let tick = event.startTick; tick < event.startTick + event.durationTicks; tick += 1) {
+      notationLabels[tick] = notation;
+    }
   });
+  const bars = Math.ceil(state.builderSteps.length / cellsPerBar);
+  for (let bar = 0; bar < bars; bar += 1) {
+    const barEl = document.createElement("section");
+    barEl.className = "builder-bar";
+    const heading = document.createElement("h4");
+    heading.textContent = `小節 ${bar + 1}`;
+    const cells = document.createElement("div");
+    cells.className = "builder-bar-cells";
+    const barEnd = Math.min(state.builderSteps.length, (bar + 1) * cellsPerBar);
+    for (let index = bar * cellsPerBar; index < barEnd; index += 1) {
+      const step = state.builderSteps[index];
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `builder-step step-${step === "-" ? "continue" : step.toLowerCase()} ${index === state.currentStep && state.isPlaying ? "active" : ""}`;
+      const notation = notationLabels[index] || (step === "-" ? "–" : step);
+      button.setAttribute("aria-label", `小節 ${bar + 1}、位置 ${index - bar * cellsPerBar + 1}: ${notation}（${stepLabels[step] || step}）`);
+      button.innerHTML = `<span>${notation}</span><small>${index - bar * cellsPerBar + 1}</small>`;
+      button.title = `${notation} · ${stepLabels[step] || step} · 小節 ${bar + 1} · ${index - bar * cellsPerBar + 1}セル目`;
+      button.addEventListener("click", () => {
+        const nextType = state.builderSelectedType;
+        state.builderSteps[index] = nextType;
+        if (nextType === "L") state.builderDirections[index] = "F";
+        if (nextType === "R") state.builderDirections[index] = "B";
+        recompileBuilderScore();
+        state.builderJsonDirty = false;
+        renderBuilder();
+      });
+      cells.appendChild(button);
+    }
+    barEl.append(heading, cells);
+    builderStepsEl.appendChild(barEl);
+  }
 
-  chartJsonEl.value = JSON.stringify(createBuilderScoreDocument(), null, 2);
+  if (!state.builderJsonDirty) {
+    chartJsonEl.value = JSON.stringify(createBuilderScoreDocument(), null, 2);
+    jsonStatusEl.textContent = "現在の譜面JSONです。編集後は「編集内容を反映」またはファイル保存ができます。";
+    jsonStatusEl.classList.remove("error");
+  }
+  updateBuilderSummary();
+}
+
+function updateToolHint() {
+  const labels = {
+    L: "前進を選択中。時間セルをクリックして配置します。",
+    R: "後進を選択中。時間セルをクリックして配置します。",
+    M: "ミュートを選択中。時間セルをクリックして配置します。",
+    C: "チョップを選択中。時間セルをクリックして配置します。",
+    P: "フレアを選択中。時間セルをクリックして配置します。",
+    K: "キープを選択中。時間セルをクリックして配置します。",
+    S: "3クリックを選択中。時間セルをクリックして配置します。",
+    "-": "継続を選択中。時間セルをクリックして配置します。",
+  };
+  builderToolHintEl.textContent = labels[state.builderSelectedType] || "";
 }
 
 function renderBuilder() {
   patternLengthInput.value = String(getBuilderBarCount());
   updateTransportValues();
   updateBuilderEditor();
+  updateToolHint();
   renderBuilderScore();
 }
 
@@ -341,6 +456,10 @@ function legacyStepsToScore(chart, steps) {
     if (step === "S") {
       faderOpen = true;
       return `${lastDirection}C3`;
+    }
+    if (step === "P") {
+      faderOpen = true;
+      return `${lastDirection}F`;
     }
     if (step === "K") {
       return "K";
@@ -630,81 +749,202 @@ patternLengthInput.addEventListener("input", (event) => {
 
   state.builderDirections = deriveBuilderDirections(state.builderSteps);
   recompileBuilderScore();
+  state.builderJsonDirty = false;
   renderBuilder();
 });
 
 document.querySelectorAll(".step-type").forEach((button) => {
   button.addEventListener("click", () => {
     state.builderSelectedType = button.dataset.stepType;
-    document.querySelectorAll(".step-type").forEach((btn) => btn.classList.toggle("active", btn === button));
+    document.querySelectorAll(".step-type").forEach((btn) => {
+      const isSelected = btn === button;
+      btn.classList.toggle("active", isSelected);
+      btn.setAttribute("aria-pressed", String(isSelected));
+    });
+    updateToolHint();
   });
 });
 
 function syncChartJson() {
   chartJsonEl.value = JSON.stringify(createBuilderScoreDocument(), null, 2);
+  state.builderJsonDirty = false;
+  jsonStatusEl.textContent = "現在の譜面JSONです。編集後は「編集内容を反映」またはファイル保存ができます。";
+  jsonStatusEl.classList.remove("error");
 }
 
 document.getElementById("random-pattern").addEventListener("click", () => {
-  const sequence = [];
-  const choices = ["L", "R", "M", "C", "K", "-"];
-  for (let index = 0; index < state.builderSteps.length; index += 1) {
-    sequence.push(choices[Math.floor(Math.random() * choices.length)]);
+  const difficulty = document.getElementById("generator-difficulty").value;
+  const minimumBeat = Number(document.getElementById("generator-min-beat").value);
+  const includeTriplets = document.getElementById("generator-triplets").checked;
+  const includeSyncopation = document.getElementById("generator-syncopation").checked;
+  const includeChops = document.getElementById("generator-chops").checked;
+  const includeFlares = document.getElementById("generator-flares").checked;
+  const includeKeeps = document.getElementById("generator-keeps").checked;
+  const [numerator, denominator] = state.builderBeat.split("/").map(Number);
+  const beatsPerBar = numerator * 4 / denominator;
+  const baseEventCount = Math.max(1, Math.floor(beatsPerBar / minimumBeat));
+  const bars = [];
+  let lastDirection = "B";
+  let faderOpen = true;
+
+  for (let bar = 0; bar < getBuilderBarCount(); bar += 1) {
+    const tripletIndex = includeTriplets ? Math.floor(Math.random() * baseEventCount) : -1;
+    const events = [];
+    for (let index = 0; index < baseEventCount; index += 1) {
+      const tripletCount = index === tripletIndex ? 3 : 1;
+      const tokens = [];
+      for (let subdivision = 0; subdivision < tripletCount; subdivision += 1) {
+        const beatPosition = index * minimumBeat + subdivision * minimumBeat / tripletCount;
+        const isStrongBeat = Math.abs(beatPosition - Math.round(beatPosition)) < 0.001;
+        if (includeSyncopation && isStrongBeat && (bar > 0 || index > 0) && Math.random() < 0.45) {
+          tokens.push(`${lastDirection}M`);
+          faderOpen = false;
+          continue;
+        }
+
+        if (includeKeeps && Math.random() < (difficulty === "Hard" ? 0.16 : 0.1)) {
+          tokens.push("K");
+          continue;
+        }
+
+        const techniqueRoll = Math.random();
+        const techniqueChance = difficulty === "Hard" ? 0.34 : difficulty === "Medium" ? 0.2 : 0.1;
+        if (includeChops && techniqueRoll < techniqueChance / 2) {
+          tokens.push(`${lastDirection}C`);
+          faderOpen = true;
+        } else if (includeFlares && techniqueRoll < techniqueChance) {
+          tokens.push(`${lastDirection}F`);
+          faderOpen = true;
+        } else {
+          lastDirection = difficulty === "Easy" && Math.random() < 0.72
+            ? (lastDirection === "F" ? "B" : "F")
+            : (Math.random() < 0.5 ? "F" : "B");
+          tokens.push(`${lastDirection}${faderOpen ? "" : "O"}`);
+          faderOpen = true;
+        }
+      }
+      events.push(tripletCount === 3 ? tokens : tokens[0]);
+    }
+    bars.push(events);
   }
-  state.builderSteps = sequence;
-  state.builderDirections = deriveBuilderDirections(sequence);
-  recompileBuilderScore();
+
+  const generated = compileScoreData({
+    name: "ランダム生成譜面",
+    difficulty,
+    beat: state.builderBeat,
+    score: bars,
+  });
+  state.builderScoreData = generated;
+  state.builderSteps = generated.steps;
+  state.builderDirections = generated.directions;
+  state.builderTicksPerBar = generated.ticksPerBar;
+  state.builderBeat = generated.beat;
+  state.builderMetadata = { name: generated.source.name, difficulty };
+  state.builderScoreMode = null;
+  state.builderJsonDirty = false;
   renderBuilder();
+  setBuilderMode("manual");
 });
 
 document.getElementById("manual-fill").addEventListener("click", () => {
   state.builderSteps = Array.from({ length: state.builderSteps.length }, (_, i) => (i % 2 === 0 ? "L" : "R"));
   state.builderDirections = deriveBuilderDirections(state.builderSteps);
   recompileBuilderScore();
+  state.builderJsonDirty = false;
   renderBuilder();
 });
 
 document.getElementById("export-json").addEventListener("click", () => {
-  const data = JSON.stringify(createBuilderScoreDocument(), null, 2);
+  let data;
+  try {
+    if (state.builderJsonDirty) {
+      const edited = JSON.parse(chartJsonEl.value);
+      compileScoreData(edited);
+      data = JSON.stringify(edited, null, 2);
+    } else {
+      data = JSON.stringify(createBuilderScoreDocument(), null, 2);
+    }
+  } catch (error) {
+    jsonStatusEl.textContent = `保存できません: ${error.message}`;
+    jsonStatusEl.classList.add("error");
+    return;
+  }
 
   const blob = new Blob([data], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = "scratch-chart.json";
+  const filename = (state.builderMetadata.name || "scratch-chart")
+    .normalize("NFKD")
+    .replace(/[^a-zA-Z0-9_-]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .toLowerCase() || "scratch-chart";
+  link.download = `${filename}.json`;
   link.click();
-  URL.revokeObjectURL(url);
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  jsonStatusEl.textContent = "譜面JSONをファイルに保存しました。";
+  jsonStatusEl.classList.remove("error");
 });
+
+function loadChartJson(parsed) {
+  if (parsed && Array.isArray(parsed.score)) {
+    const compiled = compileScoreData(parsed);
+    state.builderScoreData = compiled;
+    state.builderSteps = compiled.steps;
+    state.builderDirections = compiled.directions;
+    state.builderBeat = compiled.beat;
+    state.builderTicksPerBar = compiled.ticksPerBar;
+    state.builderScoreMode = null;
+    state.builderMetadata = { name: parsed.name, difficulty: parsed.difficulty };
+  } else if (parsed && Array.isArray(parsed.steps)) {
+    state.builderSteps = parsed.steps;
+    state.builderDirections = deriveBuilderDirections(state.builderSteps);
+    state.builderBeat = "4/4";
+    state.builderTicksPerBar = 8;
+    state.builderScoreMode = null;
+    state.builderScoreData = null;
+    state.builderMetadata = {
+      name: parsed.name || getSelectedChart().name,
+      difficulty: parsed.difficulty || getSelectedChart().difficulty,
+    };
+  } else {
+    throw new Error("score配列を持つ譜面データが必要です。");
+  }
+  state.builderJsonDirty = false;
+  renderBuilder();
+  jsonStatusEl.textContent = "JSONを譜面に反映しました。";
+  jsonStatusEl.classList.remove("error");
+}
 
 document.getElementById("import-json").addEventListener("click", () => {
   try {
     const parsed = JSON.parse(chartJsonEl.value);
-    if (parsed && Array.isArray(parsed.score)) {
-      const compiled = compileScoreData(parsed);
-      state.builderScoreData = compiled;
-      state.builderSteps = compiled.steps;
-      state.builderDirections = compiled.directions;
-      state.builderBeat = compiled.beat;
-      state.builderTicksPerBar = compiled.ticksPerBar;
-      state.builderScoreMode = null;
-      state.builderMetadata = { name: parsed.name, difficulty: parsed.difficulty };
-    } else if (parsed && Array.isArray(parsed.steps)) {
-      state.builderSteps = parsed.steps;
-      state.builderDirections = deriveBuilderDirections(state.builderSteps);
-      state.builderBeat = "4/4";
-      state.builderTicksPerBar = 8;
-      state.builderScoreMode = null;
-      state.builderScoreData = null;
-      state.builderMetadata = {
-        name: parsed.name || getSelectedChart().name,
-        difficulty: parsed.difficulty || getSelectedChart().difficulty,
-      };
-    } else {
-      throw new Error("score配列を持つ譜面データが必要です。");
-    }
-    renderBuilder();
-    midiLogEl.textContent = "JSONを読み込みました。現在の譜面に反映しました。";
+    loadChartJson(parsed);
   } catch (error) {
-    midiLogEl.textContent = `JSON読み込みエラー: ${error.message}`;
+    jsonStatusEl.textContent = `JSONエラー: ${error.message}`;
+    jsonStatusEl.classList.add("error");
+  }
+});
+
+chartJsonEl.addEventListener("input", () => {
+  state.builderJsonDirty = true;
+  jsonStatusEl.textContent = "未反映の変更があります。反映してから保存すると最新データになります。";
+  jsonStatusEl.classList.remove("error");
+});
+
+document.getElementById("json-load-file").addEventListener("click", () => chartJsonFileInput.click());
+
+chartJsonFileInput.addEventListener("change", async () => {
+  const [file] = chartJsonFileInput.files || [];
+  if (!file) return;
+  try {
+    loadChartJson(JSON.parse(await file.text()));
+  } catch (error) {
+    jsonStatusEl.textContent = `JSONファイル読み込みエラー: ${error.message}`;
+    jsonStatusEl.classList.add("error");
+  } finally {
+    chartJsonFileInput.value = "";
   }
 });
 

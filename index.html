@@ -210,37 +210,113 @@
             <div id="builder-transport-slot"></div>
           </section>
 
-          <div class="builder-controls">
-            <label class="control slim">
+          <section class="builder-overview" aria-label="現在の譜面情報">
+            <div id="builder-chart-info" class="builder-chart-info"></div>
+            <label class="builder-bar-control">
               <span>小節数</span>
               <input id="pattern-length" type="range" min="1" max="8" step="1" value="2" />
               <strong id="pattern-length-value">2</strong>
             </label>
+          </section>
 
-            <div class="button-row compact-row">
-              <button id="random-pattern" class="secondary-button">ランダム生成</button>
-              <button id="manual-fill" class="secondary-button">手動生成</button>
-              <button id="export-json" class="secondary-button">JSON保存</button>
-              <button id="import-json" class="secondary-button">JSON読み込み</button>
-            </div>
+          <div class="builder-mode-tabs" role="tablist" aria-label="譜面の作成方法">
+            <button id="builder-random-tab" class="builder-mode-tab active" type="button" role="tab" aria-selected="true" aria-controls="builder-random-panel">ランダム生成</button>
+            <button id="builder-manual-tab" class="builder-mode-tab" type="button" role="tab" aria-selected="false" aria-controls="builder-manual-panel">手動生成</button>
+            <button id="builder-json-tab" class="builder-mode-tab" type="button" role="tab" aria-selected="false" aria-controls="builder-json-panel">JSON</button>
           </div>
 
-          <div class="builder-grid">
-            <div class="manual-editor">
-              <div class="step-actions">
-                <button data-step-type="L" class="step-type active" title="前進">L</button>
-                <button data-step-type="R" class="step-type" title="後進">R</button>
-                <button data-step-type="M" class="step-type" title="ミュート時間・戻り">M</button>
-                <button data-step-type="C" class="step-type" title="フェーダー1クリック・2音">C</button>
-                <button data-step-type="K" class="step-type" title="キープ・水平線で前後を接続">K</button>
-                <button data-step-type="S" class="step-type" title="フェーダー3クリック・4音">S</button>
-                <button data-step-type="-" class="step-type" title="休止">休止</button>
+          <section id="builder-random-panel" class="builder-mode-panel" role="tabpanel" aria-labelledby="builder-random-tab">
+            <div class="builder-panel-heading">
+              <div>
+                <p class="eyebrow">PATTERN GENERATOR</p>
+                <h3>生成オプション</h3>
+                <p>難易度や使いたいテクニックを選んで譜面を作成します。</p>
               </div>
+              <button id="random-pattern" class="primary-button" type="button">この条件で生成</button>
+            </div>
+            <div class="generator-options">
+              <label class="generator-select">
+                <span>難易度</span>
+                <select id="generator-difficulty">
+                  <option value="Easy">Easy</option>
+                  <option value="Medium" selected>Medium</option>
+                  <option value="Hard">Hard</option>
+                </select>
+              </label>
+              <label class="generator-select">
+                <span>最小拍</span>
+                <select id="generator-min-beat">
+                  <option value="1">4分音符</option>
+                  <option value="0.5" selected>8分音符</option>
+                  <option value="0.25">16分音符</option>
+                </select>
+              </label>
+              <label class="generator-option">
+                <input id="generator-triplets" type="checkbox" />
+                <span><strong>連符を含む</strong><small>3連符のリズムを混ぜる</small></span>
+              </label>
+              <label class="generator-option">
+                <input id="generator-syncopation" type="checkbox" />
+                <span><strong>シンコペーションを含む</strong><small>拍の表を抜いて裏拍を強調</small></span>
+              </label>
+              <label class="generator-option">
+                <input id="generator-chops" type="checkbox" checked />
+                <span><strong>チョップを含む</strong><small>1クリックのカットを使う</small></span>
+              </label>
+              <label class="generator-option">
+                <input id="generator-flares" type="checkbox" />
+                <span><strong>フレアを含む</strong><small>短い無音から音を伸ばす</small></span>
+              </label>
+              <label class="generator-option">
+                <input id="generator-keeps" type="checkbox" />
+                <span><strong>キープを含む</strong><small>水平につなぐ区間を使う</small></span>
+              </label>
+            </div>
+          </section>
+
+          <section id="builder-manual-panel" class="builder-mode-panel" role="tabpanel" aria-labelledby="builder-manual-tab" hidden>
+            <div class="builder-panel-heading">
+              <div>
+                <p class="eyebrow">MANUAL EDITOR</p>
+                <h3>譜面を手動で編集</h3>
+                <p>記号を選んで、下の時間セルをクリックするとその位置を変更できます。</p>
+              </div>
+              <button id="manual-fill" class="secondary-button" type="button">交互パターンを作る</button>
+            </div>
+            <div id="builder-manual-info" class="manual-chart-summary"></div>
+            <div class="manual-editor">
+              <div class="step-actions" aria-label="配置する記号">
+                <button data-step-type="L" class="step-type active" type="button" title="前進">前進 <span class="step-code">F</span></button>
+                <button data-step-type="R" class="step-type" type="button" title="後進">後進 <span class="step-code">B</span></button>
+                <button data-step-type="M" class="step-type" type="button" title="ミュート">ミュート <span class="step-code">FM</span></button>
+                <button data-step-type="C" class="step-type" type="button" title="1クリックのチョップ">チョップ <span class="step-code">FC</span></button>
+                <button data-step-type="P" class="step-type" type="button" title="フレア">フレア <span class="step-code">FF</span></button>
+                <button data-step-type="K" class="step-type" type="button" title="キープ">キープ <span class="step-code">K</span></button>
+                <button data-step-type="S" class="step-type" type="button" title="3クリック">3クリック <span class="step-code">C3</span></button>
+                <button data-step-type="-" class="step-type" type="button" title="直前の動きを継続">継続 <span class="step-code">–</span></button>
+              </div>
+              <p id="builder-tool-hint" class="builder-tool-hint" aria-live="polite">前進を選択中。時間セルをクリックして配置します。</p>
               <div id="builder-steps" class="builder-steps"></div>
             </div>
+          </section>
 
-            <textarea id="chart-json" class="json-editor" spellcheck="false"></textarea>
-          </div>
+          <section id="builder-json-panel" class="builder-mode-panel" role="tabpanel" aria-labelledby="builder-json-tab" hidden>
+            <div class="builder-panel-heading">
+              <div>
+                <p class="eyebrow">CHART DATA</p>
+                <h3>JSONを編集</h3>
+                <p>現在の譜面データを直接編集するか、ファイルとして保存できます。</p>
+              </div>
+              <div class="json-actions">
+                <button id="import-json" class="secondary-button" type="button">編集内容を反映</button>
+                <button id="json-load-file" class="secondary-button" type="button">ファイルを開く</button>
+                <button id="export-json" class="primary-button" type="button">JSONを保存</button>
+                <input id="chart-json-file" type="file" accept=".json,application/json" hidden />
+              </div>
+            </div>
+            <textarea id="chart-json" class="json-editor" spellcheck="false" aria-label="譜面JSON"></textarea>
+            <p id="json-status" class="json-status" aria-live="polite">編集内容を反映すると、譜面プレビューに適用されます。</p>
+          </section>
         </section>
       </main>
     </div>
