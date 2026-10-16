@@ -136,7 +136,7 @@ function getPlaybackChart() {
   return state.isBuilderPlayback ? getBuilderChart() : getSelectedChart();
 }
 
-const { initializeAudio, playClickSound, playScratch } = createScratchAudio(state, getPlaybackChart);
+const { initializeAudio, playClickSound, playScratch, silenceActiveScratch } = createScratchAudio(state, getPlaybackChart);
 
 function renderChartList() {
   chartListEl.innerHTML = "";
@@ -342,6 +342,9 @@ function legacyStepsToScore(chart, steps) {
       faderOpen = true;
       return `${lastDirection}C3`;
     }
+    if (step === "K") {
+      return "K";
+    }
     faderOpen = true;
     return "-";
   });
@@ -418,6 +421,12 @@ function advancePlayback() {
   const isDownbeat = scoreGrid
     ? state.currentStep % scoreGrid.ticksPerBar === 0
     : state.currentStep % 8 === 0;
+  const scoreEvent = scoreData?.events.find((event) => (
+    event.startTick <= state.currentStep
+    && state.currentStep < event.startTick + event.durationTicks
+  ));
+  const isKeepInterval = scoreEvent?.keep === true;
+  if (isKeepInterval) silenceActiveScratch();
   if (state.clickEnabled && state.currentStep % clickInterval === 0) {
     playClickSound(isDownbeat);
   }
@@ -426,8 +435,8 @@ function advancePlayback() {
     const eventIndex = events.findIndex((scoreEvent) => scoreEvent.startTick === state.currentStep);
     if (eventIndex >= 0) {
       const event = events[eventIndex];
-      if (event.faderOpen) {
-        const canMerge = (candidate) => candidate.faderOpen && candidate.cutCount === 0;
+      if (event.faderOpen && !event.keep) {
+        const canMerge = (candidate) => candidate.faderOpen && !candidate.keep && candidate.cutCount === 0;
         let runStartIndex = eventIndex;
         let runEndIndex = eventIndex;
         let runStartTick = event.startTick;
@@ -440,7 +449,7 @@ function advancePlayback() {
           let previousEndTick = event.startTick;
           while (previousIndex >= 0) {
             const previous = events[previousIndex];
-            if (!previous.faderOpen || previous.direction !== event.direction || previous.startTick + previous.durationTicks !== previousEndTick) break;
+            if (!previous.faderOpen || previous.keep || previous.direction !== event.direction || previous.startTick + previous.durationTicks !== previousEndTick) break;
             if (previous.modifier === "F") {
               followsFlare = true;
               break;
@@ -454,7 +463,7 @@ function advancePlayback() {
         if (event.modifier === "F") {
           while (runEndIndex + 1 < events.length) {
             const next = events[runEndIndex + 1];
-            if (!continuesFlareTail(next) || !next.faderOpen || next.direction !== event.direction || next.startTick !== runEndTick) break;
+            if (next.keep || !continuesFlareTail(next) || !next.faderOpen || next.direction !== event.direction || next.startTick !== runEndTick) break;
             runEndIndex += 1;
             runEndTick = next.startTick + next.durationTicks;
           }
@@ -637,7 +646,7 @@ function syncChartJson() {
 
 document.getElementById("random-pattern").addEventListener("click", () => {
   const sequence = [];
-  const choices = ["L", "R", "M", "C", "-"];
+  const choices = ["L", "R", "M", "C", "K", "-"];
   for (let index = 0; index < state.builderSteps.length; index += 1) {
     sequence.push(choices[Math.floor(Math.random() * choices.length)]);
   }

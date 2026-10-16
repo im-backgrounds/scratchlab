@@ -79,6 +79,20 @@ function playClickSound(state, isDownbeat = false) {
   oscillator.stop(now + 0.09);
 }
 
+function trackScratchGain(source, gain, activeScratchGains) {
+  activeScratchGains.add(gain);
+  source.addEventListener("ended", () => activeScratchGains.delete(gain), { once: true });
+}
+
+function silenceActiveScratch(state, activeScratchGains) {
+  if (!state.audioContext) return;
+  const now = state.audioContext.currentTime;
+  activeScratchGains.forEach((gain) => {
+    gain.cancelScheduledValues(now);
+    gain.setValueAtTime(0, now);
+  });
+}
+
 function getScratchDirection(state, steps, stepIndex) {
   if (state.isBuilderPlayback && state.builderDirections[stepIndex]) {
     return state.builderDirections[stepIndex] === "F" ? -1 : 1;
@@ -130,7 +144,7 @@ function scheduleFlare(gain, now, duration, peakGain) {
   gain.linearRampToValueAtTime(0.0001, now + duration);
 }
 
-function playScratch(state, getPlaybackChart, type, stepIndex, strokeRunLength = 1, options = {}) {
+function playScratch(state, getPlaybackChart, activeScratchGains, type, stepIndex, strokeRunLength = 1, options = {}) {
   if (!state.audioContext || !state.scratchBuffers || type === "-" || type === "M") {
     return;
   }
@@ -166,6 +180,7 @@ function playScratch(state, getPlaybackChart, type, stepIndex, strokeRunLength =
   directionFilter.connect(gainNode);
   source.connect(directionFilter);
   gainNode.connect(audioContext.destination);
+  trackScratchGain(source, gainNode.gain, activeScratchGains);
 
   gainNode.gain.setValueAtTime(0.0001, now);
   const cutCount = options.cutCount ?? (type === "C" || type === "F" ? 1 : type === "S" ? 3 : 0);
@@ -207,14 +222,17 @@ function playScratch(state, getPlaybackChart, type, stepIndex, strokeRunLength =
   friction.connect(filter);
   filter.connect(frictionGain);
   frictionGain.connect(audioContext.destination);
+  trackScratchGain(friction, frictionGain.gain, activeScratchGains);
   friction.start(now, Math.random() * 0.2);
   friction.stop(now + duration);
 }
 
 export function createScratchAudio(state, getPlaybackChart) {
+  const activeScratchGains = new Set();
   return {
     initializeAudio: () => initializeAudio(state),
     playClickSound: (isDownbeat) => playClickSound(state, isDownbeat),
-    playScratch: (type, stepIndex, strokeRunLength, options) => playScratch(state, getPlaybackChart, type, stepIndex, strokeRunLength, options),
+    playScratch: (type, stepIndex, strokeRunLength, options) => playScratch(state, getPlaybackChart, activeScratchGains, type, stepIndex, strokeRunLength, options),
+    silenceActiveScratch: () => silenceActiveScratch(state, activeScratchGains),
   };
 }

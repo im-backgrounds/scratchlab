@@ -24,6 +24,15 @@ function leastCommonMultiple(left, right) {
 
 export function parseScoreToken(value, inheritedDirection) {
   const token = value.trim();
+  const keepMatch = /^K(\d*)$/.exec(token);
+  if (keepMatch) {
+    const repeat = keepMatch[1] ? Number(keepMatch[1]) : 1;
+    if (!Number.isInteger(repeat) || repeat < 1 || repeat > 128) {
+      throw new Error(`繰り返し数が範囲外です: ${value}`);
+    }
+    return { direction: inheritedDirection, modifier: "", repeat, cutCount: 0, keep: true };
+  }
+
   const sustainMatch = /^-(\d*)$/.exec(token);
   if (sustainMatch) {
     const repeat = sustainMatch[1] ? Number(sustainMatch[1]) : 1;
@@ -49,6 +58,7 @@ export function parseScoreToken(value, inheritedDirection) {
     modifier,
     repeat,
     cutCount: modifier === "C" || modifier === "F" ? 1 : 0,
+    keep: false,
   };
 }
 
@@ -115,8 +125,8 @@ export function compileScoreData(data) {
 
     const repeatDuration = durationTicks / parsed.repeat;
     for (let repeat = 0; repeat < parsed.repeat; repeat += 1) {
-      if (parsed.modifier === "O") faderOpen = true;
-      else if (parsed.modifier === "M") faderOpen = false;
+      if (parsed.modifier === "M") faderOpen = false;
+      else if (parsed.modifier === "O") faderOpen = true;
       else if (parsed.modifier === "-" || parsed.cutCount > 0) faderOpen = true;
       events.push({
         startTick: startTick + repeat * repeatDuration,
@@ -124,6 +134,7 @@ export function compileScoreData(data) {
         direction: parsed.direction,
         modifier: parsed.modifier,
         cutCount: parsed.cutCount,
+        keep: parsed.keep,
         faderOpen,
       });
     }
@@ -137,7 +148,7 @@ export function compileScoreData(data) {
   const steps = Array(totalTicks).fill("-");
   const directions = Array(totalTicks).fill("F");
   events.forEach((event) => {
-    const step = !event.faderOpen ? "M" : event.direction === "F" ? "L" : "R";
+    const step = event.keep ? "K" : !event.faderOpen ? "M" : event.direction === "F" ? "L" : "R";
     for (let tick = event.startTick; tick < event.startTick + event.durationTicks; tick += 1) {
       steps[tick] = step;
       directions[tick] = event.direction;

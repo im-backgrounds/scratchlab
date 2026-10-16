@@ -64,6 +64,7 @@ function buildRhythmStaff(scoreData, left, plotWidth, staffTop) {
     const previous = groups[groups.length - 1];
     const joins = previous
       && event.faderOpen && previous.faderOpen
+      && !event.keep && !previous.keep
       && previous.direction === event.direction
       && previous.cutCount === 0 && event.cutCount === 0
       && event.modifier !== "O"
@@ -95,7 +96,7 @@ function buildRhythmStaff(scoreData, left, plotWidth, staffTop) {
       first = false;
     }
   });
-  const isBeamable = (item) => item.event.faderOpen && item.note.flags > 0 && item.note.tuplet > 0;
+  const isBeamable = (item) => item.event.faderOpen && !item.event.keep && item.note.flags > 0 && item.note.tuplet > 0;
 
   // Contiguous audible short notes within one bar share beams instead of flags.
   const beamed = new Set();
@@ -137,7 +138,7 @@ function buildRhythmStaff(scoreData, left, plotWidth, staffTop) {
   }
 
   items.forEach(({ event, note, x }, index) => {
-    if (!event.faderOpen) {
+    if (!event.faderOpen || event.keep) {
       svg += buildRest(note, x, lineY);
     } else {
       svg += `<ellipse class="rhythm-head${note.hollow ? " hollow" : ""}" cx="${x}" cy="${lineY}" rx="4" ry="3" />`;
@@ -210,12 +211,66 @@ export function buildScratchVisualizer(steps, chartOptions = {}, playbackState =
     const scoreData = chartOptions.scoreData;
     let faderOpen = true;
     let eventIndex = 0;
+    const startYForDirection = (direction) => (direction === "F" ? bottom : top);
+    const endYForDirection = (direction) => (direction === "F" ? top : bottom);
+    const findStrokeEvent = (index, step) => {
+      let candidateIndex = index + step;
+      while (candidateIndex >= 0 && candidateIndex < scoreData.events.length) {
+        const candidate = scoreData.events[candidateIndex];
+        if (!candidate.keep) return candidate;
+        candidateIndex += step;
+      }
+      return null;
+    };
+    const keepLineY = (keepIndex) => {
+      const previous = findStrokeEvent(keepIndex, -1);
+      const next = findStrokeEvent(keepIndex, 1);
+      if (previous && next && previous.direction === next.direction) {
+        let startIndex = keepIndex - 1;
+        while (startIndex > 0) {
+          const candidate = scoreData.events[startIndex - 1];
+          if (!candidate.keep && candidate.direction !== previous.direction) break;
+          startIndex -= 1;
+        }
+
+        let endIndex = keepIndex + 1;
+        while (endIndex + 1 < scoreData.events.length) {
+          const candidate = scoreData.events[endIndex + 1];
+          if (!candidate.keep && candidate.direction !== previous.direction) break;
+          endIndex += 1;
+        }
+
+        let movingDurationTicks = 0;
+        let movingTicksBeforeKeep = 0;
+        for (let index = startIndex; index <= endIndex; index += 1) {
+          const event = scoreData.events[index];
+          if (event.keep) continue;
+          movingDurationTicks += event.durationTicks;
+          if (index < keepIndex) movingTicksBeforeKeep += event.durationTicks;
+        }
+        const runStartY = startYForDirection(previous.direction);
+        const runEndY = endYForDirection(previous.direction);
+        return runStartY + ((runEndY - runStartY) * movingTicksBeforeKeep) / movingDurationTicks;
+      }
+      if (previous) return endYForDirection(previous.direction);
+      if (next) return startYForDirection(next.direction);
+      return (top + bottom) / 2;
+    };
     while (eventIndex < scoreData.events.length) {
       const firstEvent = scoreData.events[eventIndex];
       const firstX = left + (plotWidth * firstEvent.startTick) / scoreData.totalTicks;
       const direction = firstEvent.direction === "F" ? -1 : 1;
       const yStart = direction < 0 ? bottom : top;
       const yEnd = direction < 0 ? top : bottom;
+
+      if (firstEvent.keep) {
+        const eventEndTick = firstEvent.startTick + firstEvent.durationTicks;
+        const eventEndX = left + (plotWidth * eventEndTick) / scoreData.totalTicks;
+        const lineY = keepLineY(eventIndex);
+        strokes.push(`<path d="M ${firstX} ${lineY} L ${eventEndX} ${lineY}" />`);
+        eventIndex += 1;
+        continue;
+      }
 
       if (!firstEvent.faderOpen) {
         if (faderOpen) {
@@ -234,36 +289,77 @@ export function buildScratchVisualizer(steps, chartOptions = {}, playbackState =
       }
 
       const previousEvent = scoreData.events[eventIndex - 1];
+      const previousKeepIndex = previousEvent?.keep ? eventIndex - 1 : -1;
       const opensAfterCut = previousEvent?.cutCount > 0;
       if (!faderOpen || opensAfterCut) {
-        faderMarks.push(`<line class="fader-open" x1="${firstX - 7}" y1="${yStart}" x2="${firstX + 7}" y2="${yStart}" />`);
+        const openY = previousKeepIndex >= 0 ? keepLineY(previousKeepIndex) : yStart;
+        faderMarks.push(`<line class="fader-open" x1="${firstX - 7}" y1="${openY}" x2="${firstX + 7}" y2="${openY}" />`);
       }
       faderOpen = true;
 
       const runStartTick = firstEvent.startTick;
       let runEndIndex = eventIndex;
       let runEndTick = firstEvent.startTick + firstEvent.durationTicks;
-      // Muted events in the same direction stay on the same diagonal when sound resumes in that direction.
       while (runEndIndex + 1 < scoreData.events.length) {
         let probeIndex = runEndIndex + 1;
         let probeTick = runEndTick;
+        if (scoreData.events[probeIndex].keep) {
+          while (probeIndex < scoreData.events.length && scoreData.events[probeIndex].keep) {
+            const keepEvent = scoreData.events[probeIndex];
+            if (keepEvent.startTick !== probeTick) break;
+            probeTick = keepEvent.startTick + keepEvent.durationTicks;
+            probeIndex += 1;
+          }
+          const nextStroke = scoreData.events[probeIndex];
+          if (nextStroke?.faderOpen && nextStroke.direction === firstEvent.direction && nextStroke.startTick === probeTick) {
+            runEndIndex = probeIndex;
+            runEndTick = nextStroke.startTick + nextStroke.durationTicks;
+            continue;
+          }
+          break;
+        }
         while (probeIndex < scoreData.events.length) {
           const probe = scoreData.events[probeIndex];
-          if (probe.faderOpen || probe.direction !== firstEvent.direction || probe.startTick !== probeTick) break;
+          if (probe.faderOpen || probe.keep || probe.direction !== firstEvent.direction || probe.startTick !== probeTick) break;
           probeTick = probe.startTick + probe.durationTicks;
           probeIndex += 1;
         }
         const nextEvent = scoreData.events[probeIndex];
-        if (!nextEvent || !nextEvent.faderOpen || nextEvent.direction !== firstEvent.direction || nextEvent.startTick !== probeTick) break;
+        if (!nextEvent || !nextEvent.faderOpen || nextEvent.keep || nextEvent.direction !== firstEvent.direction || nextEvent.startTick !== probeTick) break;
         runEndIndex = probeIndex;
         runEndTick = nextEvent.startTick + nextEvent.durationTicks;
       }
 
-      const yAtTick = (tick) => yStart + ((yEnd - yStart) * (tick - runStartTick)) / (runEndTick - runStartTick);
+      const nextEvent = scoreData.events[runEndIndex + 1];
+      const nextKeepIndex = nextEvent?.keep ? runEndIndex + 1 : -1;
+      const runStartY = previousKeepIndex >= 0 ? keepLineY(previousKeepIndex) : yStart;
+      const runEndY = nextKeepIndex >= 0 ? keepLineY(nextKeepIndex) : yEnd;
+      let keptDurationTicks = 0;
+      for (let index = eventIndex; index <= runEndIndex; index += 1) {
+        if (scoreData.events[index].keep) keptDurationTicks += scoreData.events[index].durationTicks;
+      }
+      const movingDurationTicks = runEndTick - runStartTick - keptDurationTicks;
+      const movingTicksBefore = (tick) => {
+        let keptTicks = 0;
+        for (let index = eventIndex; index <= runEndIndex; index += 1) {
+          const event = scoreData.events[index];
+          if (!event.keep || event.startTick >= tick) continue;
+          keptTicks += Math.min(tick, event.startTick + event.durationTicks) - event.startTick;
+        }
+        return tick - runStartTick - keptTicks;
+      };
+      const yAtTick = (tick) => runStartY + ((runEndY - runStartY) * movingTicksBefore(tick)) / movingDurationTicks;
 
       for (let currentIndex = eventIndex; currentIndex <= runEndIndex; currentIndex += 1) {
         const event = scoreData.events[currentIndex];
         const eventEndTick = event.startTick + event.durationTicks;
+        if (event.keep) {
+          const x = left + (plotWidth * event.startTick) / scoreData.totalTicks;
+          const endX = left + (plotWidth * eventEndTick) / scoreData.totalTicks;
+          const lineY = keepLineY(currentIndex);
+          strokes.push(`<path d="M ${x} ${lineY} L ${endX} ${lineY}" />`);
+          continue;
+        }
         if (!event.faderOpen) {
           if (faderOpen) {
             const x = left + (plotWidth * event.startTick) / scoreData.totalTicks;
