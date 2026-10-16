@@ -1,17 +1,23 @@
-function initializeAudio(state) {
-  if (!state.audioContext) {
+function initializeAudio(state, setAudioResources) {
+  let audioContext = state.audioContext;
+  let scratchBuffers = state.scratchBuffers;
+  if (!audioContext) {
     const AudioCtor = window.AudioContext || window.webkitAudioContext;
     if (AudioCtor) {
-      state.audioContext = new AudioCtor();
+      audioContext = new AudioCtor();
     }
   }
 
-  if (state.audioContext && !state.scratchBuffers) {
-    state.scratchBuffers = createScratchBuffers(state.audioContext);
+  if (audioContext && !scratchBuffers) {
+    scratchBuffers = createScratchBuffers(audioContext);
   }
 
-  if (state.audioContext && state.audioContext.state === "suspended") {
-    state.audioContext.resume();
+  if (audioContext !== state.audioContext || scratchBuffers !== state.scratchBuffers) {
+    setAudioResources({ audioContext, scratchBuffers });
+  }
+
+  if (audioContext && audioContext.state === "suspended") {
+    audioContext.resume();
   }
 }
 
@@ -227,10 +233,10 @@ function playScratch(state, getPlaybackChart, activeScratchGains, type, stepInde
   friction.stop(now + duration);
 }
 
-export function createScratchAudio(state, getPlaybackChart) {
+export function createScratchAudio(state, getPlaybackChart, setAudioResources) {
   const activeScratchGains = new Set();
   return {
-    initializeAudio: () => initializeAudio(state),
+    initializeAudio: () => initializeAudio(state, setAudioResources),
     playClickSound: (isDownbeat) => playClickSound(state, isDownbeat),
     playScratch: (type, stepIndex, strokeRunLength, options) => playScratch(state, getPlaybackChart, activeScratchGains, type, stepIndex, strokeRunLength, options),
     silenceActiveScratch: () => silenceActiveScratch(state, activeScratchGains),
