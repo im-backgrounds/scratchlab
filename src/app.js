@@ -64,6 +64,7 @@ import {
   getExpectedDurationMs,
   isDurationValid,
 } from "./domain/bpm-challenge.js";
+import { bindKeyboardInput } from "./domain/keyboard-input.js";
 import * as challengeUi from "./ui/challenge.js";
 import * as beginnerCourseUi from "./ui/beginner-course.js";
 import * as performanceUi from "./ui/performance.js";
@@ -105,6 +106,7 @@ let rawEventCount = 0;
 let performanceEventCount = 0;
 let recordedRawCount = 0;
 const eventCompressor = createEventCompressor();
+let keyboardInput;
 const performanceRepository = createPerformanceRepository();
 let latestPerformance = performanceRepository.load();
 const challengeRepository = createChallengeRepository();
@@ -721,6 +723,22 @@ function recordMidiActionEvent(event) {
 
 const stopDetector = createStopDetector({ onStop: recordMidiActionEvent });
 
+keyboardInput = bindKeyboardInput({
+  enabled: () => currentView === "practice",
+  onEvent: (event) => {
+    if (event.type === "scratch") {
+      stopDetector.cancel();
+    } else {
+      keyboardInput.setFaderState(event.state);
+    }
+    recordMidiActionEvent(event);
+  },
+  onFaderStateChange: (state) => {
+    document.getElementById("keyboard-fader-state").textContent =
+      state === "open" ? "開" : "閉";
+  },
+});
+
 function setFaderRange(action, values) {
   try {
     midiMapping = assignMapping(midiMapping, action, {
@@ -841,8 +859,16 @@ function handleMidiMessage(data) {
   if (midiLearnAction) return;
 
   if (routed.kind === "event") {
+    if (routed.event.type === "fader") {
+      keyboardInput.setFaderState(routed.event.state);
+    } else if (keyboardInput.heldScratchCount > 0) {
+      stopDetector.cancel();
+    }
     recordMidiActionEvent(routed.event);
-    stopDetector.observe(routed.event);
+    if (
+      routed.event.type === "scratch" &&
+      keyboardInput.heldScratchCount === 0
+    ) stopDetector.observe(routed.event);
   }
 
   controls.renderMidiLog(
@@ -1126,18 +1152,7 @@ function startChallenge() {
 }
 
 function hasChallengeInputs(report = setChallengeStatus) {
-  if (!state.midiConnected) {
-    report(
-      "「MIDIセットアップ」でMIDIを接続してから開始してください。",
-    );
-    return false;
-  }
-  if (!midiMapping.forward || !midiMapping.backward) {
-    report(
-      "「MIDIセットアップ」でForwardとBackwardを割り当ててから開始してください。",
-    );
-    return false;
-  }
+  report("←/→でスクラッチ、Spaceでフェーダーを操作できます。");
   return true;
 }
 

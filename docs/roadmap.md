@@ -226,15 +226,15 @@ MIDI機器を持たないユーザーでも遊べるようにする
 
 ### キーマップ
 
-- [ ] ← Forward
-- [ ] → Backward
-- [ ] Space Fader
+- [x] ← Forward
+- [x] → Backward
+- [x] Space Fader
 
 ### 完了条件
 
-- [ ] BPM Challenge対応
-- [ ] MIDIと共存可能
-- [ ] 入力イベント記録対応
+- [x] BPM Challenge対応
+- [x] MIDIと共存可能
+- [x] 入力イベント記録対応
 
 ---
 

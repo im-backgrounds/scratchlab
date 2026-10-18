@@ -12,7 +12,7 @@ contract when implementation begins.
 2. [x] Build the ordered Beginner course: [Baby Scratch](feature-specs/beginner-course.md),
    [Forward Scratch](feature-specs/beginner-course.md), Baby Scratch BPM90,
    Baby Scratch BPM100, then Chirp.
-3. [ ] Add [keyboard input](feature-specs/keyboard-input.md) using the same
+3. [x] Add [keyboard input](feature-specs/keyboard-input.md) using the same
    normalized event model as MIDI and make it available to BPM Challenge.
 
 ## v0.3 Retention

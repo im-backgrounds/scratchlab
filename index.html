@@ -99,6 +99,15 @@
               <p id="chart-help-text"></p>
             </section>
 
+            <section class="keyboard-input-panel" aria-label="キーボード操作">
+              <p id="keyboard-input-status" role="status" aria-live="polite">
+                キーボード操作を受付中：← 前進 / → 後進 / Space フェーダー
+              </p>
+              <p>文字入力欄では無効です。MIDI入力と同時に使えます。</p>
+              <p>Space押下中は開、離すと閉：<strong
+                  id="keyboard-fader-state">閉</strong></p>
+            </section>
+
             <div id="practice-transport-slot">
               <div id="transport-panel" class="transport-panel">
                 <div class="button-row">
@@ -191,7 +200,7 @@
             </div>
 
             <p class="challenge-help">
-              「チャレンジ開始」を押すと、お手本ループ → 記録ループ2回 → 判定まで自動で進みます。お手本ループは採点されません。MIDIの接続と割り当ては「MIDIセットアップ」で行います。
+              「チャレンジ開始」を押すと、お手本ループ → 記録ループ2回 → 判定まで自動で進みます。お手本ループは採点されません。←/→でスクラッチ、Spaceでフェーダーを操作できます。MIDIも同時に使用できます。
             </p>
 
             <div class="button-row">
