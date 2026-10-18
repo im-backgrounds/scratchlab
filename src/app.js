@@ -1,9 +1,5 @@
 import { chartCatalog as chartDefinitions } from "./data/chart-catalog.js";
-import {
-  compileScoreData,
-  deriveBuilderDirections,
-} from "./domain/score-compiler.js";
-import { legacyStepsToScore } from "./domain/builder-score.js";
+import { compileScoreData } from "./domain/score-compiler.js";
 import {
   createChartRepository,
   getBrowserStorage,
@@ -43,10 +39,6 @@ import * as transport from "./ui/transport.js";
 import * as editor from "./ui/editor.js";
 import * as midiMappingUi from "./ui/midi-mapping.js";
 import {
-  analyzePerformanceLoops,
-  createExpectedEvents,
-} from "./domain/performance-analysis.js";
-import {
   CHALLENGE_EVENTS,
   CHALLENGE_PHASES,
   createChallengeSession,
@@ -81,6 +73,12 @@ import {
   ACHIEVEMENTS,
   createAchievementRepository,
 } from "./domain/achievement-system.js";
+import { createPracticeView } from "./features/practice-view.js";
+import { createBuilderView } from "./features/builder-view.js";
+import { createBpmChallengeView } from "./features/bpm-challenge-view.js";
+import { createBeginnerCourseView } from "./features/beginner-course-view.js";
+import { renderAchievementView } from "./features/achievement-view.js";
+import { createPerformanceView } from "./features/performance-view.js";
 
 const chartCatalog = chartDefinitions.map((chart) => {
   const source = {
@@ -141,6 +139,60 @@ let beginnerCourseMessage = beginnerCourseLoad.ok
 let challengeRun = null;
 const ANALYZE_DELAY_MS = 400;
 
+const performanceView = createPerformanceView({
+  getSelectedChart,
+  getLatestPerformance: () => latestPerformance,
+  performanceUi,
+});
+const builderView = createBuilderView({
+  state,
+  actions,
+  editor,
+  visualizer,
+  getBuilderChart,
+  getBuilderBarCount,
+  updateTransportValues,
+  compileScoreData,
+  afterBuilderEdit,
+});
+const practiceView = createPracticeView({
+  state,
+  getSelectedChart,
+  visualizer,
+  performanceUi,
+  getLatestPerformance: () => latestPerformance,
+  analyzeForChart: performanceView.analyzeForChart,
+  getPlaybackSnapshot: () => ({
+    events: playbackLoopEvents,
+    startedAt: playbackLoopStartedAt,
+    currentStep: playbackLoopCurrentStep,
+    loopNumber: playbackLoopNumber,
+  }),
+  renderBuilderScore: () => builderView.renderBuilderScore(),
+});
+const beginnerCourseView = createBeginnerCourseView({
+  stages: BEGINNER_COURSE_STAGES,
+  getSelectedStageId: () => selectedCourseStageId,
+  repository: beginnerCourseRepository,
+  getNextStageId: getNextBeginnerStageId,
+  getSelectedChart,
+  isSessionRunning: () => isSessionRunning(challengeSession),
+  beginnerCourseUi,
+  getMessage: () => beginnerCourseMessage,
+});
+const bpmChallengeView = createBpmChallengeView({
+  getChallengeChartKey,
+  getActiveChallengeKey: () => activeChallengeKey,
+  getSelectedChart,
+  challengeRepository,
+  describeChallenge,
+  challengeUi,
+  describeSessionProgress,
+  getChallengeSession: () => challengeSession,
+  getBeginnerCourseStage: (stageId) => beginnerCourseView.getStage(stageId),
+  transport,
+});
+
 function getSelectedChart() {
   return chartCatalog.find((chart) => chart.id === state.selectedChartId) ||
     chartCatalog[0];
@@ -189,35 +241,11 @@ let practiceModeEnabled = false;
 const playbackController = createPlaybackController();
 
 function renderSelectedChart() {
-  const chart = getSelectedChart();
-  visualizer.renderSelectedChart(chart, state);
-  renderControllerOverlay(chart);
+  practiceView.renderSelectedChart();
 }
 
 function renderControllerOverlay(chart) {
-  if (
-    (state.isPlaying || playbackLoopEvents.length > 0) &&
-    !state.isBuilderPlayback &&
-    playbackLoopStartedAt !== null
-  ) {
-    performanceUi.renderControllerOverlay(chart.scoreData, null, null, {
-      currentStep: state.isPlaying
-        ? state.currentStep
-        : playbackLoopCurrentStep,
-      isPlaying: state.isPlaying,
-      startedAt: playbackLoopStartedAt,
-      now: Date.now(),
-      bpm: state.bpm,
-      loopNumber: playbackLoopNumber,
-      events: playbackLoopEvents,
-    });
-    return;
-  }
-  performanceUi.renderControllerOverlay(
-    chart.scoreData,
-    latestPerformance,
-    latestPerformance ? analyzeForChart(latestPerformance, chart) : null,
-  );
+  practiceView.renderControllerOverlay(chart);
 }
 
 function showPracticeView() {
@@ -270,36 +298,15 @@ function setBuilderMode(mode) {
 }
 
 function renderBuilder() {
-  updateTransportValues();
-  editor.renderBuilderEditor(state, {
-    barCount: getBuilderBarCount(),
-    scoreDocument: createBuilderScoreDocument(),
-    scoreData: state.builderScoreData ||
-      compileScoreData(createBuilderScoreDocument()),
-    onStepClick: (index) => {
-      actions.editBuilderStep(index, state.builderSelectedType);
-      afterBuilderEdit();
-    },
-  });
-  renderBuilderScore();
+  builderView.renderBuilder();
 }
 
 function renderBuilderScore() {
-  visualizer.renderBuilderScore(getBuilderChart(), state);
+  builderView.renderBuilderScore();
 }
 
 function createBuilderScoreDocument() {
-  if (state.builderScoreData) return state.builderScoreData.source;
-
-  return {
-    name: state.builderMetadata.name,
-    difficulty: state.builderMetadata.difficulty,
-    beat: state.builderBeat,
-    score: legacyStepsToScore(state.builderSteps, {
-      directions: state.builderDirections,
-      ticksPerBar: state.builderTicksPerBar,
-    }),
-  };
+  return builderView.createBuilderScoreDocument();
 }
 
 function render() {
@@ -362,12 +369,7 @@ function playCurrentStep(chart) {
  * Refreshes the visible score after the current playback tick.
  */
 function renderPlaybackProgress() {
-  if (state.isBuilderPlayback) {
-    renderBuilderScore();
-  } else {
-    visualizer.renderSelectedChart(getSelectedChart(), state);
-    renderControllerOverlay(getSelectedChart());
-  }
+  practiceView.renderPlaybackProgress();
 }
 
 /**
@@ -1126,23 +1128,11 @@ async function connectMIDI() {
 }
 
 function analyzeForChart(performance, chart) {
-  return analyzePerformanceLoops(
-    createExpectedEvents(chart.scoreData),
-    performance.events,
-    performance.loopEnds,
-  );
+  return performanceView.analyzeForChart(performance, chart);
 }
 
 function renderPerformanceAnalysis() {
-  if (!latestPerformance) {
-    performanceUi.renderPerformanceAnalysis(null, "");
-    return;
-  }
-  const chart = getSelectedChart();
-  performanceUi.renderPerformanceAnalysis(
-    analyzeForChart(latestPerformance, chart),
-    chart.name,
-  );
+  performanceView.renderPerformanceAnalysis();
 }
 
 // The practice view only offers built-in charts. Unsaved builder charts have
@@ -1152,56 +1142,23 @@ function getChallengeChartKey() {
 }
 
 function getBeginnerCourseStage(stageId = selectedCourseStageId) {
-  return BEGINNER_COURSE_STAGES.find((stage) => stage.id === stageId) ?? null;
+  return beginnerCourseView.getStage(stageId);
 }
 
 function renderBeginnerCourse() {
-  const progress = beginnerCourseRepository.progress;
-  const selectedStage = getBeginnerCourseStage();
-  const nextStageId = getNextBeginnerStageId(progress);
-  const stageIsAvailable = selectedStage &&
-    (progress.completedStageIds.includes(selectedStage.id) ||
-      selectedStage.id === nextStageId);
-  beginnerCourseUi.renderBeginnerCourse({
-    stages: BEGINNER_COURSE_STAGES,
-    completedStageIds: progress.completedStageIds,
-    nextStageId,
-    selectedStageId: selectedCourseStageId,
-    message: beginnerCourseMessage,
-    canStart: Boolean(
-      stageIsAvailable &&
-        getSelectedChart().id === selectedStage.chartId &&
-        !isSessionRunning(challengeSession),
-    ),
-  });
+  beginnerCourseView.renderBeginnerCourse();
 }
 
 function renderAchievementsPage() {
-  const result = achievementRepository.load();
-  const statusMessage = achievementMessage || ({
-    unavailable: "このブラウザーでは実績を保存できません。",
-    corrupt: "実績データを読み込めませんでした。",
-    future: "新しいバージョンの実績データがあるため、保存を停止しています。",
-  }[result.status] ?? "");
-  achievementUi.renderAchievements(result.achievements, statusMessage);
+  renderAchievementView({
+    repository: achievementRepository,
+    getMessage: () => achievementMessage,
+    achievementUi,
+  });
 }
 
 function renderChallengePanel() {
-  const chartKey = getChallengeChartKey();
-  const active = chartKey !== null && activeChallengeKey === chartKey;
-  const view = describeChallenge({
-    chartKey,
-    progress: chartKey ? challengeRepository.get(chartKey) : undefined,
-    active,
-  });
-  challengeUi.renderChallenge(view, getSelectedChart().name);
-  challengeUi.renderChallengeProgress(
-    describeSessionProgress(challengeSession),
-  );
-  transport.setBpmLocked(
-    active || Boolean(getBeginnerCourseStage()?.targetBpm),
-  );
-  return view;
+  return bpmChallengeView.renderChallengePanel();
 }
 
 function selectBeginnerCourseStage(stageId) {
@@ -1232,7 +1189,7 @@ function selectBeginnerCourseStage(stageId) {
 }
 
 function setChallengeStatus(message) {
-  challengeUi.renderChallengeStatus(message);
+  bpmChallengeView.setStatus(message);
 }
 
 function createChallengeSessionId() {

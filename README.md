@@ -203,6 +203,13 @@ index.html
       ├─ src/data/               プリセット譜面
       ├─ src/state/              アプリ状態と操作
       ├─ src/audio/              スクラッチ音とクリック音
+      ├─ src/features/           機能単位の画面描画ロジック
+      │   ├─ practice-view.js
+      │   ├─ builder-view.js
+      │   ├─ performance-view.js
+      │   ├─ bpm-challenge-view.js
+      │   ├─ beginner-course-view.js
+      │   └─ achievement-view.js
       └─ src/ui/                 譜面表示、操作画面、譜面エディター
 assets/css/styles.css            画面スタイル
 tests/                            ドメイン、再生、描画の回帰テスト
