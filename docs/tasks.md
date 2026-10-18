@@ -25,7 +25,7 @@ contract when implementation begins.
    BPM goals, practice counts, and practice streaks.
 7. [x] Add [practice history](feature-specs/practice-history.md) with date,
    pattern, BPM, and accuracy.
-8. [ ] Add growth charts for practice volume, best BPM, and average accuracy,
+8. [x] Add growth charts for practice volume, best BPM, and average accuracy,
    using the history data contract.
 
 ## v0.4 Social
