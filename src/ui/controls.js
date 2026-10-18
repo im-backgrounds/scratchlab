@@ -1,5 +1,7 @@
 export function bindControls({
   onShowGuide,
+  onStartFirstVisitGuide,
+  onSkipFirstVisitGuide,
   onShowBuilder,
   onShowMidiSetup,
   onConnectMidi,
@@ -8,6 +10,12 @@ export function bindControls({
   const mobileMenuToggle = document.getElementById("mobile-menu-toggle");
   const mainPanel = document.querySelector(".main-panel");
   const notationGuideTab = document.getElementById("notation-guide-tab");
+  const firstVisitGuideStart = document.getElementById(
+    "first-visit-guide-start",
+  );
+  const firstVisitGuideSkip = document.getElementById(
+    "first-visit-guide-skip",
+  );
   const builderTab = document.getElementById("builder-tab");
   const chartHelpToggle = document.getElementById("chart-help-toggle");
   const chartHelpPanel = document.getElementById("chart-help-panel");
@@ -45,6 +53,8 @@ export function bindControls({
   });
 
   notationGuideTab.addEventListener("click", onShowGuide);
+  firstVisitGuideStart.addEventListener("click", onStartFirstVisitGuide);
+  firstVisitGuideSkip.addEventListener("click", onSkipFirstVisitGuide);
   builderTab.addEventListener("click", onShowBuilder);
   midiSetupTab.addEventListener("click", onShowMidiSetup);
 
@@ -126,6 +136,13 @@ export function renderChartHelp(isVisible) {
     isVisible ? "譜面の見方を閉じる" : "譜面の見方を表示",
   );
   toggle.title = isVisible ? "譜面の見方を閉じる" : "譜面の見方";
+}
+
+export function renderFirstVisitGuidance(isVisible, message = "") {
+  document.getElementById("first-visit-guidance").hidden = !isVisible;
+  const status = document.getElementById("first-visit-guidance-status");
+  status.textContent = message;
+  status.hidden = !message;
 }
 
 const PAGE_IDS = [

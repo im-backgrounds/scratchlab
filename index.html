@@ -49,7 +49,24 @@
       </aside>
 
       <main class="main-panel">
+        <p id="first-visit-guidance-status"
+          class="first-visit-guidance-status" role="status"
+          aria-live="polite" hidden></p>
         <div id="practice-view">
+          <section id="first-visit-guidance"
+            class="card first-visit-guidance"
+            aria-labelledby="first-visit-guidance-title" hidden>
+            <p class="eyebrow">START HERE</p>
+            <h2 id="first-visit-guidance-title">はじめての方へ</h2>
+            <p>譜面の読み方を確認してから、スクラッチ練習を始めましょう。あとから左メニューの「譜面の読み方」からいつでも再開できます。</p>
+            <div class="button-row">
+              <button id="first-visit-guide-start" class="primary-button"
+                type="button">ガイドを始める</button>
+              <button id="first-visit-guide-skip" class="secondary-button"
+                type="button">スキップして練習する</button>
+            </div>
+          </section>
+
           <header class="topbar">
             <div>
               <p class="eyebrow">DJスクラッチ練習</p>

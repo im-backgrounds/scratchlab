@@ -79,10 +79,12 @@ const chartCatalog = chartDefinitions.map((chart) => {
   return { ...chart, scoreData, steps: scoreData.steps };
 });
 
+const FIRST_VISIT_GUIDANCE_KEY = "scratchlab.first-visit-guidance.v1";
 const store = createStore(createInitialState(chartCatalog));
 const actions = createActions(store);
 const state = store.getState();
 const repository = createChartRepository(getBrowserStorage());
+const firstVisitGuidanceStorage = getBrowserStorage();
 let editorUi;
 let currentView = "practice";
 let renamingChartId = null;
@@ -389,6 +391,34 @@ function persistSession(draft) {
     selectedChartId: state.selectedChartId,
     draft: draft === undefined ? repository.getSession()?.draft ?? null : draft,
   });
+}
+
+function initializeFirstVisitGuidance() {
+  if (!firstVisitGuidanceStorage) {
+    controls.renderFirstVisitGuidance(true, storageErrorMessages.unavailable);
+    return;
+  }
+  try {
+    const status = firstVisitGuidanceStorage.getItem(FIRST_VISIT_GUIDANCE_KEY);
+    controls.renderFirstVisitGuidance(
+      status !== "started" && status !== "skipped",
+    );
+  } catch (error) {
+    controls.renderFirstVisitGuidance(
+      true,
+      `初回ガイドの状態を読み込めませんでした。${error.message}`,
+    );
+  }
+}
+
+function saveFirstVisitGuidance(status) {
+  if (!firstVisitGuidanceStorage) return storageErrorMessages.unavailable;
+  try {
+    firstVisitGuidanceStorage.setItem(FIRST_VISIT_GUIDANCE_KEY, status);
+    return "";
+  } catch (error) {
+    return `初回ガイドの状態を保存できませんでした。${error.message}`;
+  }
 }
 
 /**
@@ -1082,6 +1112,18 @@ controls.bindControls({
     currentView = "guide";
     persistSession();
   },
+  onStartFirstVisitGuide: () => {
+    const message = saveFirstVisitGuidance("started");
+    controls.renderFirstVisitGuidance(false, message);
+    prepareViewSwitch();
+    controls.renderGuideView();
+    currentView = "guide";
+    persistSession();
+  },
+  onSkipFirstVisitGuide: () => {
+    const message = saveFirstVisitGuidance("skipped");
+    controls.renderFirstVisitGuidance(false, message);
+  },
   onShowBuilder: () => {
     prepareViewSwitch();
     showBuilderPage();
@@ -1169,6 +1211,7 @@ challengeUi.bindChallenge({
 savedCharts.bindSavedCharts({ onSave: saveCurrentChart });
 controls.renderInitialControls(state, getBuilderBarCount());
 render();
+initializeFirstVisitGuidance();
 restoreLastSession();
 renderMidiMappingPanel();
 performanceUi.renderPerformance(latestPerformance);

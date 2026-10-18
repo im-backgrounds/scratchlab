@@ -426,8 +426,25 @@ button {
 }
 
 .chart-help-panel[hidden],
-.guide-page[hidden] {
+.guide-page[hidden],
+.first-visit-guidance[hidden],
+.first-visit-guidance-status[hidden] {
   display: none;
+}
+
+.first-visit-guidance h2 {
+  margin: 0 0 10px;
+}
+
+.first-visit-guidance > p:not(.eyebrow) {
+  margin: 0 0 14px;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.first-visit-guidance-status {
+  color: var(--warning);
+  line-height: 1.6;
 }
 
 .chart-help-panel h4 {

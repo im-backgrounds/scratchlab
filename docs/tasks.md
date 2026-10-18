@@ -7,7 +7,7 @@ contract when implementation begins.
 
 ## v0.2 Learning Experience
 
-1. [ ] Improve first-visit guidance and make it skippable, resumable, and
+1. [x] Improve first-visit guidance and make it skippable, resumable, and
    explicitly re-openable.
 2. [ ] Build the ordered Beginner course: [Baby Scratch](feature-specs/beginner-course.md),
    [Forward Scratch](feature-specs/beginner-course.md), Baby Scratch BPM90,

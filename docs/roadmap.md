@@ -188,10 +188,10 @@ Feature specifications describe intended behavior; roadmap checkboxes track deli
 
 ### 完了条件
 
-- [ ] 初回アクセス時に表示
-- [ ] スキップ可能
-- [ ] LocalStorage保存
-- [ ] 再表示可能
+- [x] 初回アクセス時に表示
+- [x] スキップ可能
+- [x] LocalStorage保存
+- [x] 再表示可能
 
 ---
 
