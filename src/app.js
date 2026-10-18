@@ -798,7 +798,7 @@ function saveMidiMapping() {
 
 // Every converted message is logged as a raw event; only direction/state
 // changes become performance events (logged, and recorded while recording).
-function recordMidiActionEvent(event) {
+function recordInputActionEvent(event) {
   rawEventCount += 1;
   if (state.recordingMidi) recordedRawCount += 1;
   midiEventLog = [...midiEventLog, event].slice(-MIDI_EVENT_LOG_LIMIT);
@@ -858,7 +858,7 @@ function handleInputAudioEvent(event) {
     }, 180);
     renderAudioMonitoring();
   }
-  recordMidiActionEvent(event);
+  recordInputActionEvent(event);
 }
 
 const stopDetector = createStopDetector({ onStop: handleInputAudioEvent });
