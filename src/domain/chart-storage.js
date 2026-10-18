@@ -1,4 +1,5 @@
 import { compileScoreData } from "./score-compiler.js";
+import { safeGetItem, safeRemoveItem, safeSetItem } from "./storage-utils.js";
 
 export const STORAGE_KEY = "scratchlab.storage";
 export const STORAGE_VERSION = 1;
@@ -157,12 +158,11 @@ export function createChartRepository(storage, options = {}) {
 
   const read = () => {
     if (!available) return { store: createEmptyStore(), status: "empty" };
-    let raw = null;
-    try {
-      raw = storage.getItem(key);
-    } catch {
-      return { store: createEmptyStore(), status: "corrupt", raw };
+    const result = safeGetItem(storage, key);
+    if (!result.ok) {
+      return { store: createEmptyStore(), status: "corrupt", raw: null };
     }
+    const raw = result.value;
     return { ...parseStore(raw), raw };
   };
 
@@ -174,8 +174,12 @@ export function createChartRepository(storage, options = {}) {
     if (!outcome.ok) return outcome;
     try {
       // Preserve unreadable data once before it is replaced.
-      if (status === "corrupt" && raw) storage.setItem(`${key}.backup`, raw);
-      storage.setItem(key, JSON.stringify(store));
+      if (status === "corrupt" && raw) {
+        const backup = safeSetItem(storage, `${key}.backup`, raw);
+        if (!backup.ok) return { ok: false, reason: "write-failed" };
+      }
+      const result = safeSetItem(storage, key, JSON.stringify(store));
+      if (!result.ok) return { ok: false, reason: "write-failed" };
     } catch {
       return { ok: false, reason: "write-failed" };
     }
@@ -297,8 +301,8 @@ export function getBrowserStorage(scope = globalThis) {
     const storage = scope.localStorage;
     if (!storage) return null;
     const probe = `${STORAGE_KEY}.probe`;
-    storage.setItem(probe, "1");
-    storage.removeItem(probe);
+    if (!safeSetItem(storage, probe, "1").ok) return null;
+    if (!safeRemoveItem(storage, probe).ok) return null;
     return storage;
   } catch {
     return null;

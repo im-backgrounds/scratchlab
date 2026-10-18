@@ -216,10 +216,13 @@ assets/css/styles.css            画面スタイル
 tests/                            ドメイン、再生、描画の回帰テスト
 ```
 
-BPM Challenge Repository は、Storage の取得・保存・削除時の例外処理に
-`src/domain/storage-utils.js` を使用するよう内部実装を整理しています。
-JSON処理、正規化、バージョン判定、進捗計算はRepository内に保持し、
-ストレージキー、保存形式、ユーザー操作に変更はありません。
+各Repository（譜面保存、BPM Challenge、Performance、Achievement、 Beginner
+Course、MIDIマッピング）とストレージ利用可否の確認は、
+低レベルなStorageアクセスの例外処理に `src/domain/storage-utils.js`
+を使用するよう内部実装を整理しています。
+JSON処理、正規化、バージョン判定、進捗計算、破損データのバックアップ制御は
+Repository内に保持し、ストレージキー、保存形式、ユーザー操作、
+既存データとの互換性に変更はありません。
 
 譜面データの記法は [docs/score-format.md](docs/score-format.md)
 を参照してください。
