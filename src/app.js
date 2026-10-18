@@ -62,11 +62,18 @@ import {
   deriveCurrentBpm,
   describeChallenge,
   getExpectedDurationMs,
+  isDurationValid,
 } from "./domain/bpm-challenge.js";
 import * as challengeUi from "./ui/challenge.js";
+import * as beginnerCourseUi from "./ui/beginner-course.js";
 import * as performanceUi from "./ui/performance.js";
 import * as savedCharts from "./ui/saved-charts.js";
 import * as visualizer from "./ui/visualizer.js";
+import {
+  BEGINNER_COURSE_STAGES,
+  createBeginnerCourseRepository,
+  getNextBeginnerStageId,
+} from "./domain/beginner-course.js";
 
 const chartCatalog = chartDefinitions.map((chart) => {
   const source = {
@@ -101,9 +108,21 @@ const eventCompressor = createEventCompressor();
 const performanceRepository = createPerformanceRepository();
 let latestPerformance = performanceRepository.load();
 const challengeRepository = createChallengeRepository();
+const beginnerCourseRepository = createBeginnerCourseRepository();
+const beginnerCourseLoad = beginnerCourseRepository.load();
 // Only the challenged chart is kept; the BPM is derived from saved progress.
 let activeChallengeKey = null;
 let challengeSession = createChallengeSession();
+let selectedCourseStageId = null;
+let beginnerCourseMessage = beginnerCourseLoad.ok
+  ? getNextBeginnerStageId(beginnerCourseRepository.progress) === null
+    ? "Beginnerコースをすべてクリアしました。"
+    : ""
+  : beginnerCourseLoad.reason === "future-version"
+  ? "新しいバージョンのコース進捗があるため、保存を停止しています。"
+  : beginnerCourseLoad.reason === "unavailable"
+  ? "このブラウザーではコース進捗を保存できません。"
+  : "コース進捗を読み込めませんでした。";
 // {bpm, startedAt, loopEnds, tickSeen} of the attempt in progress.
 let challengeRun = null;
 const ANALYZE_DELAY_MS = 400;
@@ -217,6 +236,8 @@ function createBuilderScoreDocument() {
 
 function render() {
   visualizer.renderChartList(chartCatalog, state.selectedChartId, (chartId) => {
+    selectedCourseStageId = null;
+    beginnerCourseMessage = "";
     actions.selectChart(chartId);
     showPracticeView();
     resetPageState();
@@ -228,6 +249,7 @@ function render() {
   updateTransportValues();
   renderPerformanceAnalysis();
   renderChallengePanel();
+  renderBeginnerCourse();
 }
 
 /**
@@ -881,6 +903,31 @@ function getChallengeChartKey() {
   return createChartKey({ type: "builtin", id: getSelectedChart().id });
 }
 
+function getBeginnerCourseStage(stageId = selectedCourseStageId) {
+  return BEGINNER_COURSE_STAGES.find((stage) => stage.id === stageId) ?? null;
+}
+
+function renderBeginnerCourse() {
+  const progress = beginnerCourseRepository.progress;
+  const selectedStage = getBeginnerCourseStage();
+  const nextStageId = getNextBeginnerStageId(progress);
+  const stageIsAvailable = selectedStage &&
+    (progress.completedStageIds.includes(selectedStage.id) ||
+      selectedStage.id === nextStageId);
+  beginnerCourseUi.renderBeginnerCourse({
+    stages: BEGINNER_COURSE_STAGES,
+    completedStageIds: progress.completedStageIds,
+    nextStageId,
+    selectedStageId: selectedCourseStageId,
+    message: beginnerCourseMessage,
+    canStart: Boolean(
+      stageIsAvailable &&
+        getSelectedChart().id === selectedStage.chartId &&
+        !isSessionRunning(challengeSession),
+    ),
+  });
+}
+
 function renderChallengePanel() {
   const chartKey = getChallengeChartKey();
   const active = chartKey !== null && activeChallengeKey === chartKey;
@@ -893,8 +940,36 @@ function renderChallengePanel() {
   challengeUi.renderChallengeProgress(
     describeSessionProgress(challengeSession),
   );
-  transport.setBpmLocked(active);
+  transport.setBpmLocked(
+    active || Boolean(getBeginnerCourseStage()?.targetBpm),
+  );
   return view;
+}
+
+function selectBeginnerCourseStage(stageId) {
+  const stage = getBeginnerCourseStage(stageId);
+  const nextStageId = getNextBeginnerStageId(
+    beginnerCourseRepository.progress,
+  );
+  if (
+    !stage ||
+    (!beginnerCourseRepository.progress.completedStageIds.includes(stage.id) &&
+      stage.id !== nextStageId)
+  ) return;
+
+  selectedCourseStageId = stage.id;
+  beginnerCourseMessage =
+    `${stage.name}を選択しました。90%以上の一致率でクリアできます。`;
+  actions.selectChart(stage.chartId);
+  showPracticeView();
+  resetPageState();
+  if (stage.targetBpm !== null) {
+    actions.setBpm(stage.targetBpm);
+    updateTransportValues();
+  }
+  currentView = "practice";
+  persistSession();
+  renderBeginnerCourse();
 }
 
 function setChallengeStatus(message) {
@@ -939,6 +1014,50 @@ function evaluateChallengeAttempt(performance, run) {
     return;
   }
   const analysis = analyzeForChart(performance, chart);
+  if (run.courseStageId) {
+    const stage = getBeginnerCourseStage(run.courseStageId);
+    if (!stage) {
+      beginnerCourseMessage = "コースの課題を特定できませんでした。";
+      renderBeginnerCourse();
+      return;
+    }
+    const expectedDurationMs = getExpectedDurationMs(chart.scoreData, run.bpm) *
+      RECORDING_LOOPS;
+    if (analysis.accuracy === null) {
+      beginnerCourseMessage =
+        "分析できるイベントがなかったため、この課題はクリアになりません。";
+    } else if (
+      !isDurationValid(performance.durationMs, expectedDurationMs)
+    ) {
+      beginnerCourseMessage =
+        "記録時間が譜面の長さに合わなかったため、クリアになりません。";
+    } else if (analysis.accuracy < 90) {
+      beginnerCourseMessage = `一致率 ${
+        analysis.accuracy.toFixed(1)
+      }%。90%以上でクリアです。もう一度練習できます。`;
+    } else {
+      const result = beginnerCourseRepository.complete(stage.id);
+      if (!result.ok) {
+        beginnerCourseMessage = result.reason === "future-version"
+          ? "新しいバージョンのコース進捗があるため、完了を保存できません。"
+          : "コースの完了を保存できませんでした。ブラウザーの保存設定を確認してください。";
+      } else {
+        const nextStageId = getNextBeginnerStageId(result.progress);
+        const nextStage = BEGINNER_COURSE_STAGES.find((item) =>
+          item.id === nextStageId
+        );
+        beginnerCourseMessage = nextStage
+          ? `${stage.name}をクリアしました。一致率 ${
+            analysis.accuracy.toFixed(1)
+          }%。次は${nextStage.name}です。`
+          : `Beginnerコースをすべてクリアしました。一致率 ${
+            analysis.accuracy.toFixed(1)
+          }%。`;
+      }
+    }
+    renderBeginnerCourse();
+    return;
+  }
   const outcome = challengeRepository.recordAttempt(chartKey, {
     bpm: run.bpm,
     accuracy: analysis.accuracy,
@@ -975,6 +1094,7 @@ function applyChallengeEvent(event, now = Date.now()) {
     setTimeout(() => completeChallenge(performance, run), ANALYZE_DELAY_MS);
   }
   renderChallengePanel();
+  renderBeginnerCourse();
 }
 
 function completeChallenge(performance, run) {
@@ -987,24 +1107,14 @@ function completeChallenge(performance, run) {
 function startChallenge() {
   const view = renderChallengePanel();
   if (!view.canStart || isSessionRunning(challengeSession)) return;
-  if (!state.midiConnected) {
-    setChallengeStatus(
-      "「MIDIセットアップ」でMIDIを接続してから開始してください。",
-    );
-    return;
-  }
-  if (!midiMapping.forward || !midiMapping.backward) {
-    setChallengeStatus(
-      "「MIDIセットアップ」でForwardとBackwardを割り当ててから開始してください。",
-    );
-    return;
-  }
+  if (!hasChallengeInputs()) return;
   if (midiLearnAction) {
     midiLearnAction = null;
     renderMidiMappingPanel();
   }
   activeChallengeKey = getChallengeChartKey();
   challengeRun = {
+    courseStageId: null,
     bpm: view.currentBpm,
     startedAt: null,
     loopEnds: [],
@@ -1012,6 +1122,63 @@ function startChallenge() {
   };
   actions.setBpm(view.currentBpm);
   updateTransportValues();
+  applyChallengeEvent(CHALLENGE_EVENTS.START);
+}
+
+function hasChallengeInputs(report = setChallengeStatus) {
+  if (!state.midiConnected) {
+    report(
+      "「MIDIセットアップ」でMIDIを接続してから開始してください。",
+    );
+    return false;
+  }
+  if (!midiMapping.forward || !midiMapping.backward) {
+    report(
+      "「MIDIセットアップ」でForwardとBackwardを割り当ててから開始してください。",
+    );
+    return false;
+  }
+  return true;
+}
+
+function startBeginnerCourseAttempt() {
+  const stage = getBeginnerCourseStage();
+  const nextStageId = getNextBeginnerStageId(
+    beginnerCourseRepository.progress,
+  );
+  if (
+    !stage ||
+    getSelectedChart().id !== stage.chartId ||
+    (!beginnerCourseRepository.progress.completedStageIds.includes(stage.id) &&
+      stage.id !== nextStageId)
+  ) {
+    beginnerCourseMessage = "先に次の課題を選択してください。";
+    return renderBeginnerCourse();
+  }
+  if (isSessionRunning(challengeSession)) return;
+  if (
+    !hasChallengeInputs((message) => {
+      beginnerCourseMessage = message;
+      renderBeginnerCourse();
+    })
+  ) return;
+  if (midiLearnAction) {
+    midiLearnAction = null;
+    renderMidiMappingPanel();
+  }
+  const bpm = stage.targetBpm ?? state.bpm;
+  activeChallengeKey = getChallengeChartKey();
+  challengeRun = {
+    courseStageId: stage.id,
+    bpm,
+    startedAt: null,
+    loopEnds: [],
+    tickSeen: false,
+  };
+  actions.setBpm(bpm);
+  updateTransportValues();
+  beginnerCourseMessage = `${stage.name}に挑戦中です。`;
+  renderBeginnerCourse();
   applyChallengeEvent(CHALLENGE_EVENTS.START);
 }
 
@@ -1043,6 +1210,7 @@ function cancelChallenge(reason) {
   abortPerformanceRecording();
   abortChallenge(reason);
   renderChallengePanel();
+  renderBeginnerCourse();
 }
 
 function beginChallengeRecording(now) {
@@ -1157,6 +1325,7 @@ transport.bindTransport({
     }
     actions.setBpm(value);
     updateTransportValues();
+    renderBeginnerCourse();
     if (playbackController.isRunning) startPlayback(state.isBuilderPlayback);
   },
   onVolumeChange: (value) => {
@@ -1207,6 +1376,10 @@ editorUi = editor.bindEditor({
 challengeUi.bindChallenge({
   onStart: startChallenge,
   onReset: resetChallengeProgress,
+});
+beginnerCourseUi.bindBeginnerCourse({
+  onSelectStage: selectBeginnerCourseStage,
+  onStart: startBeginnerCourseAttempt,
 });
 savedCharts.bindSavedCharts({ onSave: saveCurrentChart });
 controls.renderInitialControls(state, getBuilderBarCount());

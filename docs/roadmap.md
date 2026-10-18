@@ -203,18 +203,18 @@ Feature specifications describe intended behavior; roadmap checkboxes track deli
 
 ### コース
 
-- [ ] Baby Scratch
-- [ ] Forward Scratch
-- [ ] Baby Scratch BPM90
-- [ ] Baby Scratch BPM100
-- [ ] Chirp
+- [x] Baby Scratch
+- [x] Forward Scratch
+- [x] Baby Scratch BPM90
+- [x] Baby Scratch BPM100
+- [x] Chirp
 
 ### 完了条件
 
-- [ ] コース一覧表示
-- [ ] 進捗表示
-- [ ] クリア判定
-- [ ] 次の課題を提案
+- [x] コース一覧表示
+- [x] 進捗表示
+- [x] クリア判定
+- [x] 次の課題を提案
 
 ---
 

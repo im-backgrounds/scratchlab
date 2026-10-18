@@ -2101,6 +2101,58 @@ button {
   line-height: 1.65;
 }
 
+.beginner-course-stages {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.beginner-course-stages button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 12px;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text);
+  text-align: left;
+}
+
+.beginner-course-stages button[aria-pressed="true"] {
+  border-color: var(--primary);
+  background: rgba(111, 228, 255, 0.1);
+}
+
+.beginner-course-stages li[data-state="completed"] .beginner-course-stage-state {
+  color: var(--success);
+}
+
+.beginner-course-stages li[data-state="locked"] button {
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.beginner-course-stage-state {
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.beginner-course-stages button > span:last-child {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.beginner-course-selection {
+  margin: 0 0 12px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
 .challenge-progress {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));

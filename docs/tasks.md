@@ -9,7 +9,7 @@ contract when implementation begins.
 
 1. [x] Improve first-visit guidance and make it skippable, resumable, and
    explicitly re-openable.
-2. [ ] Build the ordered Beginner course: [Baby Scratch](feature-specs/beginner-course.md),
+2. [x] Build the ordered Beginner course: [Baby Scratch](feature-specs/beginner-course.md),
    [Forward Scratch](feature-specs/beginner-course.md), Baby Scratch BPM90,
    Baby Scratch BPM100, then Chirp.
 3. [ ] Add [keyboard input](feature-specs/keyboard-input.md) using the same
