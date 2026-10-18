@@ -1,20 +1,49 @@
-myenv/
-venv/
-.venv/
-__pycache__/
-*.py[cod]
-*.pyc
-*.pyo
-*.pyd
-build/
-dist/
-*.egg-info/
-.pytest_cache/
-.mypy_cache/
-.env
-.envrc
-.Python
-node_modules/
+# ===================================
+# ScratchLab
+# ===================================
+
+# Development workspace
+work/
+
+# Mac
 .DS_Store
-.vscode/
-.github/copilot-instruction.md
+
+# VSCode
+.vscode/settings.json
+.vscode/launch.json
+
+# Logs
+*.log
+
+# Temp
+tmp/
+temp/
+
+# Coverage
+coverage/
+
+# Deno
+deno.lock.old
+
+# Build artifacts
+dist/
+build/
+
+# Generated screenshots
+screenshots/
+
+# Archive files
+*.zip
+*.tar
+*.gz
+
+# Environment
+.env
+.env.local
+.env.*
+
+# Node
+node_modules/
+
+# OS
+Thumbs.db
