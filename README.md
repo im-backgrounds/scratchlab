@@ -148,10 +148,10 @@ DJコントローラーを接続すると、BPMチャレンジで演奏を記録
   1. Demo: お手本ループ（採点されません）
   2. Recording 1/2・2/2: 続く2ループを自動で記録
   3. 再生を自動停止し、記録を自動で判定して結果を表示
-     挑戦中はBPMスライダーを変更できません。再生ボタンで止める、譜面やページを切り替えるとチャレンジは中断され、記録は破棄されます。開始には「MIDIセットアップ」での接続とForward/Backwardの割り当てが必要です。2ループの一致率が90%以上でクリアとなり、次は+5
+     挑戦中はBPMスライダーを変更できません。再生ボタンで止める、譜面やページを切り替えるとチャレンジは中断され、記録は破棄されます。入力には練習モードのマウス・キーボード、または「MIDIセットアップ」で接続・Forward/Backwardを割り当てたMIDI機器を使用します。2ループの一致率が90%以上でクリアとなり、次は+5
      BPMです。失敗した場合も、成功して次のBPMに進んだ場合も、同じ「チャレンジ開始」から始めます（失敗なら同じBPM、成功なら次のBPMに挑戦します）。リトライ専用のボタンはありません。挑戦BPMは保存せず、進捗（最高クリアBPM・挑戦回数・クリア回数・ベスト一致率・直近の結果）から求めます。進捗は譜面ごとにブラウザーへ保存され、「進捗をリセット」で消せます。保存していないビルダー譜面は対象外です。
 
-キーボード専用ショートカットはありません。画面上のボタンや入力欄から操作してください。
+練習モードではマウスの上下移動でスクラッチ、W/Pでフェーダー開、S/Lで閉、Escで練習モードを解除します。
 
 ## 開発者向け
 
@@ -176,9 +176,15 @@ python3 -m http.server 8000
 
 ```sh
 deno test --allow-read=tests/ui/snapshots
-deno check src/app.js tests/domain/*.js tests/state/*.js tests/ui/scratch-visualizer_test.js
+deno check src/app.js tests/domain/*.js tests/state/*.js tests/ui/*.js
 deno fmt --check --unstable-component --ignore='tests/ui/snapshots/*.svg' .
+deno lint src tests
+git diff --check
 ```
+
+Storage共通処理・Repositoryの失敗分岐は `tests/domain/`、
+入力ログの保持・同期描画は `tests/ui/input-event-log_test.js` で確認します。
+DOM表示や実機入力はブラウザーで別途確認してください。
 
 GitHub Actionsでは、pushとpull
 requestのたびにフォーマット確認、型チェック、テストを実行します。
@@ -194,7 +200,9 @@ Pages」を実行します。
 
 ## アーキテクチャ概要
 
-画面からの操作をアプリケーション層で受け取り、譜面データをコンパイルして再生・描画へ渡す構成です。
+`src/app.js` が状態・再生・入力・保存と各画面を接続します。
+機能単位の描画組み立ては `src/features/`、DOM操作は主に `src/ui/` が担当します。
+状態管理やChallengeの進行制御は引き続きアプリケーション層にあり、完全な分離ではありません。
 
 ```text
 index.html
@@ -204,28 +212,35 @@ index.html
       ├─ src/data/               プリセット譜面
       ├─ src/state/              アプリ状態と操作
       ├─ src/audio/              スクラッチ音とクリック音
-      ├─ src/features/           機能単位の画面描画ロジック
-      │   ├─ practice-view.js
-      │   ├─ builder-view.js
-      │   ├─ performance-view.js
-      │   ├─ bpm-challenge-view.js
-      │   ├─ beginner-course-view.js
-      │   ├─ achievement-view.js
+      ├─ src/features/           機能単位の描画組み立てと入力ログ
+      │   ├─ practice-view.js    譜面・再生進行・入力オーバーレイ
+      │   ├─ builder-view.js     Builder描画とスコア文書生成
+      │   ├─ performance-view.js 一致率分析と分析結果の描画
+      │   ├─ bpm-challenge-view.js   Challengeパネル・進行状況の描画
+      │   ├─ beginner-course-view.js コース選択・開始可否の描画
+      │   ├─ achievement-view.js 実績・練習履歴・成長グラフの描画接続
       │   └─ input-event-log.js  圧縮前・圧縮後の入力イベントログの保持、最大件数制御、同期描画
       └─ src/ui/                 譜面表示、操作画面、譜面エディター
 assets/css/styles.css            画面スタイル
 tests/                            ドメイン、再生、描画の回帰テスト
 ```
 
-各Repository（譜面保存、BPM Challenge、Performance、Achievement、 Beginner
-Course、MIDIマッピング）とストレージ利用可否の確認は、
-低レベルなStorageアクセスの例外処理に `src/domain/storage-utils.js`
-を使用するよう内部実装を整理しています。
-JSON処理、正規化、バージョン判定、進捗計算、破損データのバックアップ制御は
-Repository内に保持し、ストレージキー、保存形式、ユーザー操作、
-既存データとの互換性に変更はありません。
+`storage-utils.js` の `safeGetItem`・`safeSetItem`・`safeRemoveItem` は、
+Storage呼び出しの例外だけを捕捉し、成功時の取得値または失敗時の例外を返します。
+譜面保存、BPM Challenge、Performance、Achievement、Beginner Course、
+MIDIマッピングの6つのRepositoryとストレージ利用可否確認に適用しています。
+各Repositoryは必要な操作だけを使用し、JSON処理、検証、正規化、
+バージョン・移行判定、将来バージョン保護、破損データのバックアップ、
+再読込や書き込み可否、固有のエラー変換を引き続き担当します。
 
-MIDI・キーボード・マウスの共通入力処理の命名を整理し、ログ表示責務だけをapp.jsから分離しました。入力イベント形式、圧縮仕様、記録条件、ユーザー操作に変更はありません。
+MIDIの変換済みイベント、キーボードのフェーダー操作、マウスのスクラッチ操作は、
+`handleInputAudioEvent` を経て共通の `recordInputActionEvent` に合流します。
+`input-event-log.js` は圧縮前・圧縮後それぞれのログを独立に最大50件保持し、
+追加時に既存UI関数を同期的に呼びます。初期化時には描画しません。
+カウンター更新、圧縮器の利用・リセット、記録条件、再生ループへの追加と
+オーバーレイ更新の実行順序は `app.js` が制御します。
+これらの内部リファクタリングによる保存形式、ストレージキー、既存データとの互換性、
+入力イベント形式、圧縮仕様、記録条件、ユーザー操作の変更はありません。
 
 譜面データの記法は [docs/score-format.md](docs/score-format.md)
 を参照してください。
@@ -238,7 +253,6 @@ MIDI・キーボード・マウスの共通入力処理の命名を整理し、�
 - 初心者向けのガイドや段階的な練習パターンを拡充
 - MIDI記録と譜面の比較を、入力数だけでなくタイミングも確認できる形に改善
 - 作成した譜面の画像出力など、共有しやすいエクスポート方法を検討
-- MIDIマッピングの保存処理で、共通の安全なStorageアクセスユーティリティを使用するように整理しました。保存形式や移行仕様に変更はありません。
 
 ## ライセンス
 
