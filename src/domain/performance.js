@@ -1,4 +1,5 @@
 import { getBrowserStorage } from "./chart-storage.js";
+import { safeGetItem, safeRemoveItem, safeSetItem } from "./storage-utils.js";
 
 export const PERFORMANCE_FORMAT = "scratchlab-performance";
 export const PERFORMANCE_VERSION = 1;
@@ -205,12 +206,11 @@ export function createPerformanceRepository(
 ) {
   function read() {
     if (!storage) return { status: "unavailable", performance: null };
-    let text;
-    try {
-      text = storage.getItem(key);
-    } catch {
+    const result = safeGetItem(storage, key);
+    if (!result.ok) {
       return { status: "unavailable", performance: null };
     }
+    const text = result.value;
     if (text === null) return { status: "empty", performance: null };
     try {
       const data = JSON.parse(text);
@@ -247,14 +247,15 @@ export function createPerformanceRepository(
       if (status === "unavailable") return { ok: false, reason: "unavailable" };
       if (status === "future") return { ok: false, reason: "future-version" };
       try {
-        storage.setItem(
+        const result = safeSetItem(
+          storage,
           key,
           JSON.stringify({
             version: PERFORMANCE_VERSION,
             performance: normalized,
           }),
         );
-        return { ok: true };
+        return result.ok ? { ok: true } : { ok: false, reason: "write-failed" };
       } catch {
         return { ok: false, reason: "write-failed" };
       }
@@ -263,12 +264,8 @@ export function createPerformanceRepository(
       const { status } = read();
       if (status === "unavailable") return { ok: false, reason: "unavailable" };
       if (status === "future") return { ok: false, reason: "future-version" };
-      try {
-        storage.removeItem(key);
-        return { ok: true };
-      } catch {
-        return { ok: false, reason: "write-failed" };
-      }
+      const result = safeRemoveItem(storage, key);
+      return result.ok ? { ok: true } : { ok: false, reason: "write-failed" };
     },
   };
 }

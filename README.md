@@ -200,6 +200,7 @@ Pages」を実行します。
 index.html
   └─ src/app.js                 画面操作と各機能の連携
       ├─ src/domain/             譜面コンパイル、編集、再生判断、再生タイマー
+      │   └─ storage-utils.js    低レベルなStorageアクセスの例外処理のみを共通化
       ├─ src/data/               プリセット譜面
       ├─ src/state/              アプリ状態と操作
       ├─ src/audio/              スクラッチ音とクリック音

@@ -1,4 +1,5 @@
 import { getBrowserStorage } from "./chart-storage.js";
+import { safeGetItem, safeSetItem } from "./storage-utils.js";
 
 export const BEGINNER_COURSE_STORAGE_KEY = "scratchlab.beginner-course";
 export const BEGINNER_COURSE_VERSION = 1;
@@ -80,14 +81,13 @@ export function createBeginnerCourseRepository(
         blockedReason = "unavailable";
         return { ok: false, reason: "unavailable" };
       }
-      let raw;
-      try {
-        raw = storage.getItem(BEGINNER_COURSE_STORAGE_KEY);
-      } catch {
+      const result = safeGetItem(storage, BEGINNER_COURSE_STORAGE_KEY);
+      if (!result.ok) {
         writable = false;
         blockedReason = "read-failed";
         return { ok: false, reason: "read-failed" };
       }
+      const raw = result.value;
       if (raw === null) return { ok: true, progress };
       try {
         const data = JSON.parse(raw);
@@ -136,10 +136,12 @@ export function createBeginnerCourseRepository(
         ...createProgress(completedStageIds, new Date().toISOString()),
       };
       try {
-        storage.setItem(
+        const result = safeSetItem(
+          storage,
           BEGINNER_COURSE_STORAGE_KEY,
           JSON.stringify(nextProgress),
         );
+        if (!result.ok) return { ok: false, reason: "write-failed" };
       } catch {
         return { ok: false, reason: "write-failed" };
       }

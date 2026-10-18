@@ -1,4 +1,5 @@
 import { getBrowserStorage } from "./chart-storage.js";
+import { safeGetItem, safeRemoveItem, safeSetItem } from "./storage-utils.js";
 
 export const ACHIEVEMENT_STORAGE_KEY = "scratchlab.achievements";
 export const ACHIEVEMENT_VERSION = 1;
@@ -241,8 +242,12 @@ export function createAchievementRepository(
 
   function read() {
     if (!storage) return { progress: emptyProgress(), status: "unavailable" };
+    const result = safeGetItem(storage, key);
+    if (!result.ok) {
+      return { progress: emptyProgress(), status: "unavailable" };
+    }
     try {
-      return parseProgress(storage.getItem(key));
+      return parseProgress(result.value);
     } catch {
       return { progress: emptyProgress(), status: "unavailable" };
     }
@@ -250,8 +255,12 @@ export function createAchievementRepository(
 
   function write(progress) {
     try {
-      storage.setItem(key, JSON.stringify(normalizeProgress(progress)));
-      return { ok: true };
+      const result = safeSetItem(
+        storage,
+        key,
+        JSON.stringify(normalizeProgress(progress)),
+      );
+      return result.ok ? { ok: true } : { ok: false, reason: "write-failed" };
     } catch {
       return { ok: false, reason: "write-failed" };
     }
@@ -336,12 +345,8 @@ export function createAchievementRepository(
       const { status } = read();
       if (status === "unavailable") return { ok: false, reason: status };
       if (status === "future") return { ok: false, reason: "future-version" };
-      try {
-        storage.removeItem(key);
-        return { ok: true };
-      } catch {
-        return { ok: false, reason: "write-failed" };
-      }
+      const result = safeRemoveItem(storage, key);
+      return result.ok ? { ok: true } : { ok: false, reason: "write-failed" };
     },
   };
 }
