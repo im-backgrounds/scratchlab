@@ -2,7 +2,7 @@ function initializeAudio(state, setAudioResources) {
   let audioContext = state.audioContext;
   let scratchBuffers = state.scratchBuffers;
   if (!audioContext) {
-    const AudioCtor = window.AudioContext || window.webkitAudioContext;
+    const AudioCtor = globalThis.AudioContext || globalThis.webkitAudioContext;
     if (AudioCtor) {
       audioContext = new AudioCtor();
     }
@@ -33,7 +33,6 @@ function createScratchBuffers(audioContext) {
   let phase = 0;
 
   for (let index = 0; index < frameCount; index += 1) {
-    const time = index / sampleRate;
     const fundamental = 118;
     phase += (2 * Math.PI * fundamental) / sampleRate;
     let voice = 0;

@@ -98,7 +98,6 @@ const actions = createActions(store);
 const state = store.getState();
 const repository = createChartRepository(getBrowserStorage());
 const firstVisitGuidanceStorage = getBrowserStorage();
-let editorUi;
 let currentView = "practice";
 let renamingChartId = null;
 const midiMappingRepository = createMidiMappingRepository();
@@ -113,7 +112,6 @@ let rawEventCount = 0;
 let performanceEventCount = 0;
 let recordedRawCount = 0;
 const eventCompressor = createEventCompressor();
-let keyboardInput;
 const performanceRepository = createPerformanceRepository();
 let latestPerformance = performanceRepository.load();
 const challengeRepository = createChallengeRepository();
@@ -859,7 +857,7 @@ function handleInputAudioEvent(event) {
 
 const stopDetector = createStopDetector({ onStop: handleInputAudioEvent });
 
-keyboardInput = bindKeyboardInput({
+const keyboardInput = bindKeyboardInput({
   enabled: () => practiceModeEnabled && currentView === "practice",
   onEvent: (event) => {
     handleInputAudioEvent(event);
@@ -1645,7 +1643,7 @@ transport.bindTransport({
   },
 });
 
-editorUi = editor.bindEditor({
+const editorUi = editor.bindEditor({
   onModeChange: setBuilderMode,
   onStepTypeChange: (stepType) => {
     actions.setBuilderSelectedType(stepType);

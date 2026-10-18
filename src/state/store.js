@@ -122,7 +122,7 @@ function reduceState(state, action) {
 }
 
 export function createStore(initialState) {
-  let state = protectCollections(initialState);
+  const state = protectCollections(initialState);
   const stateView = {};
   Object.keys(state).forEach((key) => {
     Object.defineProperty(stateView, key, {

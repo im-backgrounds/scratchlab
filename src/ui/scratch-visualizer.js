@@ -323,7 +323,7 @@ function createLayout(steps, chartOptions) {
  * @returns {string}
  */
 function renderBars(steps, layout) {
-  const { left, right, top, bottom, plotWidth, scoreGrid } = layout;
+  const { left, top, bottom, plotWidth, scoreGrid } = layout;
   let grid = "";
   if (scoreGrid) {
     const { totalTicks, ticksPerBar, beatsPerBar } = scoreGrid;
