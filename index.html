@@ -48,7 +48,7 @@
 
           <div class="nav-group builder-link-group">
             <button id="achievements-tab" class="chart-item nav-page-button"
-              type="button">実績</button>
+              type="button">実績・練習履歴</button>
           </div>
         </div>
       </aside>
@@ -739,6 +739,14 @@
           </header>
           <p id="achievement-status" class="status-box" role="status"
             aria-live="polite" hidden></p>
+          <section class="card" aria-labelledby="practice-history-title">
+            <h3 id="practice-history-title">練習履歴</h3>
+            <p>完了した有効な練習を最大500件保存します。最高BPMのクリア記録を優先して残します。</p>
+            <p>履歴を削除すると、実績・練習回数・連続練習日数もリセットされます。BPM ChallengeとBeginnerコースの進捗は残ります。</p>
+            <button id="practice-history-clear" type="button">履歴と実績をすべて削除</button>
+            <p id="practice-history-empty">練習履歴はまだありません。BPM ChallengeまたはBeginnerコースで練習を完了してください。</p>
+            <ul id="practice-history-list"></ul>
+          </section>
           <section class="card" aria-labelledby="achievement-bpm-title">
             <h3 id="achievement-bpm-title">BPM達成</h3>
             <ul id="achievement-bpm-list" class="achievement-list"></ul>

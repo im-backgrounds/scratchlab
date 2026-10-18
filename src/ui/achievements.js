@@ -10,10 +10,44 @@ const LIST_IDS = {
   streak: "achievement-streak-list",
 };
 
-export function bindAchievements({ onDismiss }) {
+export function bindAchievements({ onDismiss, onClearHistory }) {
   document.getElementById("achievement-notification-dismiss").addEventListener(
     "click",
     onDismiss,
+  );
+  document.getElementById("practice-history-clear").addEventListener(
+    "click",
+    () => {
+      if (
+        globalThis.confirm(
+          "練習履歴と実績をすべて削除します。練習回数・連続練習日数と、履歴に基づく分析もリセットされます。この操作は取り消せません。削除しますか？",
+        )
+      ) onClearHistory();
+    },
+  );
+}
+
+export function renderPracticeHistory(sessions, canClear, charts) {
+  document.getElementById("practice-history-clear").disabled = !canClear;
+  document.getElementById("practice-history-empty").hidden =
+    sessions.length > 0;
+  const ordered = [...sessions].sort(
+    (a, b) => Date.parse(b.date) - Date.parse(a.date),
+  );
+  document.getElementById("practice-history-list").replaceChildren(
+    ...ordered.map((session) => {
+      const item = document.createElement("li");
+      const pattern = charts.find((chart) =>
+        chart.id === session.pattern
+      )?.name ??
+        session.pattern;
+      item.textContent = `${
+        new Date(session.date).toLocaleString("ja-JP")
+      } · ${pattern} · ${session.bpm} BPM · 一致率 ${
+        session.accuracy.toFixed(1)
+      }%`;
+      return item;
+    }),
   );
 }
 

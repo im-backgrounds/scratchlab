@@ -2,6 +2,7 @@ export function renderAchievementView({
   repository,
   getMessage,
   achievementUi,
+  charts,
 }) {
   const result = repository.load();
   const statusMessage = getMessage() || ({
@@ -10,4 +11,9 @@ export function renderAchievementView({
     future: "新しいバージョンの実績データがあるため、保存を停止しています。",
   }[result.status] ?? "");
   achievementUi.renderAchievements(result.achievements, statusMessage);
+  achievementUi.renderPracticeHistory(
+    result.sessions,
+    result.status !== "unavailable" && result.status !== "future",
+    charts,
+  );
 }

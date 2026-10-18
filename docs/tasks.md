@@ -23,7 +23,7 @@ contract when implementation begins.
    score-aligned expected and performed events.
 6. [x] Add the [achievement system](feature-specs/achievement-system.md) for
    BPM goals, practice counts, and practice streaks.
-7. [ ] Add [practice history](feature-specs/practice-history.md) with date,
+7. [x] Add [practice history](feature-specs/practice-history.md) with date,
    pattern, BPM, and accuracy.
 8. [ ] Add growth charts for practice volume, best BPM, and average accuracy,
    using the history data contract.

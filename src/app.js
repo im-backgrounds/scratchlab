@@ -1150,6 +1150,7 @@ function renderAchievementsPage() {
     repository: achievementRepository,
     getMessage: () => achievementMessage,
     achievementUi,
+    charts: chartCatalog,
   });
 }
 
@@ -1579,6 +1580,16 @@ controls.bindControls({
 
 achievementUi.bindAchievements({
   onDismiss: achievementUi.dismissAchievementNotification,
+  onClearHistory: () => {
+    const result = achievementRepository.clear();
+    achievementMessage = result.ok
+      ? "練習履歴と実績を削除しました。"
+      : result.reason === "future-version"
+      ? "新しいバージョンのデータがあるため、削除できません。"
+      : "練習履歴を削除できませんでした。ブラウザーの保存設定を確認してください。";
+    if (result.ok) achievementUi.dismissAchievementNotification();
+    renderAchievementsPage();
+  },
 });
 
 performanceUi.bindPerformance({
