@@ -19,7 +19,7 @@ contract when implementation begins.
 
 4. [x] Add [input audio monitoring](feature-specs/input-audio-monitoring.md)
    with separate SAMPLE/YOU levels and mute controls.
-5. [ ] Add the [controller overlay](feature-specs/controller-overlay.md) for
+5. [x] Add the [controller overlay](feature-specs/controller-overlay.md) for
    score-aligned expected and performed events.
 6. [ ] Add the [achievement system](feature-specs/achievement-system.md) for
    BPM goals, practice counts, and practice streaks.

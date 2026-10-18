@@ -360,6 +360,123 @@ button {
   height: 220px;
 }
 
+.controller-overlay {
+  margin: -8px 0 22px;
+  padding: 12px 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.controller-overlay h4 {
+  margin: 0 14px 4px;
+}
+
+.controller-overlay > p {
+  margin: 0 14px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.controller-overlay-tracks {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.controller-overlay-lane {
+  display: block;
+}
+
+.controller-overlay-lane .performance-lane-label {
+  display: block;
+  margin: 0 14px 4px;
+}
+
+.controller-overlay-track {
+  height: 22px;
+  border-radius: 0;
+}
+
+.controller-overlay-grid-line {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  bottom: 0;
+  border-left: 1px dotted rgba(255, 255, 255, 0.95);
+  box-shadow: -1px 0 rgba(19, 29, 42, 0.9);
+  pointer-events: none;
+}
+
+.controller-overlay-grid-line.is-beat {
+  border-left-color: #fff;
+}
+
+.controller-overlay-grid-line.is-bar {
+  border-left: 1.5px solid #fff;
+}
+
+.controller-overlay .controller-overlay-lane {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+}
+
+.controller-overlay-legend {
+  margin-right: 14px;
+  margin-left: 14px;
+}
+
+.controller-overlay-track.is-playing::after {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  bottom: 0;
+  left: var(--playhead-position);
+  border-left: 1px solid var(--text);
+  content: "";
+  pointer-events: none;
+}
+
+.controller-overlay-empty,
+.controller-overlay-status,
+.controller-overlay-error-summary {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.controller-overlay-status {
+  color: var(--muted);
+}
+
+.controller-overlay-error-summary {
+  color: #ff8a5b;
+}
+
+.controller-overlay-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 10px 0 0;
+  padding: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  list-style: none;
+}
+
+.controller-overlay-legend li::before {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 6px;
+  border-radius: 3px;
+  background: var(--segment-color, var(--overlay-color));
+  content: "";
+}
+
+.controller-overlay-error {
+  --overlay-color: #ff8a5b;
+}
+
 .scratch-strokes path {
   fill: none;
   stroke: var(--primary);

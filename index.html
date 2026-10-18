@@ -93,6 +93,22 @@
 
             <div id="chart-steps" class="chart-grid" aria-live="polite"></div>
 
+            <section class="controller-overlay" aria-labelledby="controller-overlay-title">
+              <h4 id="controller-overlay-title">コントローラーオーバーレイ</h4>
+              <p>スクラッチとフェーダーの入力を、譜面と同じ長さの時間軸で表示します。</p>
+              <div id="controller-overlay"
+                class="controller-overlay-tracks"
+                aria-label="譜面と演奏イベントの比較"></div>
+              <ul class="controller-overlay-legend" aria-label="タイムラインの凡例">
+                <li class="performance-segment-forward">Forward</li>
+                <li class="performance-segment-backward">Backward</li>
+                <li class="performance-segment-stop">Stop</li>
+                <li class="performance-segment-open">Fader Open</li>
+                <li class="performance-segment-closed">Fader Close</li>
+                <li class="controller-overlay-error">Error</li>
+              </ul>
+            </section>
+
             <section id="chart-help-panel" class="chart-help-panel" hidden
               aria-labelledby="chart-help-title">
               <h4 id="chart-help-title"></h4>
@@ -171,8 +187,7 @@
                 Escで練習モードを解除します。
               </p>
               <p class="audio-monitor-instructions">
-                練習モード中は前進・後進・フェーダー以外のマウス／キーボード操作は無効です。
-                MIDI入力は同時に使えます。
+                練習モード中も、通常のマウス・キーボード操作やMIDI入力をそのまま使えます。
               </p>
               <p class="audio-monitor-instructions">
                 フェーダー：<strong id="keyboard-fader-state">閉</strong>

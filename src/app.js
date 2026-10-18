@@ -117,6 +117,10 @@ const beginnerCourseLoad = beginnerCourseRepository.load();
 let activeChallengeKey = null;
 let challengeSession = createChallengeSession();
 let selectedCourseStageId = null;
+let playbackLoopStartedAt = null;
+let playbackLoopNumber = 1;
+let playbackLoopEvents = [];
+let playbackLoopCurrentStep = 0;
 let beginnerCourseMessage = beginnerCourseLoad.ok
   ? getNextBeginnerStageId(beginnerCourseRepository.progress) === null
     ? "Beginnerコースをすべてクリアしました。"
@@ -178,7 +182,35 @@ let practiceModeEnabled = false;
 const playbackController = createPlaybackController();
 
 function renderSelectedChart() {
-  visualizer.renderSelectedChart(getSelectedChart(), state);
+  const chart = getSelectedChart();
+  visualizer.renderSelectedChart(chart, state);
+  renderControllerOverlay(chart);
+}
+
+function renderControllerOverlay(chart) {
+  if (
+    (state.isPlaying || playbackLoopEvents.length > 0) &&
+    !state.isBuilderPlayback &&
+    playbackLoopStartedAt !== null
+  ) {
+    performanceUi.renderControllerOverlay(chart.scoreData, null, null, {
+      currentStep: state.isPlaying
+        ? state.currentStep
+        : playbackLoopCurrentStep,
+      isPlaying: state.isPlaying,
+      startedAt: playbackLoopStartedAt,
+      now: Date.now(),
+      bpm: state.bpm,
+      loopNumber: playbackLoopNumber,
+      events: playbackLoopEvents,
+    });
+    return;
+  }
+  performanceUi.renderControllerOverlay(
+    chart.scoreData,
+    latestPerformance,
+    latestPerformance ? analyzeForChart(latestPerformance, chart) : null,
+  );
 }
 
 function showPracticeView() {
@@ -201,6 +233,9 @@ function stopInputMonitoring() {
 function resetPageState() {
   stopInputMonitoring();
   stopPlayback();
+  playbackLoopStartedAt = null;
+  playbackLoopEvents = [];
+  playbackLoopCurrentStep = 0;
   abortPerformanceRecording();
   abortChallenge();
   const selectedChart = getSelectedChart();
@@ -323,7 +358,8 @@ function renderPlaybackProgress() {
   if (state.isBuilderPlayback) {
     renderBuilderScore();
   } else {
-    renderSelectedChart();
+    visualizer.renderSelectedChart(getSelectedChart(), state);
+    renderControllerOverlay(getSelectedChart());
   }
 }
 
@@ -350,13 +386,28 @@ function advancePlayback() {
     chart.steps.length,
     challengeLooping || state.repeat,
   );
+  playbackLoopCurrentStep = cursor.shouldStop
+    ? state.currentStep
+    : cursor.currentStep;
   if (cursor.shouldStop) return stopPlayback();
+  if (cursor.currentStep === 0) {
+    playbackLoopStartedAt = Date.now();
+    playbackLoopNumber += 1;
+    playbackLoopEvents = [];
+    playbackLoopCurrentStep = 0;
+    eventCompressor.reset();
+  } else if (
+    cursor.currentStep % chart.scoreData?.ticksPerBar === 0
+  ) {
+    eventCompressor.reset();
+  }
   actions.setPlaybackState({ currentStep: cursor.currentStep });
 }
 
 function stopPlayback() {
   const wasBuilderPlayback = state.isBuilderPlayback;
   playbackController.stop();
+  silenceActiveScratch();
   actions.setPlaybackState({ isPlaying: false, currentStep: 0 });
   controls.setPlaybackButton(false);
   if (wasBuilderPlayback) {
@@ -369,6 +420,10 @@ function stopPlayback() {
 
 function startPlayback(isBuilderPlayback = false) {
   initializeAudio();
+  playbackLoopStartedAt = Date.now();
+  playbackLoopNumber = 1;
+  playbackLoopEvents = [];
+  playbackLoopCurrentStep = 0;
   actions.setPlaybackState({ isBuilderPlayback });
   const chart = getPlaybackChart();
   if (!chart.steps.length) {
@@ -746,6 +801,10 @@ function recordMidiActionEvent(event) {
       "midi-performance-log",
     );
     if (state.recordingMidi) actions.recordMidiAction(performanceEvent);
+    if (playbackController.isRunning && !state.isBuilderPlayback) {
+      playbackLoopEvents = [...playbackLoopEvents, performanceEvent];
+      renderControllerOverlay(getSelectedChart());
+    }
   }
   midiMappingUi.renderMidiEventCounts(rawEventCount, performanceEventCount);
 }
@@ -808,6 +867,9 @@ keyboardInput = bindKeyboardInput({
     }
     audioMonitorSettings.faderOpen = state === "open";
     setInputFaderState(audioMonitorSettings.faderOpen);
+    if (audioMonitorSettings.faderOpen && practiceModeEnabled) {
+      initializeAudio();
+    }
     renderAudioMonitoring();
   },
 });
@@ -848,6 +910,7 @@ function setPracticeModeEnabled(enabled) {
   }
   practiceModeEnabled = enabled;
   document.body.classList.toggle("practice-mode-active", enabled);
+  if (enabled) keyboardInput.setFaderState("open");
   syncPracticeModeButton();
 }
 
@@ -859,27 +922,6 @@ document.getElementById("practice-mode-toggle").addEventListener(
 const isPracticeModeToggle = (target) =>
   target instanceof Element && target.closest("#practice-mode-toggle");
 
-document.addEventListener("pointerdown", (event) => {
-  if (practiceModeEnabled && !isPracticeModeToggle(event.target)) {
-    event.preventDefault();
-    event.stopImmediatePropagation();
-  }
-}, true);
-document.addEventListener("click", (event) => {
-  if (practiceModeEnabled && !isPracticeModeToggle(event.target)) {
-    event.preventDefault();
-    event.stopImmediatePropagation();
-  }
-}, true);
-document.addEventListener("wheel", (event) => {
-  if (practiceModeEnabled) {
-    event.preventDefault();
-    event.stopImmediatePropagation();
-  }
-}, { capture: true, passive: false });
-document.addEventListener("contextmenu", (event) => {
-  if (practiceModeEnabled) event.preventDefault();
-}, true);
 document.addEventListener("pointermove", (event) => {
   if (
     !practiceModeEnabled || event.pointerType !== "mouse" ||
@@ -1425,6 +1467,7 @@ function finishChallengeRecording(run, now) {
   performanceUi.renderPerformanceRecording(false);
   performanceUi.renderPerformance(performance);
   renderPerformanceAnalysis();
+  renderSelectedChart();
   const saved = performanceRepository.save(performance);
   const note = saved.ok
     ? "最新の記録はこのブラウザーに保存されました。"
