@@ -1,4 +1,5 @@
 import { getBrowserStorage } from "./chart-storage.js";
+import { safeGetItem, safeRemoveItem, safeSetItem } from "./storage-utils.js";
 
 export const CHALLENGE_STORAGE_KEY = "scratchlab.challenge";
 export const CHALLENGE_VERSION = 1;
@@ -320,8 +321,12 @@ export function createChallengeRepository(
     if (!storage) {
       return { store: createEmptyChallengeStore(), status: "unavailable" };
     }
+    const result = safeGetItem(storage, key);
+    if (!result.ok) {
+      return { store: createEmptyChallengeStore(), status: "unavailable" };
+    }
     try {
-      return parseChallengeStore(storage.getItem(key), MIGRATIONS, rules);
+      return parseChallengeStore(result.value, MIGRATIONS, rules);
     } catch {
       return { store: createEmptyChallengeStore(), status: "unavailable" };
     }
@@ -329,8 +334,12 @@ export function createChallengeRepository(
 
   function write(store) {
     try {
-      storage.setItem(key, JSON.stringify(normalizeStore(store, rules)));
-      return { ok: true };
+      const result = safeSetItem(
+        storage,
+        key,
+        JSON.stringify(normalizeStore(store, rules)),
+      );
+      return result.ok ? { ok: true } : { ok: false, reason: "write-failed" };
     } catch {
       return { ok: false, reason: "write-failed" };
     }
@@ -384,12 +393,8 @@ export function createChallengeRepository(
       const { status } = read();
       if (status === "unavailable") return { ok: false, reason: "unavailable" };
       if (status === "future") return { ok: false, reason: "future-version" };
-      try {
-        storage.removeItem(key);
-        return { ok: true };
-      } catch {
-        return { ok: false, reason: "write-failed" };
-      }
+      const result = safeRemoveItem(storage, key);
+      return result.ok ? { ok: true } : { ok: false, reason: "write-failed" };
     },
   };
 }
