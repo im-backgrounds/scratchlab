@@ -57,9 +57,17 @@ versioned local record:
 }
 ```
 
-Do not store user identity or transmit practice events. Define migration and
-reset behavior before implementation; deleting practice history must not leave
-orphaned derived achievements.
+Until the history view is delivered, store valid completed challenge sessions
+as the shared progress source, using the practice-history record fields plus a
+challenge-clear result. Retain at most 500 sessions, preserving the
+highest-BPM clear if it falls outside the recent records; retain the 30 most
+recent distinct local calendar days for streak calculation. Practice-count
+progress is capped at 500. Clearing this progress source must also clear the
+earned timestamps so derived achievements cannot become orphaned.
+
+The initial local format is version 1; reject future versions without
+overwriting them. Clearing the progress source also clears all earned
+timestamps. Do not store user identity or transmit practice events.
 
 # Acceptance Criteria
 

@@ -69,6 +69,7 @@ import * as challengeUi from "./ui/challenge.js";
 import * as beginnerCourseUi from "./ui/beginner-course.js";
 import * as audioMonitoringUi from "./ui/audio-monitoring.js";
 import * as performanceUi from "./ui/performance.js";
+import * as achievementUi from "./ui/achievements.js";
 import * as savedCharts from "./ui/saved-charts.js";
 import * as visualizer from "./ui/visualizer.js";
 import {
@@ -76,6 +77,10 @@ import {
   createBeginnerCourseRepository,
   getNextBeginnerStageId,
 } from "./domain/beginner-course.js";
+import {
+  ACHIEVEMENTS,
+  createAchievementRepository,
+} from "./domain/achievement-system.js";
 
 const chartCatalog = chartDefinitions.map((chart) => {
   const source = {
@@ -111,6 +116,8 @@ let keyboardInput;
 const performanceRepository = createPerformanceRepository();
 let latestPerformance = performanceRepository.load();
 const challengeRepository = createChallengeRepository();
+const achievementRepository = createAchievementRepository();
+let achievementMessage = "";
 const beginnerCourseRepository = createBeginnerCourseRepository();
 const beginnerCourseLoad = beginnerCourseRepository.load();
 // Only the challenged chart is kept; the BPM is derived from saved progress.
@@ -696,6 +703,10 @@ function restoreLastSession() {
   if (currentView === "builder") showBuilderPage();
   else if (currentView === "guide") controls.renderGuideView();
   else if (currentView === "midi") controls.renderMidiSetupView();
+  else if (currentView === "achievements") {
+    controls.renderAchievementsView();
+    renderAchievementsPage();
+  }
 }
 
 function syncChartJson() {
@@ -1165,6 +1176,16 @@ function renderBeginnerCourse() {
   });
 }
 
+function renderAchievementsPage() {
+  const result = achievementRepository.load();
+  const statusMessage = achievementMessage || ({
+    unavailable: "このブラウザーでは実績を保存できません。",
+    corrupt: "実績データを読み込めませんでした。",
+    future: "新しいバージョンの実績データがあるため、保存を停止しています。",
+  }[result.status] ?? "");
+  achievementUi.renderAchievements(result.achievements, statusMessage);
+}
+
 function renderChallengePanel() {
   const chartKey = getChallengeChartKey();
   const active = chartKey !== null && activeChallengeKey === chartKey;
@@ -1214,6 +1235,11 @@ function setChallengeStatus(message) {
   challengeUi.renderChallengeStatus(message);
 }
 
+function createChallengeSessionId() {
+  return globalThis.crypto?.randomUUID?.() ??
+    `session-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+}
+
 function describeAttemptResult(outcome, bpm, accuracy) {
   if (!outcome.ok) {
     return outcome.reason === "unavailable"
@@ -1235,6 +1261,31 @@ function describeAttemptResult(outcome, bpm, accuracy) {
       deriveCurrentBpm(outcome.progress)
     } BPM です。`
     : `${bpm} BPM: 一致率 ${percent}。90%以上でクリアです。もう一度挑戦できます。`;
+}
+
+function recordPracticeAchievement(run, accuracy, cleared) {
+  const result = achievementRepository.recordSession({
+    id: run.sessionId,
+    pattern: getSelectedChart().id,
+    bpm: run.bpm,
+    accuracy,
+    cleared,
+  });
+  if (!result.ok) {
+    const message = result.reason === "future-version"
+      ? "新しいバージョンの実績データがあるため、実績を保存できません。"
+      : "実績を保存できませんでした。ブラウザーの保存設定を確認してください。";
+    achievementMessage = message;
+    return message;
+  }
+  achievementMessage = "";
+  if (result.newlyEarned.length > 0) {
+    const titles = ACHIEVEMENTS.filter((achievement) =>
+      result.newlyEarned.includes(achievement.id)
+    ).map((achievement) => achievement.title);
+    achievementUi.renderAchievementNotification(titles);
+  }
+  return "";
 }
 
 function isChallengeLooping() {
@@ -1261,6 +1312,11 @@ function evaluateChallengeAttempt(performance, run) {
     }
     const expectedDurationMs = getExpectedDurationMs(chart.scoreData, run.bpm) *
       RECORDING_LOOPS;
+    const validPractice = analysis.accuracy !== null &&
+      isDurationValid(performance.durationMs, expectedDurationMs);
+    const achievementError = validPractice
+      ? recordPracticeAchievement(run, analysis.accuracy, false)
+      : "";
     if (analysis.accuracy === null) {
       beginnerCourseMessage =
         "分析できるイベントがなかったため、この課題はクリアになりません。";
@@ -1293,6 +1349,9 @@ function evaluateChallengeAttempt(performance, run) {
           }%。`;
       }
     }
+    if (achievementError) {
+      beginnerCourseMessage += ` ${achievementError}`;
+    }
     renderBeginnerCourse();
     return;
   }
@@ -1303,9 +1362,25 @@ function evaluateChallengeAttempt(performance, run) {
     expectedDurationMs: getExpectedDurationMs(chart.scoreData, run.bpm) *
       RECORDING_LOOPS,
   });
-  setChallengeStatus(
-    describeAttemptResult(outcome, run.bpm, analysis.accuracy ?? 0),
+  const resultMessage = describeAttemptResult(
+    outcome,
+    run.bpm,
+    analysis.accuracy ?? 0,
   );
+  setChallengeStatus(resultMessage);
+  if (
+    outcome.ok && outcome.result.status === "counted" &&
+    outcome.result.valid
+  ) {
+    const achievementError = recordPracticeAchievement(
+      run,
+      analysis.accuracy,
+      outcome.result.cleared,
+    );
+    if (achievementError) {
+      setChallengeStatus(`${resultMessage} ${achievementError}`);
+    }
+  }
 }
 
 /**
@@ -1352,6 +1427,7 @@ function startChallenge() {
   }
   activeChallengeKey = getChallengeChartKey();
   challengeRun = {
+    sessionId: createChallengeSessionId(),
     courseStageId: null,
     bpm: view.currentBpm,
     startedAt: null,
@@ -1396,6 +1472,7 @@ function startBeginnerCourseAttempt() {
   const bpm = stage.targetBpm ?? state.bpm;
   activeChallengeKey = getChallengeChartKey();
   challengeRun = {
+    sessionId: createChallengeSessionId(),
     courseStageId: stage.id,
     bpm,
     startedAt: null,
@@ -1536,7 +1613,19 @@ controls.bindControls({
     syncPracticeModeButton();
     persistSession();
   },
+  onShowAchievements: () => {
+    prepareViewSwitch();
+    controls.renderAchievementsView();
+    renderAchievementsPage();
+    currentView = "achievements";
+    syncPracticeModeButton();
+    persistSession();
+  },
   onConnectMidi: connectMIDI,
+});
+
+achievementUi.bindAchievements({
+  onDismiss: achievementUi.dismissAchievementNotification,
 });
 
 performanceUi.bindPerformance({

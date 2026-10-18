@@ -1417,6 +1417,65 @@ button {
   display: none;
 }
 
+.achievement-page[hidden] {
+  display: none;
+}
+
+.achievement-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.achievement-item {
+  position: relative;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(4, 12, 20, 0.44);
+}
+
+.achievement-item[data-earned="true"] {
+  border-color: rgba(126, 240, 187, 0.45);
+}
+
+.achievement-item h4,
+.achievement-item p {
+  margin: 0 0 8px;
+}
+
+.achievement-item p {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.achievement-state {
+  display: inline-block;
+  font-size: 0.82rem;
+}
+
+.achievement-notification {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--primary);
+  border-radius: 14px;
+  background: var(--panel-strong);
+}
+
+.achievement-notification[hidden] {
+  display: none;
+}
+
+.achievement-notification p {
+  margin: 0;
+}
+
 .builder-overview {
   display: flex;
   align-items: stretch;

@@ -5,7 +5,7 @@ export const STORAGE_VERSION = 1;
 export const MAX_SAVED_CHARTS = 100;
 export const MAX_NAME_LENGTH = 80;
 export const DEFAULT_CHART_NAME = "無題の譜面";
-const VIEWS = ["practice", "guide", "builder"];
+const VIEWS = ["practice", "guide", "builder", "achievements"];
 
 /**
  * Upgrade functions keyed by the version they read. Each returns the next

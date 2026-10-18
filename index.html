@@ -45,6 +45,11 @@
             <button id="midi-setup-tab" class="chart-item nav-page-button"
               type="button">MIDIセットアップ</button>
           </div>
+
+          <div class="nav-group builder-link-group">
+            <button id="achievements-tab" class="chart-item nav-page-button"
+              type="button">実績</button>
+          </div>
         </div>
       </aside>
 
@@ -52,6 +57,12 @@
         <p id="first-visit-guidance-status"
           class="first-visit-guidance-status" role="status"
           aria-live="polite" hidden></p>
+        <div id="achievement-notification" class="achievement-notification"
+          role="status" aria-live="polite" hidden>
+          <p id="achievement-notification-text"></p>
+          <button id="achievement-notification-dismiss"
+            class="secondary-button" type="button">閉じる</button>
+        </div>
         <div id="practice-view">
           <section id="first-visit-guidance"
             class="card first-visit-guidance"
@@ -716,6 +727,29 @@
             <ul id="saved-chart-list" class="saved-chart-list"></ul>
             <p id="saved-chart-status" class="json-status"
               aria-live="polite"></p>
+          </section>
+        </section>
+        <section id="achievements-page" class="achievement-page" hidden
+          aria-labelledby="achievements-title">
+          <header class="topbar">
+            <div>
+              <p class="eyebrow">PRACTICE MILESTONES</p>
+              <h2 id="achievements-title">実績</h2>
+            </div>
+          </header>
+          <p id="achievement-status" class="status-box" role="status"
+            aria-live="polite" hidden></p>
+          <section class="card" aria-labelledby="achievement-bpm-title">
+            <h3 id="achievement-bpm-title">BPM達成</h3>
+            <ul id="achievement-bpm-list" class="achievement-list"></ul>
+          </section>
+          <section class="card" aria-labelledby="achievement-practice-title">
+            <h3 id="achievement-practice-title">練習回数</h3>
+            <ul id="achievement-practice-list" class="achievement-list"></ul>
+          </section>
+          <section class="card" aria-labelledby="achievement-streak-title">
+            <h3 id="achievement-streak-title">連続練習日数</h3>
+            <ul id="achievement-streak-list" class="achievement-list"></ul>
           </section>
         </section>
       </main>

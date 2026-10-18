@@ -4,6 +4,7 @@ export function bindControls({
   onSkipFirstVisitGuide,
   onShowBuilder,
   onShowMidiSetup,
+  onShowAchievements,
   onConnectMidi,
 }) {
   const sidebar = document.getElementById("sidebar");
@@ -21,6 +22,7 @@ export function bindControls({
   const chartHelpPanel = document.getElementById("chart-help-panel");
   const midiConnectButton = document.getElementById("midi-connect");
   const midiSetupTab = document.getElementById("midi-setup-tab");
+  const achievementsTab = document.getElementById("achievements-tab");
 
   const setMobileMenuOpen = (isOpen, restoreFocus = false) => {
     document.body.classList.toggle("mobile-menu-open", isOpen);
@@ -57,6 +59,7 @@ export function bindControls({
   firstVisitGuideSkip.addEventListener("click", onSkipFirstVisitGuide);
   builderTab.addEventListener("click", onShowBuilder);
   midiSetupTab.addEventListener("click", onShowMidiSetup);
+  achievementsTab.addEventListener("click", onShowAchievements);
 
   chartHelpToggle.addEventListener("click", () => {
     chartHelpPanel.hidden = !chartHelpPanel.hidden;
@@ -150,8 +153,14 @@ const PAGE_IDS = [
   "notation-guide-page",
   "builder-page",
   "midi-setup-page",
+  "achievements-page",
 ];
-const TAB_IDS = ["notation-guide-tab", "builder-tab", "midi-setup-tab"];
+const TAB_IDS = [
+  "notation-guide-tab",
+  "builder-tab",
+  "midi-setup-tab",
+  "achievements-tab",
+];
 
 function showPage(pageId, activeTabId) {
   for (const id of PAGE_IDS) document.getElementById(id).hidden = id !== pageId;
@@ -180,4 +189,8 @@ export function renderBuilderView() {
 
 export function renderMidiSetupView() {
   showPage("midi-setup-page", "midi-setup-tab");
+}
+
+export function renderAchievementsView() {
+  showPage("achievements-page", "achievements-tab");
 }
