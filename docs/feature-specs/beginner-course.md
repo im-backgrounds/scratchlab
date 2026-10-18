@@ -2,8 +2,8 @@
 
 Provide a guided sequence for learners who are unsure what to practice. The
 course consists of five ordered stages: Baby Scratch, Forward Scratch, Baby
-Scratch BPM90, Baby Scratch BPM100, and Chirp. Each stage unlocks only after
-the previous stage is completed.
+Scratch BPM90, Baby Scratch BPM100, and Chirp. Each stage unlocks only after the
+previous stage is completed.
 
 This is planned work. See the [roadmap](../roadmap.md) and
 [v0.2 tasks](../tasks.md#v02-learning-experience).
@@ -25,8 +25,8 @@ tempo on my own.
 - Lock all stages after the next incomplete stage.
 - Allow the learner to replay completed stages.
 - The BPM90 and BPM100 stages use Baby Scratch at their named target tempo;
-  these fixed course targets are distinct from the user's personal BPM
-  Challenge progression.
+  these fixed course targets are distinct from the user's personal BPM Challenge
+  progression.
 - A course stage is cleared by one valid performance at its target BPM with at
   least 90% event-sequence accuracy. A stage without a BPM target uses the
   selected/default practice tempo and the same accuracy threshold.
@@ -40,8 +40,7 @@ tempo on my own.
 - Explain why a stage is locked and which prior stage unlocks it.
 - Show the selected stage's score, target tempo when applicable, and progress
   feedback.
-- Keep normal practice and playback controls available when a stage is
-  selected.
+- Keep normal practice and playback controls available when a stage is selected.
 - Make completion status understandable without relying on color alone.
 
 # Data Model
@@ -57,10 +56,10 @@ Course state is stored locally and versioned. Suggested logical shape:
 }
 ```
 
-Use stable stage IDs rather than display names. The ordered catalog maps each
-ID to its chart and optional target BPM. Progress is monotonic: completing a
-later stage implies earlier stages are complete; malformed or unknown IDs are
-ignored during normalization. Do not store transient playback or MIDI state.
+Use stable stage IDs rather than display names. The ordered catalog maps each ID
+to its chart and optional target BPM. Progress is monotonic: completing a later
+stage implies earlier stages are complete; malformed or unknown IDs are ignored
+during normalization. Do not store transient playback or MIDI state.
 
 # Acceptance Criteria
 

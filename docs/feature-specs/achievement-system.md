@@ -27,8 +27,8 @@ that I can see progress and stay motivated.
 - A practice-count milestone counts one completed, valid practice session once;
   incomplete playback and duplicate lifecycle events must not inflate it.
 - A streak day is a calendar day on which at least one valid practice session
-  completes. Use the browser's local calendar date consistently and do not
-  count multiple sessions on the same day as multiple streak days.
+  completes. Use the browser's local calendar date consistently and do not count
+  multiple sessions on the same day as multiple streak days.
 - Explain the earned milestone and the remaining progress for locked
   achievements where a meaningful denominator exists.
 - Do not require sign-in or remote synchronization.
@@ -36,8 +36,8 @@ that I can see progress and stay motivated.
 # UI Requirements
 
 - Provide an achievement view grouped by BPM, practice count, and streak.
-- Clearly distinguish earned from locked achievements with labels or icons,
-  not color alone.
+- Clearly distinguish earned from locked achievements with labels or icons, not
+  color alone.
 - On earning an achievement, provide a dismissible, non-blocking notification.
 - Respect reduced-motion settings for notification animation.
 
@@ -57,13 +57,13 @@ versioned local record:
 }
 ```
 
-Until the history view is delivered, store valid completed challenge sessions
-as the shared progress source, using the practice-history record fields plus a
-challenge-clear result. Retain at most 500 sessions, preserving the
-highest-BPM clear if it falls outside the recent records; retain the 30 most
-recent distinct local calendar days for streak calculation. Practice-count
-progress is capped at 500. Clearing this progress source must also clear the
-earned timestamps so derived achievements cannot become orphaned.
+Until the history view is delivered, store valid completed challenge sessions as
+the shared progress source, using the practice-history record fields plus a
+challenge-clear result. Retain at most 500 sessions, preserving the highest-BPM
+clear if it falls outside the recent records; retain the 30 most recent distinct
+local calendar days for streak calculation. Practice-count progress is capped
+at 500. Clearing this progress source must also clear the earned timestamps so
+derived achievements cannot become orphaned.
 
 The initial local format is version 1; reject future versions without
 overwriting them. Clearing the progress source also clears all earned
@@ -74,8 +74,8 @@ timestamps. Do not store user identity or transmit practice events.
 - Every listed threshold is represented with a stable achievement ID.
 - Valid progress unlocks the corresponding achievement once; invalid or
   duplicate events do not award it.
-- Practice streaks use distinct local calendar days and handle repeated
-  sessions on one day correctly.
+- Practice streaks use distinct local calendar days and handle repeated sessions
+  on one day correctly.
 - Achievement state survives reload and can be reconciled with its source
   history.
 - A user can understand earned and locked state without color alone.

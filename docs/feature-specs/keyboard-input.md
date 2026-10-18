@@ -1,8 +1,8 @@
 # Overview
 
-Allow users to practice without MIDI hardware. Mouse and keyboard controls
-must be translated into the same semantic input events used by MIDI so
-recording, comparison, overlays, and BPM Challenge can share behavior.
+Allow users to practice without MIDI hardware. Mouse and keyboard controls must
+be translated into the same semantic input events used by MIDI so recording,
+comparison, overlays, and BPM Challenge can share behavior.
 
 See [architecture decisions](../architecture-decisions.md) and the
 [roadmap](../roadmap.md).
@@ -54,9 +54,9 @@ the common events:
 { type: "fader", state: "open" | "closed", t: milliseconds }
 ```
 
-The default key map may be represented as configuration, but the event
-recording must remain device-independent. Persist user remapping only if that
-feature is introduced; defaults are W/P for open and S/L for closed.
+The default key map may be represented as configuration, but the event recording
+must remain device-independent. Persist user remapping only if that feature is
+introduced; defaults are W/P for open and S/L for closed.
 
 # Acceptance Criteria
 

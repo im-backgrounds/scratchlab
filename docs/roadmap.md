@@ -18,7 +18,8 @@ ScratchLabはブラウザー上で学べるDJスクラッチ練習アプリ。
 - [Roadmap](roadmap.md): release themes and feature priorities
 - [Task backlog](tasks.md): actionable work ordered to match this roadmap
 - [Milestones](milestones.md): milestone outcomes and completion gates
-- [Architecture decisions](architecture-decisions.md): technical constraints and accepted decisions
+- [Architecture decisions](architecture-decisions.md): technical constraints and
+  accepted decisions
 - [Feature specifications](feature-specs/):
   - [Beginner course](feature-specs/beginner-course.md)
   - [Keyboard input](feature-specs/keyboard-input.md)
@@ -30,7 +31,8 @@ ScratchLabはブラウザー上で学べるDJスクラッチ練習アプリ。
   - [Timing analysis](feature-specs/timing-analysis.md)
   - [Monetization](feature-specs/monetization.md)
 
-Feature specifications describe intended behavior; roadmap checkboxes track delivery status. Keep both in sync when scope or priority changes.
+Feature specifications describe intended behavior; roadmap checkboxes track
+delivery status. Keep both in sync when scope or priority changes.
 
 ---
 
@@ -55,8 +57,7 @@ Feature specifications describe intended behavior; roadmap checkboxes track deli
 
 ## Prototype Mode（デフォルト）
 
-目的：
-素早く機能開発を進める
+目的： 素早く機能開発を進める
 
 ルール：
 
@@ -84,8 +85,7 @@ Feature specifications describe intended behavior; roadmap checkboxes track deli
 
 ## Stabilization Mode
 
-目的：
-リリース前の品質向上
+目的： リリース前の品質向上
 
 ルール：
 
@@ -104,8 +104,7 @@ Feature specifications describe intended behavior; roadmap checkboxes track deli
 
 ## Release Mode
 
-目的：
-公開前の最終確認
+目的： 公開前の最終確認
 
 ルール：
 
@@ -527,22 +526,5 @@ v0.3の入力オーバーレイ機能を利用する
 
 理想的な練習体験
 
-譜面を見る
-↓
-お手本を聞く
-↓
-自分で演奏する
-↓
-入力音を聞く
-↓
-譜面上で比較する
-↓
-採点される
-↓
-ズレを確認する
-↓
-改善する
-↓
-成長を記録する
-↓
-共有する
+譜面を見る ↓ お手本を聞く ↓ 自分で演奏する ↓ 入力音を聞く ↓ 譜面上で比較する ↓
+採点される ↓ ズレを確認する ↓ 改善する ↓ 成長を記録する ↓ 共有する

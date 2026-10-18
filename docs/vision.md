@@ -23,11 +23,13 @@ through an input device.
 
 ## Product principles
 
-- Make the next useful practice action obvious, especially for a first-time user.
+- Make the next useful practice action obvious, especially for a first-time
+  user.
 - Keep score, playback, and input behavior consistent across input devices.
 - Give learners immediate audio and visual feedback without obscuring the score.
 - Make progress understandable and motivating without requiring an account.
-- Keep the core practice experience usable in a browser with a simple deployment.
+- Keep the core practice experience usable in a browser with a simple
+  deployment.
 - Treat scoring and saved data as explicit, documented product behavior.
 
 ## Product boundaries
@@ -43,8 +45,8 @@ through an input device.
 ## Current foundation
 
 Score display, audio playback, MIDI input, BPM Challenge, input recording, and
-performance comparison are implemented. Their current behavior is documented
-in the [BPM Challenge specification](feature-specs/bpm-challenge.md) and the
+performance comparison are implemented. Their current behavior is documented in
+the [BPM Challenge specification](feature-specs/bpm-challenge.md) and the
 existing [score format reference](score-format.md).
 
 ## Near-term direction

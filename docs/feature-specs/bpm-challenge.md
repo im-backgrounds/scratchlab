@@ -1,10 +1,10 @@
 # Overview
 
-Document the implemented BPM Challenge behavior. This feature spec describes
-the existing application and is not a request to change its implementation.
-The source of truth for current behavior is the challenge domain/session code
-and the practice UI; if this document drifts, inspect the implementation
-before changing either. See [roadmap](../roadmap.md).
+Document the implemented BPM Challenge behavior. This feature spec describes the
+existing application and is not a request to change its implementation. The
+source of truth for current behavior is the challenge domain/session code and
+the practice UI; if this document drifts, inspect the implementation before
+changing either. See [roadmap](../roadmap.md).
 
 # User Story
 
@@ -16,8 +16,8 @@ toward a measurable BPM goal.
 
 ## Eligibility and challenge BPM
 
-- The practice challenge applies to the selected built-in chart. Unsaved
-  builder drafts are not eligible.
+- The practice challenge applies to the selected built-in chart. Unsaved builder
+  drafts are not eligible.
 - MIDI must be connected and Forward and Backward actions must be mapped before
   a challenge can start.
 - The initial challenge BPM is 80.
@@ -35,8 +35,8 @@ toward a measurable BPM goal.
   analysis and a result.
 - Recording starts and stops automatically at loop boundaries.
 - The BPM control is fixed during a challenge.
-- Stopping playback, changing the chart, or leaving the practice context
-  cancels the active attempt and discards its incomplete recording.
+- Stopping playback, changing the chart, or leaving the practice context cancels
+  the active attempt and discards its incomplete recording.
 - The recorded loops are compared independently against the expected score and
   their tallies are added; events from one loop cannot match another loop.
 - Expected and performed events are aligned by sequence. Scratch
@@ -46,14 +46,14 @@ toward a measurable BPM goal.
   `matched / (matched + missing + extra) * 100`, rounded to one decimal place.
   An empty comparison has no accuracy.
 - A valid attempt clears at 90% or higher and counts as an attempt. A
-  below-threshold valid attempt is retained as a failed attempt at the same
-  BPM. A take longer than 1.2 times the expected duration is invalid, counts
-  as a failed attempt, and does not update best accuracy or cleared BPM.
+  below-threshold valid attempt is retained as a failed attempt at the same BPM.
+  A take longer than 1.2 times the expected duration is invalid, counts as a
+  failed attempt, and does not update best accuracy or cleared BPM.
 - Attempts with no accuracy, no recording, invalid expected duration, or a BPM
   that is not the current challenge BPM are ignored and not counted.
 - Successful and failed attempts both return to the same start action; a
-  successful attempt starts the derived next BPM, and a failure retries the
-  same BPM.
+  successful attempt starts the derived next BPM, and a failure retries the same
+  BPM.
 - A progress reset removes the selected chart's challenge progress.
 
 ## Progress retention
@@ -75,8 +75,7 @@ toward a measurable BPM goal.
   Result.
 - Disable challenge start during active work and after completion; expose
   progress reset when progress exists and no attempt is active.
-- Explain MIDI connection/mapping prerequisites and show status/result
-  messages.
+- Explain MIDI connection/mapping prerequisites and show status/result messages.
 - Indicate whether the current attempt is a demo, recording, analysis, or
   result.
 
@@ -105,10 +104,12 @@ The versioned challenge store is logically:
 }
 ```
 
-`highestClearedBpm` is null before a clear; `bestAccuracy` and `lastAttempt`
-may also be null. The chart key uses a stable built-in chart ID. The active
-state machine is transient and follows `ready → demo → recording 1/2 →
-recording 2/2 → analyzing → result`; abort returns it to ready.
+`highestClearedBpm` is null before a clear; `bestAccuracy` and `lastAttempt` may
+also be null. The chart key uses a stable built-in chart ID. The active state
+machine is transient and follows
+`ready → demo → recording 1/2 →
+recording 2/2 → analyzing → result`; abort
+returns it to ready.
 
 # Acceptance Criteria
 
@@ -128,7 +129,8 @@ recording 2/2 → analyzing → result`; abort returns it to ready.
 
 - Support keyboard input using the common event model; see
   [keyboard input](keyboard-input.md).
-- Show performed events on the score; see [controller overlay](controller-overlay.md).
+- Show performed events on the score; see
+  [controller overlay](controller-overlay.md).
 - Add timing metrics without changing the existing sequence-score definition;
   see [timing analysis](timing-analysis.md).
 - Revisit per-chart history and longer-term trends using

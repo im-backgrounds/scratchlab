@@ -10,8 +10,8 @@ See the [product vision](../vision.md), [roadmap](../roadmap.md), and
 # User Story
 
 As a learner or supporter, I want optional ways to access additional practice
-content or support ScratchLab, while the core learning experience remains
-useful without payment.
+content or support ScratchLab, while the core learning experience remains useful
+without payment.
 
 # Functional Requirements
 
@@ -21,8 +21,8 @@ useful without payment.
   - Battle Scratch Pack
   - DMC Practice Pack
   - Advanced Flare Pack
-- Evaluate Pro Analysis for detailed statistics, growth analysis, and
-  difficulty insights.
+- Evaluate Pro Analysis for detailed statistics, growth analysis, and difficulty
+  insights.
 - Evaluate a Supporter Plan as an optional way to support the project.
 - Keep monetization optional and do not block the core learning path.
 - Do not collect payment, add account requirements, or promise paid access until
@@ -32,8 +32,8 @@ useful without payment.
 
 # UI Requirements
 
-- Clearly distinguish available free content from concepts or offerings that
-  are not yet available.
+- Clearly distinguish available free content from concepts or offerings that are
+  not yet available.
 - Do not show misleading purchase controls or imply that payment unlocks
   unavailable content.
 - Explain what an offering provides before any future purchase flow.

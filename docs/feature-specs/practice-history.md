@@ -21,14 +21,14 @@ performed, so that I can recognize patterns in my progress.
 - A session must have a stable identifier and represent one completed practice
   attempt, not a playback loop or each individual input event.
 - Save locally without requiring an account or network access.
-- Do not create a successful-looking history entry when no usable performance
-  or accuracy exists.
+- Do not create a successful-looking history entry when no usable performance or
+  accuracy exists.
 - Allow users to review history and provide a way to delete history.
 - Bound stored history and define a retention policy before implementation;
   never silently grow LocalStorage without limit.
-- Retain at most 500 completed challenge sessions, preserving the
-  highest-BPM clear if it falls outside the recent records; keep the 30 most
-  recent distinct local calendar days for achievement streaks.
+- Retain at most 500 completed challenge sessions, preserving the highest-BPM
+  clear if it falls outside the recent records; keep the 30 most recent distinct
+  local calendar days for achievement streaks.
 - Treat missing/corrupt stored entries as invalid and preserve unrelated valid
   entries during normalization.
 - Make history available to achievement and growth analysis without coupling

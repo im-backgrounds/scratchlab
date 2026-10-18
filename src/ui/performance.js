@@ -239,8 +239,7 @@ function renderOverlayLane(
   for (const [index, event] of laneEvents.entries()) {
     const end = laneEvents[index + 1]?.position ?? 100;
     const segment = document.createElement("span");
-    segment.className =
-      `performance-segment performance-segment-${event.kind}`;
+    segment.className = `performance-segment performance-segment-${event.kind}`;
     segment.style.left = `${Math.min(100, Math.max(0, event.position))}%`;
     segment.style.width = `${
       Math.max(0, Math.min(100, end) - Math.max(0, event.position))

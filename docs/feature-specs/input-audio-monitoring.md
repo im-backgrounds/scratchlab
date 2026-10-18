@@ -1,7 +1,7 @@
 # Overview
 
-Play scratch audio in response to the learner's input so they can hear their
-own performance. Keep the score/demo source (SAMPLE) separate from the
+Play scratch audio in response to the learner's input so they can hear their own
+performance. Keep the score/demo source (SAMPLE) separate from the
 user-triggered source (YOU).
 
 See [architecture decisions](../architecture-decisions.md) and the
@@ -16,8 +16,8 @@ independently from the demo, so that I can check my performance by ear.
 
 - Play distinct, direction-sensitive monitoring sounds on Forward and Backward
   input, separate from the SAMPLE scratch audio.
-- Output YOU audio only while the fader is open; close/mute it immediately
-  when the fader closes.
+- Output YOU audio only while the fader is open; close/mute it immediately when
+  the fader closes.
 - Accept MIDI and the mouse/keyboard practice controls from
   [keyboard input](keyboard-input.md) through the common semantic event model.
 - Keep SAMPLE (score/demo playback) and YOU (live input monitoring) as
@@ -26,8 +26,8 @@ independently from the demo, so that I can check my performance by ear.
 - Apply fader gating to YOU output; it must not accidentally gate SAMPLE.
 - Ensure the feature works during BPM Challenge and does not add or alter
   challenge scoring events.
-- Start audio only in an allowed browser audio context in response to a
-  practice input gesture; do not require a separate audio-enable button.
+- Start audio only in an allowed browser audio context in response to a practice
+  input gesture; do not require a separate audio-enable button.
 - Prevent stale or overlapping input voices from continuing after fader close,
   input release/stop, or leaving the practice view.
 

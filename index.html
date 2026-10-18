@@ -104,13 +104,15 @@
 
             <div id="chart-steps" class="chart-grid" aria-live="polite"></div>
 
-            <section class="controller-overlay" aria-labelledby="controller-overlay-title">
+            <section class="controller-overlay"
+              aria-labelledby="controller-overlay-title">
               <h4 id="controller-overlay-title">コントローラーオーバーレイ</h4>
               <p>スクラッチとフェーダーの入力を、譜面と同じ長さの時間軸で表示します。</p>
               <div id="controller-overlay"
                 class="controller-overlay-tracks"
                 aria-label="譜面と演奏イベントの比較"></div>
-              <ul class="controller-overlay-legend" aria-label="タイムラインの凡例">
+              <ul class="controller-overlay-legend"
+                aria-label="タイムラインの凡例">
                 <li class="performance-segment-forward">Forward</li>
                 <li class="performance-segment-backward">Backward</li>
                 <li class="performance-segment-stop">Stop</li>
@@ -187,7 +189,8 @@
               </div>
             </div>
 
-            <section class="audio-monitor-panel" aria-labelledby="audio-monitor-title">
+            <section class="audio-monitor-panel"
+              aria-labelledby="audio-monitor-title">
               <h4 id="audio-monitor-title">入力音モニタリング</h4>
               <p class="audio-monitor-instructions">
                 練習モード中：マウスを上に動かすと前進、下に動かすと後進。
@@ -742,15 +745,18 @@
           <section class="card" aria-labelledby="practice-growth-title">
             <h3 id="practice-growth-title">成長グラフ</h3>
             <p>保存中の履歴をローカル日付ごとに集計します。最高BPMはクリアの有無を問わない練習BPM、平均一致率はイベント順序の一致率です。練習のない日は表示しません。</p>
-            <p id="practice-growth-empty">練習を完了するとグラフが表示されます。</p>
+            <p
+              id="practice-growth-empty">練習を完了するとグラフが表示されます。</p>
             <div id="practice-growth-charts"></div>
           </section>
           <section class="card" aria-labelledby="practice-history-title">
             <h3 id="practice-history-title">練習履歴</h3>
             <p>完了した有効な練習を最大500件保存します。最高BPMのクリア記録を優先して残します。</p>
             <p>履歴を削除すると、実績・練習回数・連続練習日数もリセットされます。BPM ChallengeとBeginnerコースの進捗は残ります。</p>
-            <button id="practice-history-clear" type="button">履歴と実績をすべて削除</button>
-            <p id="practice-history-empty">練習履歴はまだありません。BPM ChallengeまたはBeginnerコースで練習を完了してください。</p>
+            <button id="practice-history-clear"
+              type="button">履歴と実績をすべて削除</button>
+            <p
+              id="practice-history-empty">練習履歴はまだありません。BPM ChallengeまたはBeginnerコースで練習を完了してください。</p>
             <ul id="practice-history-list"></ul>
           </section>
           <section class="card" aria-labelledby="achievement-bpm-title">

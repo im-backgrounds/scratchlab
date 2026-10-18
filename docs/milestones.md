@@ -1,7 +1,7 @@
 # Milestones
 
-Milestones group the themes in the [roadmap](roadmap.md) into verifiable
-product outcomes. They are planning targets, not date commitments. The
+Milestones group the themes in the [roadmap](roadmap.md) into verifiable product
+outcomes. They are planning targets, not date commitments. The
 [task backlog](tasks.md) is the execution checklist.
 
 ## v0.2 — Learning Experience
@@ -99,6 +99,8 @@ free learning path.
 
 - Keep the [vision](vision.md), roadmap, backlog, and feature specifications
   mutually consistent.
-- Preserve the constraints in [architecture decisions](architecture-decisions.md).
+- Preserve the constraints in
+  [architecture decisions](architecture-decisions.md).
 - Use Prototype Mode by default; stabilization and release work require an
-  explicit mode change. See [Copilot instructions](../.github/copilot-instructions.md).
+  explicit mode change. See
+  [Copilot instructions](../.github/copilot-instructions.md).

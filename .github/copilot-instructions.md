@@ -12,8 +12,8 @@ reference.
   Stabilization Mode or Release Mode.
 - Work on one roadmap task at a time and respect its priority.
 - Inspect the relevant implementation before proposing or making code changes.
-- Keep the change small and focused while fully satisfying the selected
-  feature specification.
+- Keep the change small and focused while fully satisfying the selected feature
+  specification.
 - Preserve existing behavior unless a specified behavior intentionally changes.
 - Do not update README files, screenshots, or tests in Prototype Mode.
 - For a documentation-only request, modify documentation only; do not change
@@ -26,8 +26,8 @@ reference.
 - Prefer native JavaScript and existing browser APIs.
 - Preserve the static GitHub Pages deployment model.
 - Do not add npm dependencies without a documented need.
-- Prefer LocalStorage for small, local-only data; version and validate
-  persisted formats.
+- Prefer LocalStorage for small, local-only data; version and validate persisted
+  formats.
 - Prefer serverless behavior. Accounts, sync, payments, and remote services
   require explicit architecture and privacy decisions.
 - Preserve Deno test compatibility.

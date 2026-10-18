@@ -5,7 +5,8 @@ the score. This makes it possible to compare what the chart requests with what
 the user actually played.
 
 See [architecture decisions](../architecture-decisions.md), the
-[BPM Challenge specification](bpm-challenge.md), and the [roadmap](../roadmap.md).
+[BPM Challenge specification](bpm-challenge.md), and the
+[roadmap](../roadmap.md).
 
 # User Story
 
@@ -27,11 +28,11 @@ identify what I played correctly and where I made an error.
 - Use the common semantic event model for MIDI and keyboard input.
 - Show live or recorded input in synchronization with the score/playback
   position where timing data is available.
-- Retain the distinction between input display and evaluation: the existing
-  BPM Challenge event-sequence analysis ignores timing. See
+- Retain the distinction between input display and evaluation: the existing BPM
+  Challenge event-sequence analysis ignores timing. See
   [BPM Challenge](bpm-challenge.md) and [timing analysis](timing-analysis.md).
-- If there is insufficient information to classify an event as an error, do
-  not present it as a confirmed error.
+- If there is insufficient information to classify an event as an error, do not
+  present it as a confirmed error.
 - Keep existing score notation readable and provide non-color cues such as
   labels, shapes, or patterns.
 
@@ -65,13 +66,13 @@ comparison in the renderer.
 - Expected events render blue, performed events render green, and confirmed
   mismatches render red.
 - A legend or equivalent text explains every source/color.
-- Input remains visibly distinct from the expected score and stays aligned
-  with the score/playback context.
+- Input remains visibly distinct from the expected score and stays aligned with
+  the score/playback context.
 - The display works with both keyboard and MIDI event sources.
 
 # Future Extensions
 
-- Show timing offset and error magnitude when [timing analysis](timing-analysis.md)
-  is available.
+- Show timing offset and error magnitude when
+  [timing analysis](timing-analysis.md) is available.
 - Ghost comparison between a saved take and the current performance.
 - Selectable display density and overlay visibility.

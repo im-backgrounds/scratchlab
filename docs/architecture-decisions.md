@@ -52,8 +52,8 @@ architecture decisions; they are not implied by the monetization concepts.
 
 Keep modules and tests compatible with the repository's Deno-based validation
 workflow. If a code change affects business logic, follow the applicable
-workflow's test requirements; a documentation-only change does not create or
-run tests.
+workflow's test requirements; a documentation-only change does not create or run
+tests.
 
 ## ADR-007: Share one normalized input event model
 
@@ -61,8 +61,8 @@ run tests.
 
 MIDI and future keyboard input should be translated into the same semantic
 events: scratch `forward`, `backward`, and `stop`, plus fader `open` and
-`closed`. Downstream recording, analysis, and overlays should consume this
-model rather than implement device-specific scoring. See the
+`closed`. Downstream recording, analysis, and overlays should consume this model
+rather than implement device-specific scoring. See the
 [keyboard input](feature-specs/keyboard-input.md) and
 [controller overlay](feature-specs/controller-overlay.md) specifications.
 
@@ -79,9 +79,9 @@ specified in the [controller overlay](feature-specs/controller-overlay.md).
 
 **Status:** Accepted
 
-The existing BPM Challenge score compares event sequences and ignores timing.
-Do not silently redefine it when adding timing metrics. Specify units,
-matching, tolerance, and missing/extra event handling in
+The existing BPM Challenge score compares event sequences and ignores timing. Do
+not silently redefine it when adding timing metrics. Specify units, matching,
+tolerance, and missing/extra event handling in
 [timing analysis](feature-specs/timing-analysis.md) before implementation.
 
 ## Related documents
