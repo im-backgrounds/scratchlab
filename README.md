@@ -210,7 +210,8 @@ index.html
       │   ├─ performance-view.js
       │   ├─ bpm-challenge-view.js
       │   ├─ beginner-course-view.js
-      │   └─ achievement-view.js
+      │   ├─ achievement-view.js
+      │   └─ input-event-log.js  圧縮前・圧縮後の入力イベントログの保持、最大件数制御、同期描画
       └─ src/ui/                 譜面表示、操作画面、譜面エディター
 assets/css/styles.css            画面スタイル
 tests/                            ドメイン、再生、描画の回帰テスト
@@ -224,7 +225,7 @@ JSON処理、正規化、バージョン判定、進捗計算、破損データ�
 Repository内に保持し、ストレージキー、保存形式、ユーザー操作、
 既存データとの互換性に変更はありません。
 
-MIDI・キーボード・マウスの共通入力処理の命名を整理しました。入力仕様やユーザー操作に変更はありません。
+MIDI・キーボード・マウスの共通入力処理の命名を整理し、ログ表示責務だけをapp.jsから分離しました。入力イベント形式、圧縮仕様、記録条件、ユーザー操作に変更はありません。
 
 譜面データの記法は [docs/score-format.md](docs/score-format.md)
 を参照してください。
