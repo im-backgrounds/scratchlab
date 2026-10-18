@@ -1,4 +1,5 @@
 import { getBrowserStorage } from "./chart-storage.js";
+import { safeGetItem, safeSetItem } from "./storage-utils.js";
 
 export const MIDI_MAPPING_KEY = "scratchlab.midi-mapping";
 export const MIDI_MAPPING_VERSION = 4;
@@ -462,12 +463,11 @@ export function createMidiMappingRepository(
 
   function read() {
     if (!storage) return empty("unavailable");
-    let text;
-    try {
-      text = storage.getItem(key);
-    } catch {
+    const result = safeGetItem(storage, key);
+    if (!result.ok) {
       return empty("unavailable");
     }
+    const text = result.value;
     if (text === null) return empty("empty");
     try {
       const data = JSON.parse(text);
@@ -500,14 +500,15 @@ export function createMidiMappingRepository(
       if (status === "unavailable") return { ok: false, reason: "unavailable" };
       if (status === "future") return { ok: false, reason: "future-version" };
       try {
-        storage.setItem(
+        const result = safeSetItem(
+          storage,
           key,
           JSON.stringify({
             version: MIDI_MAPPING_VERSION,
             mappings: normalizeMapping(mapping),
           }),
         );
-        return { ok: true };
+        return result.ok ? { ok: true } : { ok: false, reason: "write-failed" };
       } catch {
         return { ok: false, reason: "write-failed" };
       }
