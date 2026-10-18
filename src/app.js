@@ -79,6 +79,7 @@ import { createBpmChallengeView } from "./features/bpm-challenge-view.js";
 import { createBeginnerCourseView } from "./features/beginner-course-view.js";
 import { renderAchievementView } from "./features/achievement-view.js";
 import { createPerformanceView } from "./features/performance-view.js";
+import { createInputEventLog } from "./features/input-event-log.js";
 
 const chartCatalog = chartDefinitions.map((chart) => {
   const source = {
@@ -104,8 +105,10 @@ const midiMappingRepository = createMidiMappingRepository();
 const MIDI_EVENT_LOG_LIMIT = 50;
 let midiMapping = midiMappingRepository.load();
 let midiLearnAction = null;
-let midiEventLog = [];
-let performanceEventLog = [];
+const inputEventLog = createInputEventLog({
+  limit: MIDI_EVENT_LOG_LIMIT,
+  renderMidiEventLog: midiMappingUi.renderMidiEventLog,
+});
 let rawEventCount = 0;
 let performanceEventCount = 0;
 let recordedRawCount = 0;
@@ -801,18 +804,11 @@ function saveMidiMapping() {
 function recordInputActionEvent(event) {
   rawEventCount += 1;
   if (state.recordingMidi) recordedRawCount += 1;
-  midiEventLog = [...midiEventLog, event].slice(-MIDI_EVENT_LOG_LIMIT);
-  midiMappingUi.renderMidiEventLog(midiEventLog);
+  inputEventLog.appendRawEvent(event);
   const performanceEvent = eventCompressor.accept(event);
   if (performanceEvent) {
     performanceEventCount += 1;
-    performanceEventLog = [...performanceEventLog, performanceEvent].slice(
-      -MIDI_EVENT_LOG_LIMIT,
-    );
-    midiMappingUi.renderMidiEventLog(
-      performanceEventLog,
-      "midi-performance-log",
-    );
+    inputEventLog.appendPerformanceEvent(performanceEvent);
     if (state.recordingMidi) actions.recordMidiAction(performanceEvent);
     if (playbackController.isRunning && !state.isBuilderPlayback) {
       playbackLoopEvents = [...playbackLoopEvents, performanceEvent];
