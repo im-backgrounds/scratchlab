@@ -14,28 +14,27 @@ independently from the demo, so that I can check my performance by ear.
 
 # Functional Requirements
 
-- Play the forward scratch sound on Forward input.
-- Play the backward scratch sound on Backward input.
+- Play distinct, direction-sensitive monitoring sounds on Forward and Backward
+  input, separate from the SAMPLE scratch audio.
 - Output YOU audio only while the fader is open; close/mute it immediately
   when the fader closes.
-- Accept both MIDI and [keyboard input](keyboard-input.md) through the common
-  semantic event model.
+- Accept MIDI and the mouse/keyboard practice controls from
+  [keyboard input](keyboard-input.md) through the common semantic event model.
 - Keep SAMPLE (score/demo playback) and YOU (live input monitoring) as
   independent audio sources with separate volume controls.
-- Provide independent mute controls for SAMPLE and YOU. Muting one source must
-  not mute the other.
+- Provide a mute control for YOU; SAMPLE remains controlled by its volume only.
 - Apply fader gating to YOU output; it must not accidentally gate SAMPLE.
 - Ensure the feature works during BPM Challenge and does not add or alter
   challenge scoring events.
-- Start audio only in an allowed browser audio context and provide a clear
-  user action when browser autoplay policy requires it.
+- Start audio only in an allowed browser audio context in response to a
+  practice input gesture; do not require a separate audio-enable button.
 - Prevent stale or overlapping input voices from continuing after fader close,
   input release/stop, or leaving the practice view.
 
 # UI Requirements
 
-- Show distinct SAMPLE and YOU labels.
-- Provide an independent volume control and mute control for each source.
+- Show distinct SAMPLE and input-audio labels.
+- Provide a volume control for each source and a mute control for input audio.
 - Indicate mute state and current source status visibly and accessibly.
 - Keep the controls understandable while a challenge is running.
 - Do not use a single unlabeled volume control for both sources.
@@ -49,7 +48,6 @@ normalized input events separate from audio playback. Suggested settings:
 {
   "sampleVolume": 1,
   "youVolume": 1,
-  "sampleMuted": false,
   "youMuted": false
 }
 ```
@@ -60,10 +58,12 @@ needed. Do not persist live fader state, active voices, or audio context state.
 
 # Acceptance Criteria
 
-- Forward and Backward input trigger the corresponding YOU scratch sound.
+- Forward and Backward input trigger distinct, direction-sensitive YOU
+  monitoring sounds.
 - YOU is audible only while the fader is open and stops promptly when closed.
-- SAMPLE and YOU volumes and mute controls affect only their own source.
-- MIDI and keyboard input produce equivalent monitoring behavior.
+- SAMPLE and YOU volume controls affect only their own source, and YOU mute does
+  not affect SAMPLE.
+- MIDI and mouse/keyboard input produce equivalent monitoring behavior.
 - Monitoring can run during BPM Challenge without changing the recorded score
   comparison or challenge result.
 - Leaving the practice context does not leave YOU audio sounding.

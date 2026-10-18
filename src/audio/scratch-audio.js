@@ -69,7 +69,7 @@ function createScratchBuffers(audioContext) {
   return { forward: phraseBuffer, reverse: reverseBuffer, noise: noiseBuffer };
 }
 
-function playClickSound(state, isDownbeat = false) {
+function playClickSound(state, output, isDownbeat = false) {
   if (!state.audioContext || !state.clickEnabled) {
     return;
   }
@@ -89,7 +89,7 @@ function playClickSound(state, isDownbeat = false) {
   gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
 
   oscillator.connect(gainNode);
-  gainNode.connect(state.audioContext.destination);
+  gainNode.connect(output);
 
   oscillator.start(now);
   oscillator.stop(now + 0.09);
@@ -166,6 +166,7 @@ function playScratch(
   state,
   getPlaybackChart,
   activeScratchGains,
+  output,
   type,
   stepIndex,
   strokeRunLength = 1,
@@ -203,6 +204,7 @@ function playScratch(
   const directionFilter = audioContext.createBiquadFilter();
   const gainNode = state.audioContext.createGain();
   const now = audioContext.currentTime;
+  const outputVolume = options.volume ?? 1;
   const offset = (stepIndex * 0.11) %
     Math.max(0.01, buffer.duration - duration * 3.4);
 
@@ -213,7 +215,7 @@ function playScratch(
   directionFilter.frequency.setValueAtTime(direction < 0 ? 3600 : 1100, now);
   directionFilter.connect(gainNode);
   source.connect(directionFilter);
-  gainNode.connect(audioContext.destination);
+  gainNode.connect(output);
   trackScratchGain(source, gainNode.gain, activeScratchGains);
 
   gainNode.gain.setValueAtTime(0.0001, now);
@@ -221,18 +223,18 @@ function playScratch(
     (type === "C" || type === "F" ? 1 : type === "S" ? 3 : 0);
   if (cutCount > 0) {
     if (type === "C") {
-      scheduleChop(gainNode.gain, now, duration, state.volume * 0.4);
+      scheduleChop(gainNode.gain, now, duration, outputVolume * 0.4);
     } else if (type === "F") {
-      scheduleFlare(gainNode.gain, now, duration, state.volume * 0.4);
+      scheduleFlare(gainNode.gain, now, duration, outputVolume * 0.4);
     } else {scheduleFaderCuts(
         gainNode.gain,
         now,
         duration,
         cutCount,
-        state.volume * 0.4,
+        outputVolume * 0.4,
       );}
   } else {
-    const strokeLevel = Math.max(0.0001, state.volume * 0.3);
+    const strokeLevel = Math.max(0.0001, outputVolume * 0.3);
     gainNode.gain.linearRampToValueAtTime(strokeLevel, now + 0.006);
     gainNode.gain.setValueAtTime(strokeLevel, now + duration * 0.78);
     gainNode.gain.linearRampToValueAtTime(0.0001, now + duration);
@@ -256,46 +258,142 @@ function playScratch(
   frictionGain.gain.setValueAtTime(0.0001, now);
   if (cutCount > 0) {
     if (type === "C") {
-      scheduleChop(frictionGain.gain, now, duration, state.volume * 0.012);
+      scheduleChop(frictionGain.gain, now, duration, outputVolume * 0.012);
     } else if (type === "F") {
-      scheduleFlare(frictionGain.gain, now, duration, state.volume * 0.012);
+      scheduleFlare(frictionGain.gain, now, duration, outputVolume * 0.012);
     } else {scheduleFaderCuts(
         frictionGain.gain,
         now,
         duration,
         cutCount,
-        state.volume * 0.012,
+        outputVolume * 0.012,
       );}
   } else {
     frictionGain.gain.linearRampToValueAtTime(
-      Math.max(0.0001, state.volume * 0.025),
+      Math.max(0.0001, outputVolume * 0.025),
       now + 0.008,
     );
     frictionGain.gain.linearRampToValueAtTime(0.0001, now + duration * 0.65);
   }
   friction.connect(filter);
   filter.connect(frictionGain);
-  frictionGain.connect(audioContext.destination);
+  frictionGain.connect(output);
   trackScratchGain(friction, frictionGain.gain, activeScratchGains);
   friction.start(now, Math.random() * 0.2);
   friction.stop(now + duration);
 }
 
 export function createScratchAudio(state, getPlaybackChart, setAudioResources) {
-  const activeScratchGains = new Set();
+  const activeSampleGains = new Set();
+  const monitor = {
+    sampleVolume: state.volume,
+    youVolume: 0.8,
+    youMuted: false,
+    faderOpen: false,
+  };
+  let outputContext = null;
+  let sampleOutput = null;
+  let youOutput = null;
+  let inputVoice = null;
+
+  const updateOutputs = () => {
+    if (!state.audioContext) return;
+    if (outputContext !== state.audioContext) {
+      outputContext = state.audioContext;
+      sampleOutput = outputContext.createGain();
+      sampleOutput.connect(outputContext.destination);
+      youOutput = outputContext.createGain();
+      youOutput.connect(outputContext.destination);
+    }
+    const now = outputContext.currentTime;
+    sampleOutput.gain.setTargetAtTime(
+      monitor.sampleVolume,
+      now,
+      0.01,
+    );
+    youOutput.gain.setTargetAtTime(
+      monitor.youMuted || !monitor.faderOpen ? 0 : monitor.youVolume,
+      now,
+      0.01,
+    );
+  };
+
+  const silenceInput = () => {
+    if (!inputVoice || !state.audioContext) return;
+    const { source, gain, filter } = inputVoice;
+    inputVoice = null;
+    const now = state.audioContext.currentTime;
+    gain.gain.cancelScheduledValues(now);
+    gain.gain.setTargetAtTime(0, now, 0.005);
+    source.stop(now + 0.025);
+    source.addEventListener("ended", () => {
+      source.disconnect();
+      filter.disconnect();
+      gain.disconnect();
+    }, { once: true });
+  };
+
   return {
-    initializeAudio: () => initializeAudio(state, setAudioResources),
-    playClickSound: (isDownbeat) => playClickSound(state, isDownbeat),
+    initializeAudio: () => {
+      initializeAudio(state, setAudioResources);
+      updateOutputs();
+    },
+    playClickSound: (isDownbeat) => {
+      updateOutputs();
+      playClickSound(state, sampleOutput, isDownbeat);
+    },
     playScratch: (type, stepIndex, strokeRunLength, options) =>
       playScratch(
         state,
         getPlaybackChart,
-        activeScratchGains,
+        activeSampleGains,
+        sampleOutput,
         type,
         stepIndex,
         strokeRunLength,
         options,
       ),
-    silenceActiveScratch: () => silenceActiveScratch(state, activeScratchGains),
+    silenceActiveScratch: () => silenceActiveScratch(state, activeSampleGains),
+    playInputScratch: (direction) => {
+      updateOutputs();
+      if (!monitor.faderOpen || monitor.youMuted || !state.audioContext) return;
+      const audioContext = state.audioContext;
+      const now = audioContext.currentTime;
+      const isForward = direction === "forward";
+      if (inputVoice) {
+        inputVoice.filter.frequency.setTargetAtTime(
+          isForward ? 1500 : 2400,
+          now,
+          0.025,
+        );
+        return;
+      }
+      const source = audioContext.createBufferSource();
+      const filter = audioContext.createBiquadFilter();
+      const gain = audioContext.createGain();
+      source.buffer = state.scratchBuffers.noise;
+      source.loop = true;
+      filter.type = "bandpass";
+      filter.Q.setValueAtTime(0.8, now);
+      filter.frequency.setValueAtTime(isForward ? 1500 : 2400, now);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.linearRampToValueAtTime(0.16, now + 0.015);
+      source.connect(filter);
+      filter.connect(gain);
+      gain.connect(youOutput);
+      source.start(now, Math.random() * 0.2);
+      inputVoice = { source, filter, gain };
+    },
+    setInputFaderState: (isOpen) => {
+      monitor.faderOpen = isOpen;
+      updateOutputs();
+      if (!isOpen) silenceInput();
+    },
+    silenceInput,
+    setMonitorSettings: (settings) => {
+      Object.assign(monitor, settings);
+      updateOutputs();
+      if (monitor.youMuted) silenceInput();
+    },
   };
 }

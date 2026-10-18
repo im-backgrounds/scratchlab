@@ -99,15 +99,6 @@
               <p id="chart-help-text"></p>
             </section>
 
-            <section class="keyboard-input-panel" aria-label="キーボード操作">
-              <p id="keyboard-input-status" role="status" aria-live="polite">
-                キーボード操作を受付中：← 前進 / → 後進 / Space フェーダー
-              </p>
-              <p>文字入力欄では無効です。MIDI入力と同時に使えます。</p>
-              <p>Space押下中は開、離すと閉：<strong
-                  id="keyboard-fader-state">閉</strong></p>
-            </section>
-
             <div id="practice-transport-slot">
               <div id="transport-panel" class="transport-panel">
                 <div class="button-row">
@@ -124,7 +115,7 @@
                   </label>
 
                   <label class="control">
-                    <span>ボリューム</span>
+                    <span>SAMPLE音量</span>
                     <input id="volume-slider" type="range" min="0" max="100"
                       step="1" value="80" />
                     <strong id="volume-value">80%</strong>
@@ -168,6 +159,44 @@
                 </div>
               </div>
             </div>
+
+            <section class="audio-monitor-panel" aria-labelledby="audio-monitor-title">
+              <h4 id="audio-monitor-title">入力音モニタリング</h4>
+              <p class="audio-monitor-instructions">
+                練習モード中：マウスを上に動かすと前進、下に動かすと後進。
+                <kbd id="fader-key-w" data-fader-key="KeyW">W</kbd>
+                <kbd id="fader-key-p" data-fader-key="KeyP">P</kbd> でフェーダーを開き、
+                <kbd id="fader-key-s" data-fader-key="KeyS">S</kbd>
+                <kbd id="fader-key-l" data-fader-key="KeyL">L</kbd> で閉じます。
+                Escで練習モードを解除します。
+              </p>
+              <p class="audio-monitor-instructions">
+                練習モード中は前進・後進・フェーダー以外のマウス／キーボード操作は無効です。
+                MIDI入力は同時に使えます。
+              </p>
+              <p class="audio-monitor-instructions">
+                フェーダー：<strong id="keyboard-fader-state">閉</strong>
+              </p>
+              <button id="practice-mode-toggle" class="practice-mode-toggle"
+                type="button" aria-pressed="false">
+                練習モードを有効化
+              </button>
+              <div class="audio-monitor-controls">
+                <label class="control">
+                  <span>入力音量</span>
+                  <input id="you-volume-slider" type="range" min="0"
+                    max="100" step="1" value="80" />
+                  <strong id="you-volume-value">80%</strong>
+                </label>
+                <label class="toggle-row">
+                  <input id="you-mute" type="checkbox" />
+                  <span>入力音ミュート</span>
+                </label>
+              </div>
+              <p id="you-source-status" role="status" aria-live="polite">
+                入力音：フェーダー閉
+              </p>
+            </section>
           </section>
 
           <section id="beginner-course-panel" class="card secondary-card"
@@ -200,7 +229,7 @@
             </div>
 
             <p class="challenge-help">
-              「チャレンジ開始」を押すと、お手本ループ → 記録ループ2回 → 判定まで自動で進みます。お手本ループは採点されません。←/→でスクラッチ、Spaceでフェーダーを操作できます。MIDIも同時に使用できます。
+              「チャレンジ開始」を押すと、お手本ループ → 記録ループ2回 → 判定まで自動で進みます。お手本ループは採点されません。マウスで前進・後進、W/Pでフェーダーを開き、S/Lで閉じます。MIDIも同時に使用できます。
             </p>
 
             <div class="button-row">

@@ -67,6 +67,7 @@ import {
 import { bindKeyboardInput } from "./domain/keyboard-input.js";
 import * as challengeUi from "./ui/challenge.js";
 import * as beginnerCourseUi from "./ui/beginner-course.js";
+import * as audioMonitoringUi from "./ui/audio-monitoring.js";
 import * as performanceUi from "./ui/performance.js";
 import * as savedCharts from "./ui/saved-charts.js";
 import * as visualizer from "./ui/visualizer.js";
@@ -155,12 +156,25 @@ function getPlaybackChart() {
   return state.isBuilderPlayback ? getBuilderChart() : getSelectedChart();
 }
 
-const { initializeAudio, playClickSound, playScratch, silenceActiveScratch } =
-  createScratchAudio(
-    state,
-    getPlaybackChart,
-    actions.setAudioResources,
-  );
+const {
+  initializeAudio,
+  playClickSound,
+  playScratch,
+  silenceActiveScratch,
+  playInputScratch,
+  setInputFaderState,
+  silenceInput,
+  setMonitorSettings,
+} = createScratchAudio(state, getPlaybackChart, actions.setAudioResources);
+const audioMonitorSettings = {
+  sampleVolume: state.volume,
+  youMuted: false,
+  youVolume: 0.8,
+  faderOpen: false,
+  youPlaying: false,
+};
+let youActivityTimer = null;
+let practiceModeEnabled = false;
 const playbackController = createPlaybackController();
 
 function renderSelectedChart() {
@@ -175,7 +189,17 @@ function showBuilderPage() {
   controls.renderBuilderView();
 }
 
+function stopInputMonitoring() {
+  keyboardInput.releaseAll();
+  stopMouseScratch();
+  audioMonitorSettings.faderOpen = false;
+  setInputFaderState(false);
+  silenceInput();
+  renderAudioMonitoring();
+}
+
 function resetPageState() {
+  stopInputMonitoring();
   stopPlayback();
   abortPerformanceRecording();
   abortChallenge();
@@ -244,6 +268,7 @@ function render() {
     showPracticeView();
     resetPageState();
     currentView = "practice";
+    syncPracticeModeButton();
     persistSession();
   });
   renderSelectedChart();
@@ -566,11 +591,14 @@ function deleteSavedChart(id) {
  * page state is reset to the selected chart as before.
  */
 function prepareViewSwitch() {
+  setPracticeModeEnabled(false);
   if (isSessionRunning(challengeSession)) {
     cancelChallenge("ページの切り替えでチャレンジを中断しました。");
   }
-  if (state.builderDraftActive) stopPlayback();
-  else resetPageState();
+  if (state.builderDraftActive) {
+    stopInputMonitoring();
+    stopPlayback();
+  } else resetPageState();
 }
 
 function restoreLastSession() {
@@ -609,6 +637,7 @@ function restoreLastSession() {
     }
   }
   currentView = session.view;
+  syncPracticeModeButton();
   if (currentView === "builder") showBuilderPage();
   else if (currentView === "guide") controls.renderGuideView();
   else if (currentView === "midi") controls.renderMidiSetupView();
@@ -721,22 +750,160 @@ function recordMidiActionEvent(event) {
   midiMappingUi.renderMidiEventCounts(rawEventCount, performanceEventCount);
 }
 
-const stopDetector = createStopDetector({ onStop: recordMidiActionEvent });
+function renderAudioMonitoring() {
+  audioMonitoringUi.renderAudioMonitoring({
+    ...audioMonitorSettings,
+  });
+}
+
+function handleInputAudioEvent(event) {
+  if (event.type === "fader") {
+    audioMonitorSettings.faderOpen = currentView === "practice" &&
+      event.state === "open";
+    setInputFaderState(audioMonitorSettings.faderOpen);
+    if (!audioMonitorSettings.faderOpen) {
+      audioMonitorSettings.youPlaying = false;
+      clearTimeout(youActivityTimer);
+    }
+    if (audioMonitorSettings.faderOpen) initializeAudio();
+    renderAudioMonitoring();
+  } else if (event.direction === "stop") {
+    silenceInput();
+    audioMonitorSettings.youPlaying = false;
+    clearTimeout(youActivityTimer);
+    renderAudioMonitoring();
+  } else if (
+    currentView === "practice" && audioMonitorSettings.faderOpen &&
+    !audioMonitorSettings.youMuted
+  ) {
+    initializeAudio();
+    playInputScratch(event.direction);
+    audioMonitorSettings.youPlaying = true;
+    clearTimeout(youActivityTimer);
+    youActivityTimer = setTimeout(() => {
+      audioMonitorSettings.youPlaying = false;
+      renderAudioMonitoring();
+    }, 180);
+    renderAudioMonitoring();
+  }
+  recordMidiActionEvent(event);
+}
+
+const stopDetector = createStopDetector({ onStop: handleInputAudioEvent });
 
 keyboardInput = bindKeyboardInput({
-  enabled: () => currentView === "practice",
+  enabled: () => practiceModeEnabled && currentView === "practice",
   onEvent: (event) => {
-    if (event.type === "scratch") {
-      stopDetector.cancel();
-    } else {
-      keyboardInput.setFaderState(event.state);
-    }
-    recordMidiActionEvent(event);
+    handleInputAudioEvent(event);
   },
-  onFaderStateChange: (state) => {
+  onEscape: () => setPracticeModeEnabled(false),
+  onFaderStateChange: (state, heldKeys) => {
     document.getElementById("keyboard-fader-state").textContent =
       state === "open" ? "開" : "閉";
+    for (const key of ["KeyW", "KeyP", "KeyS", "KeyL"]) {
+      document.querySelector(`[data-fader-key="${key}"]`).classList.toggle(
+        "is-active",
+        heldKeys.includes(key),
+      );
+    }
+    audioMonitorSettings.faderOpen = state === "open";
+    setInputFaderState(audioMonitorSettings.faderOpen);
+    renderAudioMonitoring();
   },
+});
+
+let activeMouseDirection = null;
+let lastMouseDirection = null;
+let lastMouseInputAt = 0;
+let mouseStopTimer = null;
+
+function stopMouseScratch() {
+  clearTimeout(mouseStopTimer);
+  mouseStopTimer = null;
+  if (!activeMouseDirection) return;
+  activeMouseDirection = null;
+  lastMouseDirection = null;
+  handleInputAudioEvent({
+    type: "scratch",
+    direction: "stop",
+    time: Date.now(),
+  });
+}
+
+function syncPracticeModeButton() {
+  const button = document.getElementById("practice-mode-toggle");
+  button.hidden = currentView !== "practice";
+  button.setAttribute("aria-pressed", String(practiceModeEnabled));
+  button.textContent = practiceModeEnabled
+    ? "練習モード解除（Esc）"
+    : "練習モードを有効化";
+}
+
+function setPracticeModeEnabled(enabled) {
+  if (enabled && currentView !== "practice") return;
+  if (practiceModeEnabled === enabled) return;
+  if (!enabled) {
+    keyboardInput.releaseAll();
+    stopMouseScratch();
+  }
+  practiceModeEnabled = enabled;
+  document.body.classList.toggle("practice-mode-active", enabled);
+  syncPracticeModeButton();
+}
+
+document.getElementById("practice-mode-toggle").addEventListener(
+  "click",
+  () => setPracticeModeEnabled(!practiceModeEnabled),
+);
+
+const isPracticeModeToggle = (target) =>
+  target instanceof Element && target.closest("#practice-mode-toggle");
+
+document.addEventListener("pointerdown", (event) => {
+  if (practiceModeEnabled && !isPracticeModeToggle(event.target)) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }
+}, true);
+document.addEventListener("click", (event) => {
+  if (practiceModeEnabled && !isPracticeModeToggle(event.target)) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }
+}, true);
+document.addEventListener("wheel", (event) => {
+  if (practiceModeEnabled) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }
+}, { capture: true, passive: false });
+document.addEventListener("contextmenu", (event) => {
+  if (practiceModeEnabled) event.preventDefault();
+}, true);
+document.addEventListener("pointermove", (event) => {
+  if (
+    !practiceModeEnabled || event.pointerType !== "mouse" ||
+    isPracticeModeToggle(event.target) || event.movementY === 0
+  ) return;
+
+  const direction = event.movementY < 0 ? "forward" : "backward";
+  const now = Date.now();
+  if (direction !== lastMouseDirection || now - lastMouseInputAt >= 120) {
+    activeMouseDirection = direction;
+    lastMouseDirection = direction;
+    lastMouseInputAt = now;
+    stopDetector.cancel();
+    handleInputAudioEvent({ type: "scratch", direction, time: now });
+  }
+  clearTimeout(mouseStopTimer);
+  mouseStopTimer = setTimeout(stopMouseScratch, 180);
+});
+document.defaultView?.addEventListener("blur", stopMouseScratch);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") {
+    stopMouseScratch();
+    setPracticeModeEnabled(false);
+  }
 });
 
 function setFaderRange(action, values) {
@@ -860,14 +1027,16 @@ function handleMidiMessage(data) {
 
   if (routed.kind === "event") {
     if (routed.event.type === "fader") {
-      keyboardInput.setFaderState(routed.event.state);
-    } else if (keyboardInput.heldScratchCount > 0) {
+      keyboardInput.setFaderState(
+        currentView === "practice" ? routed.event.state : "closed",
+      );
+    } else if (activeMouseDirection !== null) {
       stopDetector.cancel();
     }
-    recordMidiActionEvent(routed.event);
+    handleInputAudioEvent(routed.event);
     if (
       routed.event.type === "scratch" &&
-      keyboardInput.heldScratchCount === 0
+      activeMouseDirection === null
     ) stopDetector.observe(routed.event);
   }
 
@@ -994,6 +1163,7 @@ function selectBeginnerCourseStage(stageId) {
     updateTransportValues();
   }
   currentView = "practice";
+  syncPracticeModeButton();
   persistSession();
   renderBeginnerCourse();
 }
@@ -1152,7 +1322,7 @@ function startChallenge() {
 }
 
 function hasChallengeInputs(report = setChallengeStatus) {
-  report("←/→でスクラッチ、Spaceでフェーダーを操作できます。");
+  report("マウスで前進・後進、W/Pでフェーダーを開き、S/Lで閉じます。");
   return true;
 }
 
@@ -1293,6 +1463,7 @@ controls.bindControls({
     prepareViewSwitch();
     controls.renderGuideView();
     currentView = "guide";
+    syncPracticeModeButton();
     persistSession();
   },
   onStartFirstVisitGuide: () => {
@@ -1301,6 +1472,7 @@ controls.bindControls({
     prepareViewSwitch();
     controls.renderGuideView();
     currentView = "guide";
+    syncPracticeModeButton();
     persistSession();
   },
   onSkipFirstVisitGuide: () => {
@@ -1311,12 +1483,14 @@ controls.bindControls({
     prepareViewSwitch();
     showBuilderPage();
     currentView = "builder";
+    syncPracticeModeButton();
     persistSession();
   },
   onShowMidiSetup: () => {
     prepareViewSwitch();
     controls.renderMidiSetupView();
     currentView = "midi";
+    syncPracticeModeButton();
     persistSession();
   },
   onConnectMidi: connectMIDI,
@@ -1324,6 +1498,23 @@ controls.bindControls({
 
 performanceUi.bindPerformance({
   onExport: exportPerformance,
+});
+
+audioMonitoringUi.bindAudioMonitoring({
+  onYouMute: (youMuted) => {
+    audioMonitorSettings.youMuted = youMuted;
+    setMonitorSettings({ youMuted });
+    if (youMuted) {
+      audioMonitorSettings.youPlaying = false;
+      clearTimeout(youActivityTimer);
+    }
+    renderAudioMonitoring();
+  },
+  onYouVolume: (youVolume) => {
+    audioMonitorSettings.youVolume = youVolume;
+    setMonitorSettings({ youVolume });
+    renderAudioMonitoring();
+  },
 });
 
 transport.bindTransport({
@@ -1345,6 +1536,8 @@ transport.bindTransport({
   },
   onVolumeChange: (value) => {
     actions.setVolume(value);
+    audioMonitorSettings.sampleVolume = value;
+    setMonitorSettings({ sampleVolume: value });
     updateTransportValues();
   },
   onRepeatChange: actions.setRepeat,
@@ -1398,6 +1591,8 @@ beginnerCourseUi.bindBeginnerCourse({
 });
 savedCharts.bindSavedCharts({ onSave: saveCurrentChart });
 controls.renderInitialControls(state, getBuilderBarCount());
+syncPracticeModeButton();
+renderAudioMonitoring();
 render();
 initializeFirstVisitGuidance();
 restoreLastSession();

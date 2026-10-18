@@ -1,35 +1,34 @@
 # Overview
 
-Allow users to practice without MIDI hardware. Keyboard controls must be
-translated into the same semantic input events used by MIDI so recording,
-comparison, overlays, and BPM Challenge can share behavior.
+Allow users to practice without MIDI hardware. Mouse and keyboard controls
+must be translated into the same semantic input events used by MIDI so
+recording, comparison, overlays, and BPM Challenge can share behavior.
 
 See [architecture decisions](../architecture-decisions.md) and the
 [roadmap](../roadmap.md).
 
 # User Story
 
-As a learner without a DJ controller, I want to perform the basic scratch and
-fader actions from my keyboard, so that I can use the practice experience and
-its feedback.
+As a learner without a DJ controller, I want to perform scratch actions with
+mouse movement and fader actions with keyboard keys, so that I can practice
+without other inputs interfering.
 
 # Functional Requirements
 
-- Default key map:
-  - Left Arrow: Forward
-  - Right Arrow: Backward
-  - Space: Fader
-- Emit `scratch/forward` and `scratch/backward` semantic events for the two
-  scratch keys.
-- Space toggles the fader state between open and closed and emits a fader
-  state-change event.
+- A fixed practice-mode button enables mouse and keyboard practice; Escape
+  disables it.
+- Upward mouse movement performs Forward; downward movement performs Backward.
+- W/P opens the fader; S/L closes it.
+- While multiple fader keys are held, the most recently pressed key determines
+  the fader state. Releasing it restores the state of the most recently pressed
+  key that remains held; no held key means closed.
+- Show which fader keys are currently held.
+- While practice mode is active, ignore other mouse and keyboard actions.
 - Translate keyboard actions into the existing common event model before
   recording or analysis; do not add keyboard-specific score rules.
-- Ignore key-repeat events so holding a key does not generate an unbounded
-  stream of repeated strokes or toggles.
+- Ignore key-repeat events so holding a fader key does not generate repeated
+  transitions.
 - Release/blur handling must not leave a held input or fader state stuck.
-- Do not intercept keys while the user is typing in an editable field or when
-  an unrelated browser shortcut should take precedence.
 - Allow simultaneous use with connected MIDI; each received input contributes
   events to the same stream. Avoid duplicate transitions when both devices
   report an unchanged state.
@@ -38,11 +37,10 @@ its feedback.
 
 # UI Requirements
 
-- Show the active key map near the practice controls and provide concise usage
-  instructions.
+- Show the mouse and fader key map near the practice controls.
+- Keep the practice-mode button fixed at the lower-right of the screen.
 - Provide a visible indication of the current fader state.
-- Clearly communicate when keyboard input is active and how to avoid typing
-  field conflicts.
+- Visually indicate currently held fader keys.
 - Any future remapping UI must show conflicts and restore the documented
   defaults.
 
@@ -58,15 +56,17 @@ the common events:
 
 The default key map may be represented as configuration, but the event
 recording must remain device-independent. Persist user remapping only if that
-feature is introduced; defaults are Left Arrow, Right Arrow, and Space.
+feature is introduced; defaults are W/P for open and S/L for closed.
 
 # Acceptance Criteria
 
-- The three default keys perform the documented actions.
-- Repeated `keydown` events from a held key do not create repeated actions.
+- Mouse movement up and down produces forward and backward scratch events.
+- W/P and S/L apply last-pressed-wins fader behavior while held.
+- Escape disables practice mode and releases active inputs.
+- Non-practice mouse and keyboard actions are ignored while practice mode is
+  active.
 - A key release, lost focus, or input-context switch cannot leave a control
   active indefinitely.
-- Typing in text controls remains possible.
 - Keyboard and MIDI events can be recorded and compared through the same
   downstream path.
 - BPM Challenge can be completed without MIDI when keyboard mode is available.

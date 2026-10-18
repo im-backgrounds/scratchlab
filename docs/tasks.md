@@ -17,7 +17,7 @@ contract when implementation begins.
 
 ## v0.3 Retention
 
-4. [ ] Add [input audio monitoring](feature-specs/input-audio-monitoring.md)
+4. [x] Add [input audio monitoring](feature-specs/input-audio-monitoring.md)
    with separate SAMPLE/YOU levels and mute controls.
 5. [ ] Add the [controller overlay](feature-specs/controller-overlay.md) for
    score-aligned expected and performed events.
