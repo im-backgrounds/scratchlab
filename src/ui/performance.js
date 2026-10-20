@@ -320,10 +320,12 @@ function renderOverlayRows(
   errors,
   scoreData,
   progress = null,
+  ghost = null,
 ) {
   for (
     const [source, events] of [
       ["sample", expected],
+      ...(ghost === null ? [] : [["ghost", ghost]]),
       ["you", actual],
       ["error", errors],
     ]
@@ -331,6 +333,8 @@ function renderOverlayRows(
     for (const lane of ["scratch", "fader"]) {
       const label = source === "sample"
         ? "SAMPLE"
+        : source === "ghost"
+        ? "GHOST"
         : source === "you"
         ? "YOU"
         : "Error";
@@ -352,23 +356,45 @@ export function renderControllerOverlay(
   bundle,
   playback = null,
   expectedTimeline = [],
+  ghostOverlay = null,
 ) {
   const container = document.getElementById("controller-overlay");
   container.replaceChildren();
   const kind = (value) =>
     value === "faderOpen" ? "open" : value === "faderClosed" ? "closed" : value;
   const tickPosition = (tick) => tick / scoreData.totalTicks * 100;
+  const ghostEvents = (loopIndex = null) =>
+    ghostOverlay === null
+      ? null
+      : ghostOverlay.events.filter((event) =>
+        loopIndex === null || event.loopIndex === loopIndex
+      ).map((event) => ({
+        kind: kind(event.kind),
+        position: event.position * 100,
+      }));
   if (!bundle) {
-    renderOverlayRows(
-      container,
-      expectedTimeline.map((event) => ({
-        kind: event.type === "scratch" ? event.direction : event.state,
-        position: tickPosition(event.tick),
-      })),
-      [],
-      [],
-      scoreData,
-    );
+    const ghostLoops = [
+      ...new Set(ghostOverlay?.events.map((event) => event.loopIndex) ?? []),
+    ];
+    for (const loopIndex of ghostLoops.length ? ghostLoops : [null]) {
+      if (loopIndex !== null) {
+        const title = document.createElement("p");
+        title.textContent = `Loop ${loopIndex}`;
+        container.append(title);
+      }
+      renderOverlayRows(
+        container,
+        expectedTimeline.map((event) => ({
+          kind: event.type === "scratch" ? event.direction : event.state,
+          position: tickPosition(event.tick),
+        })),
+        [],
+        [],
+        scoreData,
+        null,
+        ghostEvents(loopIndex),
+      );
+    }
   } else {
     const duration = scoreData.totalTicks * scoreData.tickDurationSeconds *
       60000 / bundle.bpm;
@@ -413,6 +439,7 @@ export function renderControllerOverlay(
         errors,
         scoreData,
         playback?.isPlaying ? playback.progress : null,
+        ghostEvents(loop.loopIndex),
       );
     }
   }

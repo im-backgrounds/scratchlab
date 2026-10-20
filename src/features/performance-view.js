@@ -1,6 +1,7 @@
 import {
   analyzeTimelineTiming,
   createExpectedTimeline,
+  EVENT_MODEL_VERSION,
   matchPerformanceTimeline,
 } from "../domain/performance-analysis.js";
 import { createPerformanceOverlay } from "../domain/performance-overlay.js";
@@ -24,7 +25,16 @@ export function analyzeRuntimePerformance(
     matching,
     timing,
   );
-  return { expected, matching, timing, overlay, loops, bpm };
+  return {
+    eventModelVersion: EVENT_MODEL_VERSION,
+    recordedTimeline: events,
+    expected,
+    matching,
+    timing,
+    overlay,
+    loops,
+    bpm,
+  };
 }
 
 export function createPerformanceView({

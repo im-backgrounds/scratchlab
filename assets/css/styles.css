@@ -425,6 +425,11 @@ button {
   background: #4ade80;
 }
 
+.controller-overlay-event-ghost {
+  border-radius: 2px;
+  background: #a5b4fc;
+}
+
 .controller-overlay-event-error {
   clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
   background: #ff8a5b;

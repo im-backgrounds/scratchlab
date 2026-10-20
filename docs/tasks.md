@@ -99,13 +99,54 @@ Charts、Achievement、Beginner Course、初回ガイドの提供は継続する
 
 ### Ghost Foundation
 
+- [x] Phase 1 Ghost Storage: 保存・読込・取得・Best Run更新・Ghost専用クリア
+- [x] v2のみ保存、Meaning Eventのみ保持、Timing nullの比較、破損・保存失敗テスト
+- [x] Phase 2: クリアしたBPM Challenge結果をGhostRecordへ変換して自動保存
+- [x] 未クリア・中断・分析欠損・v1・不正記録・Beginner Courseの保存拒否
+- [x] Phase 3: 譜面選択時のBest Run取得とselectedGhostのランタイム保持
+- [x] 譜面切替・Ghost無し・破損・読込拒否時のnull化、保存データ非変更テスト
+- [x] Phase 5: Ghost Enable Stateとenable／disable／toggle／現在値取得API
+- [x] 初期OFF・冪等操作・譜面切替で状態維持・Ghost無し・Storage非アクセスのテスト
+- [x] Phase 6: Ghost TimelineのOverlayデータ変換（描画・採点・保存への接続なし）
+- [x] Meaning Event保持・境界所属・不変性・再現性・既存YOU投影との整合テスト
+- [x] Phase 7: Best Run更新時の元録音コンテキストをメモリー保持し、描画APIへ供給
+- [x] SAMPLE／GHOST／YOU／ERRORの描画と4種マーカー・既存集計不変のテスト
+- [ ] 再読込後のGhost表示／Replay接続時の元録音コンテキスト供給方法を設計
 - [ ] 比較用記録と対応ペアの扱いを設計
-- [ ] Ghost保存・再生、Best Run／Previous Run比較、Ghost Overlay
+- [x] Ghost Overlay描画（同一セッションのコンテキスト付きBest Runのみ）
+- [ ] Ghost再生、Best Run／Previous Run比較
+
+保存基盤とBPM Challengeクリア時の自動保存は完了。
+譜面一覧・コース選択・起動時の復元後にBest Runを読込する。読込状態は保存しない。
+元録音コンテキストを保持するBest RunはGhost行に表示する。ON/OFF操作UIは未接続。
+再読込後の保存済みGhostはコンテキスト不足で非表示。Beginner
+Courseの保存は対象外。 Ghost
+Storageの`clearGhostStorage`は明示呼出し用であり、自動削除・Migrationは行わない。
 
 ### Replay Viewer
 
-- [ ] Replay保存・再生
-- [ ] Seek・巻き戻し
+- [x] Replay Foundation Phase 1: 専用キーのload／save／get／clear API
+- [x] ReplayRecord検証、Meaning Event・Stop・Boundaryと録音コンテキスト保存
+- [x] 往復一致・譜面独立・破損復旧・不正拒否・入力不変・保存失敗テスト
+- [x] Replay Foundation Phase 2: BPM Challengeクリア時だけReplayを自動保存
+- [x] 取得一致・録音コンテキスト保持・保存拒否・書込失敗時の結果非変更テスト
+- [x] Replay Foundation Phase 3: 譜面選択・起動復元時のselectedReplay読込
+- [x] Replay切替・欠損／破損時null・読込結果編集でStorage不変のテスト
+- [x] Replay Foundation Phase 4: 純粋なPlayback Modelとseek／reset／getState
+- [x] 相対時刻・半開境界・空白null・進捗・全イベント保持・不変性／再現性テスト
+- [x] Replay Foundation Phase 5: タイマー非依存のRuntime Controller
+- [x] play／pause／stop／seek／tick・終端停止・操作列の再現性／状態不変テスト
+- [x] Replay Foundation Phase 6: Replay PanelとPlay／Pause／StopのController接続
+- [x] 欠損時無効・状態表示・フレーム進行・Pause／Stop・終端／譜面切替のテスト
+- [ ] Replayイベント描画・Ghost／Overlay接続
+- [x] ドメインのseek・後方移動
+- [x] 再生操作UI（Play／Pause／Stop）
+- [x] Replay Foundation Phase 7: range入力からController.seekへ委譲
+- [x] バー同期・時刻／ループ更新・Pause／Play中移動・終端／欠損状態のテスト
+
+Phase 1は保存基盤だけ。UI・Overlay・Ghost・Challengeは変更しない。 Phase
+2はChallenge結果確定後の保存のみ接続。保存失敗でも結果・Progress・Achievementは維持する。
+Migration・既存Ghostの変換や互換読込は行わない。
 
 ### その他Backlog
 

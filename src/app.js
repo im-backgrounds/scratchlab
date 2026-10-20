@@ -83,6 +83,16 @@ import { createBeginnerCourseView } from "./features/beginner-course-view.js";
 import { renderAchievementView } from "./features/achievement-view.js";
 import { createPerformanceView } from "./features/performance-view.js";
 import { createInputEventLog } from "./features/input-event-log.js";
+import { createReplayView } from "./features/replay-view.js";
+import * as replayUi from "./ui/replay.js";
+import {
+  createReplaySelection,
+  saveChallengeReplay,
+} from "./features/replay-integration.js";
+import {
+  createGhostSelection,
+  saveChallengeGhost,
+} from "./features/ghost-integration.js";
 
 const chartCatalog = chartDefinitions.map((chart) => {
   const source = {
@@ -99,6 +109,9 @@ const FIRST_VISIT_GUIDANCE_KEY = "scratchlab.first-visit-guidance.v1";
 const store = createStore(createInitialState(chartCatalog));
 const actions = createActions(store);
 const state = store.getState();
+const ghostSelection = createGhostSelection();
+const replaySelection = createReplaySelection();
+const replayView = createReplayView({ replayUi });
 const repository = createChartRepository(getBrowserStorage());
 const firstVisitGuidanceStorage = getBrowserStorage();
 let currentView = "practice";
@@ -171,6 +184,7 @@ const practiceView = createPracticeView({
   performanceUi,
   getLatestPerformance: () => latestPerformance,
   getAnalysis: performanceView.getAnalysis,
+  getGhostOverlayData: (chart) => ghostSelection.getOverlayData(chart),
   getPlaybackSnapshot: () => ({
     events: playbackLoopEvents,
     startedAt: playbackLoopStartedAt,
@@ -325,11 +339,18 @@ function createBuilderScoreDocument() {
   return builderView.createBuilderScoreDocument();
 }
 
+function selectChart(chartId) {
+  actions.selectChart(chartId);
+  ghostSelection.selectChart(chartId);
+  replaySelection.selectChart(chartId);
+  replayView.setReplay(replaySelection.selectedReplay);
+}
+
 function render() {
   visualizer.renderChartList(chartCatalog, state.selectedChartId, (chartId) => {
     selectedCourseStageId = null;
     beginnerCourseMessage = "";
-    actions.selectChart(chartId);
+    selectChart(chartId);
     showPracticeView();
     resetPageState();
     currentView = "practice";
@@ -712,7 +733,7 @@ function restoreLastSession() {
     chart.id === session.selectedChartId
   );
   if (chartExists && session.selectedChartId !== state.selectedChartId) {
-    actions.selectChart(session.selectedChartId);
+    selectChart(session.selectedChartId);
     resetPageState();
   }
   if (session.draft) {
@@ -1217,7 +1238,7 @@ function selectBeginnerCourseStage(stageId) {
   selectedCourseStageId = stage.id;
   beginnerCourseMessage =
     `${stage.name}を選択しました。90%以上の一致率でクリアできます。`;
-  actions.selectChart(stage.chartId);
+  selectChart(stage.chartId);
   showPracticeView();
   resetPageState();
   if (stage.targetBpm !== null) {
@@ -1394,6 +1415,27 @@ function evaluateChallengeAttempt(performance, run) {
   setChallengeStatus(resultMessage);
   if (
     outcome.ok && outcome.result.status === "counted" &&
+    outcome.result.valid && outcome.result.cleared
+  ) {
+    const ghostResult = saveChallengeGhost({
+      chartId: chart.id,
+      run,
+      analysis: performanceView.getAnalysis(performance, chart),
+      outcome,
+      recordedAt: Date.now(),
+    });
+    if (!ghostResult.ok) {
+      console.warn(`Ghost Best Run could not be saved: ${ghostResult.reason}`);
+    } else if (ghostResult.updated) {
+      ghostSelection.captureBestRunContext(
+        chart,
+        performanceView.getAnalysis(performance, chart),
+      );
+      renderControllerOverlay(chart);
+    }
+  }
+  if (
+    outcome.ok && outcome.result.status === "counted" &&
     outcome.result.valid
   ) {
     const achievementError = recordPracticeAchievement(
@@ -1403,6 +1445,24 @@ function evaluateChallengeAttempt(performance, run) {
     );
     if (achievementError) {
       setChallengeStatus(`${resultMessage} ${achievementError}`);
+    }
+  }
+  if (
+    outcome.ok && outcome.result.status === "counted" &&
+    outcome.result.valid && outcome.result.cleared
+  ) {
+    const replayResult = saveChallengeReplay({
+      chartId: chart.id,
+      run,
+      analysis: performanceView.getAnalysis(performance, chart),
+      outcome,
+      recordedAt: Date.now(),
+    });
+    if (!replayResult.ok) {
+      console.warn(`Challenge Replay could not be saved: ${replayResult.reason}`);
+    } else {
+      replaySelection.selectChart(chart.id);
+      replayView.setReplay(replaySelection.selectedReplay);
     }
   }
 }
@@ -1845,6 +1905,9 @@ renderAudioMonitoring();
 render();
 initializeFirstVisitGuidance();
 restoreLastSession();
+ghostSelection.selectChart(state.selectedChartId);
+replaySelection.selectChart(state.selectedChartId);
+replayView.setReplay(replaySelection.selectedReplay);
 renderMidiMappingPanel();
 performanceUi.renderPerformance(latestPerformance);
 renderPerformanceAnalysis();

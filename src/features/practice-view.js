@@ -10,8 +10,10 @@ export function createPracticeView({
   getAnalysis,
   getPlaybackSnapshot,
   renderBuilderScore,
+  getGhostOverlayData = () => null,
 }) {
   function renderControllerOverlay(chart = getSelectedChart()) {
+    const ghost = getGhostOverlayData(chart);
     const snapshot = getPlaybackSnapshot();
     if (
       (state.isPlaying || snapshot.events.length > 0) &&
@@ -37,6 +39,7 @@ export function createPracticeView({
           null,
           playback,
           expected,
+          ghost,
         );
         return;
       }
@@ -61,6 +64,7 @@ export function createPracticeView({
         bundle,
         playback,
         expected,
+        ghost,
       );
       return;
     }
@@ -70,6 +74,7 @@ export function createPracticeView({
       getAnalysis(performance, chart),
       null,
       createExpectedTimeline(chart.scoreData),
+      ghost,
     );
   }
 

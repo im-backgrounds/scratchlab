@@ -3,7 +3,7 @@ import { compileScoreData } from "../../src/domain/score-compiler.js";
 import { createPracticeView } from "../../src/features/practice-view.js";
 import { createStopObservation } from "../../src/domain/midi-mapping.js";
 
-function setup() {
+function setup(getGhostOverlayData = () => null) {
   const chart = {
     id: "test",
     scoreData: compileScoreData({
@@ -34,10 +34,30 @@ function setup() {
     getPlaybackSnapshot: () => snapshot,
     getLatestPerformance: () => ({}),
     getAnalysis: () => completed,
+    getGhostOverlayData,
     performanceUi: { renderControllerOverlay: (...args) => calls.push(args) },
   });
+
   return { chart, state, snapshot, calls, completed, view };
 }
+
+Deno.test("practice passes Ghost data only to rendering in live, demo and finished views", () => {
+  const ghost = {
+    events: [{ kind: "forward", position: 0, timeMs: 0, loopIndex: 1 }],
+  };
+  const { state, snapshot, view, calls } = setup(() => ghost);
+  view.renderControllerOverlay();
+  assert.equal(calls.at(-1)[4], ghost);
+  assert.equal(Object.hasOwn(calls.at(-1)[1], "ghost"), false);
+  snapshot.loopState.phase = "demo";
+  view.renderControllerOverlay();
+  assert.equal(calls.at(-1)[4], ghost);
+  state.isPlaying = false;
+  snapshot.startedAt = null;
+  snapshot.events = [];
+  view.renderControllerOverlay();
+  assert.equal(calls.at(-1)[4], ghost);
+});
 
 Deno.test("practice v2: demo displays the expected timeline without Missing or initial-state errors", () => {
   const { snapshot, calls, view } = setup();

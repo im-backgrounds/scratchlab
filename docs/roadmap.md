@@ -74,16 +74,44 @@ Event Model v2の実装完了と、以下の追加検証・将来機能は分離
 
 ### Ghost Foundation — High
 
+- [x] Phase 1: Best Runの保存・読込・更新・削除API（Event Model v2専用）
+- [x] Phase 2: クリアしたBPM Challengeの結果からBest Runを自動更新
+- [x] Phase 3: 譜面選択時にBest Runを取得し、ランタイムのselectedGhostへ保持
+- [x] Phase 5: GhostのON/OFFをランタイムだけで管理（初期OFF、譜面切替時も維持）
+- [x] Phase 6: 元の録音コンテキストからGhost Overlayデータを生成する独立API
+- [x] Phase 7: 同一セッションのBest RunをGHOST行へ描画（ON/OFFは未接続）
+- [ ] 再読込後のGhostに対する元録音コンテキストの供給方法を設計
 - [ ] 比較用の記録・対応ペアの扱いを設計
 - [ ] Best Run／Previous Run比較
-- [ ] Ghost Overlay
+- [x] Ghost Overlay（元録音コンテキストをメモリーに保持できる記録のみ）
 
-共通Meaning Eventと対応ペアは利用できるが、Ghost機能自体は未実装。
+Ghost StorageとBPM Challenge成功時の保存を接続済み。 Accuracy・Timing
+Accuracy・RecordedAtでBest Runを選択する。 未クリア・中断・分析失敗・Beginner
+Courseは保存しない。 同一セッションで更新したBest RunはController
+Overlayへ表示する。
+再読込後など元録音コンテキストがないGhostの表示とON/OFF操作UIは未実装。
+譜面一覧・コース選択・起動時の選択復元で読込し、Ghost無し／破損時はnullとする。
+詳細は[Ghost Foundation](ghost-foundation.md)を参照。
 
 ### Replay Viewer — Medium
 
-- [ ] Replay保存・再生
-- [ ] Seek・巻き戻し
+- [x] Replay Foundation Phase 1: ReplayRecordの独立Storage API・検証・回帰テスト
+- [x] Replay Foundation Phase 2: BPM Challengeクリア時のReplay保存接続
+- [x] Replay Foundation Phase 3: 譜面選択時のReplay取得とランタイム保持
+- [x] Replay Foundation Phase 4: 独立Playback Model（seek／reset／状態取得）
+- [x] Replay Foundation Phase 5: tick駆動の独立Runtime
+      Controller（play／pause／stop）
+- [x] Replay Foundation Phase 6:
+      最小Viewer（時刻・ループ・進捗、Play／Pause／Stop）
+- [ ] Replayイベント描画・Ghost／Overlay接続
+- [x] ドメインのseek・後方移動・ループ境界判定
+- [x] 再生操作UI（Play／Pause／Stop）
+- [x] Replay Foundation Phase 7: 進捗同期Seek Bar（Pause／Play中の移動）
+
+`scratchlab.replay`にTimeline・境界・録音条件だけを保存する基盤を実装済み。
+クリアしたBPM Challengeだけを自動保存する。未クリア・中断・Beginner
+Courseは対象外。 Ghost Storage・既存保存データは維持し、Migrationは行わない。
+詳細は[Replay Foundation](replay-foundation.md)を参照。
 
 ## Post v2 Backlog
 

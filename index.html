@@ -344,6 +344,41 @@
             </section>
           </section>
 
+          <section id="replay-panel" class="card secondary-card"
+            aria-labelledby="replay-title">
+            <h3 id="replay-title">Replay</h3>
+            <dl class="performance-counts">
+              <div class="performance-count">
+                <dt>Current Time</dt>
+                <dd id="replay-current-time">—</dd>
+              </div>
+              <div class="performance-count">
+                <dt>Current Loop</dt>
+                <dd id="replay-current-loop">—</dd>
+              </div>
+              <div class="performance-count">
+                <dt>Progress</dt>
+                <dd id="replay-progress">—</dd>
+              </div>
+            </dl>
+            <div class="button-row">
+              <button id="replay-play" class="secondary-button" type="button"
+                disabled>Play</button>
+              <button id="replay-pause" class="secondary-button" type="button"
+                disabled>Pause</button>
+              <button id="replay-stop" class="secondary-button" type="button"
+                disabled>Stop</button>
+            </div>
+            <label for="replay-seek">Seek</label>
+            <div class="button-row">
+              <span>0%</span>
+              <input id="replay-seek" type="range" min="0" max="1" step="0.001"
+                value="0" aria-describedby="replay-progress" disabled>
+              <span>100%</span>
+            </div>
+            <p id="replay-status" role="status"></p>
+          </section>
+
           <section id="performance-panel" class="card secondary-card"
             aria-labelledby="performance-title">
             <div class="section-header">
