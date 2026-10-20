@@ -1417,8 +1417,28 @@ function startChallenge() {
 }
 
 function hasChallengeInputs(report = setChallengeStatus) {
-  report("マウスで前進・後進、W/Pでフェーダーを開き、S/Lで閉じます。");
-  return true;
+  const midiScratchAvailable = state.midiConnected &&
+    midiMapping.forward && midiMapping.backward;
+  const mouseScratchAvailable = practiceModeEnabled;
+  const midiFaderAvailable = state.midiConnected && midiMapping.fader;
+  const keyboardFaderAvailable = practiceModeEnabled;
+  const scratchAvailable = midiScratchAvailable || mouseScratchAvailable;
+  const faderAvailable = midiFaderAvailable || keyboardFaderAvailable;
+  if (scratchAvailable && faderAvailable) return true;
+
+  const reasons = [];
+  if (!scratchAvailable) {
+    reasons.push(
+      "スクラッチ入力が設定されていません。Mouse操作またはMIDI設定でForward/Backwardを割り当ててください。",
+    );
+  }
+  if (!faderAvailable) {
+    reasons.push(
+      "フェーダー入力が設定されていません。練習モードのKeyboard操作またはMIDI設定でFaderを割り当ててください。",
+    );
+  }
+  report(reasons.join(" "));
+  return false;
 }
 
 function startBeginnerCourseAttempt() {
