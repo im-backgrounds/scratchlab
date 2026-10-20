@@ -1,335 +1,300 @@
 # ScratchLab Copilot Instructions
 
-Use the [product vision](../docs/vision.md), [roadmap](../docs/roadmap.md),
-[task backlog](../docs/tasks.md), [milestones](../docs/milestones.md),
-[architecture decisions](../docs/architecture-decisions.md), and relevant
-[feature specifications](../docs/feature-specs/) as the product and technical
-reference.
+## Project Overview
+
+ScratchLab is a browser-based scratch DJ training application.
+
+Core goals:
+
+- Practice scratch patterns
+- Compare performance against score data
+- Visualize improvement
+- Complete BPM Challenges
+- Build a foundation for future Ghost Comparison
+
+The project prioritizes:
+
+1. Scoring accuracy
+2. Learning effectiveness
+3. Clear visual feedback
+4. Maintainable architecture
 
 ---
 
-# Default workflow: Prototype Mode
+# Architecture Principles
 
-- Prototype Mode is the default unless the user explicitly requests Stabilization Mode or Release Mode.
-- Work on one roadmap task at a time and respect its priority.
-- Inspect the relevant implementation before proposing or making code changes.
-- Keep the change small and focused while fully satisfying the selected feature specification.
-- Preserve existing behavior unless a specified behavior intentionally changes.
-- For a documentation-only request, modify documentation only.
-- Report:
-  - changed files
-  - implementation summary
-  - manual verification steps
-  - remaining work
+Keep responsibilities separate.
 
-## Scope Control
+## Domain
 
-Implement only the requested task.
-
-Do not automatically:
-
-- Refactor unrelated code
-- Rename files without necessity
-- Change architecture without specification
-- Add new frameworks
-- Convert code to TypeScript
-- Add dependencies without approval
-- Modify unrelated features
-
-Prefer multiple small commits over one large change.
-
----
-
-# Architecture Constraints
-
-## Technology Stack
-
-ScratchLab uses:
-
-- Native JavaScript
-- HTML
-- CSS
-- Browser APIs
-
-Do not introduce:
-
-- TypeScript
-- React
-- Vue
-- Angular
-- jQuery
-- Redux
-- Zustand
-- MobX
-
-unless explicitly requested.
-
-## Deployment
-
-- Preserve the static GitHub Pages deployment model.
-- Keep the application runnable without backend services.
-- Prefer browser-native solutions.
-
-## Dependencies
-
-- Do not add npm dependencies without documented justification.
-- Prefer native browser APIs.
-- Prefer lightweight implementations.
-
-## Storage
-
-- Prefer LocalStorage for user data.
-- Validate persisted data before use.
-- Version storage formats when introducing breaking changes.
-- UI components must not directly manipulate LocalStorage.
-- Use repositories or storage abstraction modules.
-
-Example:
-
-```text
-UI
- ↓
-Repository
- ↓
-Storage
- ↓
-LocalStorage
-```
-
-## Testing
-
-- Preserve Deno test compatibility.
-- New business logic should include tests.
-- Existing tests must continue to pass.
-- Fix failing tests caused by the change.
-
----
-
-# BPM Challenge Development Rules
-
-## Product Goal
-
-The BPM Challenge is the core feature of ScratchLab.
-
-The purpose is to help users improve scratch timing, fader control, and pattern accuracy through repeatable practice and objective scoring.
-
-## v1.0 Completion Criteria
-
-v1.0 is considered complete when users can:
-
-- Configure MIDI input
-- Start a BPM Challenge
-- Complete a challenge loop
-- Record evaluation laps
-- Receive a score
-- Receive a rank
-- Save results
-- View challenge history
-- View basic progress analytics
-- Use the application through GitHub Pages
-
-## Feature Priority
-
-Development priority:
-
-1. Evaluation Engine
-2. Recording System
-3. Challenge Flow
-4. Results Screen
-5. History
-6. Analytics
-7. Optional Enhancements
-
-Do not prioritize cosmetic improvements over challenge functionality.
-
----
-
-# BPM Challenge Scope Management
-
-Before implementing any feature, determine whether it is required for BPM Challenge v1.0.
-
-If not required:
-
-- Do not implement immediately.
-- Add to roadmap/tasks/milestones instead.
-
-## Out of Scope for v1.0
+Business logic only.
 
 Examples:
 
-- AI coaching
-- Online rankings
-- User accounts
-- Cloud sync
-- Multiplayer
-- Social features
-- Audio waveform analysis
-- Ghost battles
-- Premium subscriptions
-- Remote APIs
+- BPM Challenge
+- Performance Analysis
+- Timing Analysis
+- Achievement System
+- Beginner Course
 
-These ideas may be considered for future releases.
+Rules:
 
----
-
-# BPM Challenge Architecture
-
-Prefer separation between:
-
-```text
-src/features/challenge/
-
-domain/
-application/
-ui/
-```
-
-## Domain Layer
-
-Contains:
-
-- scoring
-- evaluation
-- ranking
-- challenge rules
-
-Domain code:
-
-- must be deterministic
-- must not access DOM
-- must not access LocalStorage
-- must not perform rendering
-
-## UI Layer
-
-Responsible for:
-
-- rendering
-- user interaction
-- visual feedback
-
-UI should not calculate scores directly.
+- No DOM access
+- No browser APIs
+- Easily unit testable
 
 ---
 
-# Input Device Model
+## Features
 
-All input devices should be translated into shared semantic events.
+Application workflows.
 
 Examples:
 
-- MIDI
-- Keyboard
-- Mouse
+- Challenge execution
+- Practice flow
+- Achievement updates
 
-should produce equivalent challenge events.
+Rules:
 
-Avoid device-specific logic inside evaluation code.
-
-Example:
-
-```js
-{
-  timestamp: 123456,
-  type: "scratch",
-  value: 1
-}
-```
-
-```js
-{
-  timestamp: 123789,
-  type: "crossfader",
-  value: 0
-}
-```
-
-Evaluation logic should consume these common events.
+- Coordinate domain modules
+- Avoid direct rendering logic
 
 ---
 
-# Documentation Consistency
+## UI
 
-Keep aligned:
+Rendering only.
 
-- roadmap
-- tasks
-- milestones
-- feature specifications
+Rules:
 
-Distinguish between:
-
-- shipped functionality
-- planned functionality
-- experimental concepts
-
-Do not document behavior changes without first verifying the implementation.
-
-## README Policy
-
-When user-facing functionality changes:
-
-Review whether README requires updates.
-
-README updates are encouraged when:
-
-- New features are added
-- User workflows change
-- Screenshots become inaccurate
-- Setup instructions change
+- No business logic
+- No scoring calculations
+- No persistence decisions
 
 ---
 
-# Change Isolation Rules
+# BPM Challenge Principles
 
-When implementing a roadmap task:
+The BPM Challenge is the primary product feature.
 
-- Modify only required files.
-- Do not perform opportunistic refactoring.
-- Do not reorganize directories unless required.
-- Do not rewrite working systems.
-- Avoid architecture changes without documented benefit.
+Requirements:
 
-Small focused pull requests are preferred.
+- Results must be reproducible
+- Scoring must be deterministic
+- Mouse and MIDI should produce equivalent results
+- Timing Analysis must not affect pass/fail conditions
+- Previous results must remain understandable
 
----
+Never change challenge scoring without reviewing:
 
-# Explicit Workflow Overrides
-
-## Stabilization Mode
-
-When explicitly requested:
-
-- Update affected tests
-- Update affected documentation
-- Fix technical debt in the touched area
-- Improve maintainability
-
-Do not expand beyondd test suite
-- Verify challenge flow
-- Verify MIDI configuration
-- Verify history persistence
-- Update README
-- Update screenshots if needed
-- Verify GitHub Pages deployment
-- Verify no obvious console errors
+- docs/event-model-v2.md
+- docs/feature-specs/bpm-challenge.md
 
 ---
 
-# Copilot Task Execution Template
+# Event Model v2
 
-When implementing a task:
+The project is migrating to Event Model v2.
 
-1. Read the relevant specification.
-2. Inspect existing implementation.
-3. Identify smallest possible change.
-4. Implement only the requested scope.
-5. Add tests if business logic changes.
-6. Verify existing functionality remains intact.
-7. Report:
-   - changed files
-   - implementation summary
-   - validation performed
-   - remaining work
+Read before modifying:
 
-Never expand task scope without explicit instruction.
+- docs/event-model-v2.md
+
+Current priority:
+
+- Event Model v2 migration
+
+Do not introduce alternative scoring models.
+
+Do not add special-case scoring rules for individual charts.
+
+Scoring, Timing Analysis, Overlay and Beginner Course must share the same event model.
+
+---
+
+# Event Model Concepts
+
+Meaningful player actions are evaluated.
+
+Target events:
+
+- Forward Stroke
+- Backward Stroke
+- Fader Open
+- Fader Close
+
+Special events:
+
+- Stop
+- Loop Boundary
+
+Principles:
+
+- Direction changes create stroke events
+- Continuous movement in the same direction does not
+- Fader changes do not reset direction state
+- Loop boundaries are not player actions
+- Stop is not scored directly
+
+---
+
+# Timing Analysis Rules
+
+Timing Analysis is separate from Accuracy.
+
+Accuracy:
+
+- Sequence correctness
+
+Timing Analysis:
+
+- Temporal precision
+
+Never merge these concepts.
+
+Current metrics:
+
+- Average Error
+- Max Error
+- Timing Accuracy
+
+Timing Accuracy must never replace Accuracy.
+
+---
+
+# Overlay Rules
+
+Overlay must visualize the same model used by scoring.
+
+Avoid creating separate event-generation logic for:
+
+- SAMPLE
+- YOU
+- ERROR
+
+Whenever possible:
+
+Expected Timeline
+→ Matching Engine
+→ Overlay
+
+Use one shared source of truth.
+
+---
+
+# Beginner Course Rules
+
+Beginner Course and BPM Challenge must use the same scoring engine.
+
+Do not create:
+
+- Beginner-specific scoring
+- Beginner-only event models
+- Alternate matching rules
+
+Only progression requirements may differ.
+
+---
+
+# Persistence Rules
+
+LocalStorage is the primary persistence layer.
+
+Rules:
+
+- Preserve backward compatibility unless a migration is planned
+- Never silently delete user data
+- Document all storage changes
+- Include migration strategy when changing score-related data
+
+---
+
+# Testing Requirements
+
+Scoring-related changes require tests.
+
+Minimum expectations:
+
+- Unit tests
+- Regression tests
+- Boundary-condition tests
+
+Priority charts:
+
+- Baby Scratch
+- Forward Scratch
+- Backward Scratch
+- Chirp Scratch
+- Transformer Scratch
+- 1 Click Flare Orbit
+
+Ideal performance input should score 100%.
+
+---
+
+# Performance Analysis Requirements
+
+When modifying:
+
+- performance-analysis.js
+- performance.js
+- midi-mapping.js
+- challenge-session.js
+
+Always verify:
+
+- Accuracy calculation
+- Missing events
+- Extra events
+- Timing Analysis
+- Loop boundaries
+- Stop handling
+
+A change is not complete until tests verify all affected areas.
+
+---
+
+# Development Workflow
+
+Before implementation:
+
+1. Read related feature specification
+2. Read event-model-v2.md if scoring is affected
+3. Review existing tests
+4. Minimize scope
+
+After implementation:
+
+1. Run tests
+2. Run type checking
+3. Verify browser behavior
+4. Update documentation if behavior changed
+
+---
+
+# Preferred Decision Order
+
+When trade-offs occur:
+
+1. Correct scoring
+2. Data integrity
+3. User understanding
+4. Visual polish
+5. New features
+
+Prefer fewer, correct features over more, unreliable features.
+
+---
+
+# Future Features
+
+Do not start these features until Event Model v2 is complete:
+
+- Ghost Comparison
+- Replay Viewer
+- Ranking System
+
+These depend on a reliable scoring foundation.
+
+Event Model v2 completion is the highest priority technical milestone.

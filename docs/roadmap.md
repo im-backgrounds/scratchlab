@@ -1,530 +1,405 @@
 # ScratchLab Roadmap
 
-## Product Vision
-
-ScratchLabはブラウザー上で学べるDJスクラッチ練習アプリ。
-
-目標：
-
-- 初心者でも独学でスクラッチを学べる
-- MIDIコントローラーで実践練習できる
-- BPMチャレンジで成長を実感できる
-- 毎日練習したくなる体験を提供する
-- 音・譜面・入力を同時に確認しながら上達できる
-
-## Development Documents
-
-- [Product vision](vision.md): target users, principles, and product boundaries
-- [Roadmap](roadmap.md): release themes and feature priorities
-- [Task backlog](tasks.md): actionable work ordered to match this roadmap
-- [Milestones](milestones.md): milestone outcomes and completion gates
-- [Architecture decisions](architecture-decisions.md): technical constraints and
-  accepted decisions
-- [Feature specifications](feature-specs/):
-  - [Beginner course](feature-specs/beginner-course.md)
-  - [Keyboard input](feature-specs/keyboard-input.md)
-  - [Input audio monitoring](feature-specs/input-audio-monitoring.md)
-  - [Controller overlay](feature-specs/controller-overlay.md)
-  - [Achievement system](feature-specs/achievement-system.md)
-  - [Practice history](feature-specs/practice-history.md)
-  - [BPM Challenge](feature-specs/bpm-challenge.md)
-  - [Timing analysis](feature-specs/timing-analysis.md)
-  - [Monetization](feature-specs/monetization.md)
-
-Feature specifications describe intended behavior; roadmap checkboxes track
-delivery status. Keep both in sync when scope or priority changes.
+最終更新: 2026-10
 
 ---
 
-# Copilot Rules
+# Vision
 
-以下を必ず守ること。
+ScratchLab を
 
-- roadmap.md の Priority 順で実装する
-- 一度に複数機能を実装しない
-- 実装前に影響ファイルを調査する
-- 実装前に計画を提示する
-- テストが存在する場合は更新する
-- README が影響を受ける場合は更新する
-- 既存機能を削除しない
-- UI変更時はスクリーンショット候補を提案する
-- 可能な限り Native JavaScript を維持する
-- GitHub Pages のシンプルな構成を維持する
+「スクラッチ練習を可視化できる
+ブラウザーDJトレーニングツール」
 
----
+として育てる。
 
-# Development Workflow
+目標は
 
-## Prototype Mode（デフォルト）
+- 練習
+- 分析
+- 上達確認
 
-目的： 素早く機能開発を進める
+ができること。
 
-ルール：
+将来的には
 
-- README更新不要
-- スクリーンショット更新不要
-- テスト追加不要
-- テスト更新不要
-- リファクタリング不要
-- 最小変更で実装する
-- 動作することを最優先にする
-- 実装後は変更内容のみ報告する
+- Ghost Comparison
+- ランキング
+- コミュニティ共有
 
-対象：
-
-- 新機能追加
-- UI改善
-- チュートリアル
-- Achievement
-- グラフ
-- SNS共有
-- オーバーレイ表示
-- 音声モニタリング
+まで発展させる。
 
 ---
 
-## Stabilization Mode
+# Current Status
 
-目的： リリース前の品質向上
+## BPM Challenge v1
 
-ルール：
+完了
 
-- 関連テストのみ更新
-- 影響範囲を確認
-- README更新
-- 不要コード削除
-- 軽量なリファクタリング実施
+### Core
 
-対象：
+- [x] MIDI入力
+- [x] Keyboard入力
+- [x] Mouse入力
+- [x] Practice Mode
+- [x] BPM Challenge
 
-- 大型機能完了時
-- v0.x マイルストーン完了時
+### Analysis
 
----
+- [x] Sequence Accuracy
+- [x] Timing Analysis
+- [x] Average Error
+- [x] Max Error
+- [x] Timing Accuracy
 
-## Release Mode
+### History
 
-目的： 公開前の最終確認
+- [x] Practice History
+- [x] Growth Charts
+- [x] Achievement System
 
-ルール：
+### UX
 
-- 全テスト実行
-- テスト失敗ゼロ
-- README更新
-- スクリーンショット更新
-- Roadmap更新
-- GitHub Pages動作確認
-- 主要機能の手動確認
+- [x] Beginner Course
+- [x] First Visit Guidance
+- [x] Baby Scratch Quick Start
+- [x] Previous Result Display
 
-対象：
+### Visualization
 
-- v0.5
-- v1.0
-- 公開リリース
-
----
-
-## Testing Rules
-
-以下の場合のみテスト作成・更新を行う
-
-- BPM Challenge採点ロジック変更
-- MIDIイベント変換変更
-- 譜面コンパイル変更
-- LocalStorage保存ロジック変更
-- 既存テスト失敗修正
-
-以下ではテスト不要
-
-- UIレイアウト変更
-- チュートリアル
-- Achievement
-- 履歴画面
-- グラフ表示
-- SNS共有
-- ロードマップ更新
-- README修正
-- 音量調整UI
+- [x] Controller Overlay
+- [x] SAMPLE Timeline
+- [x] YOU Timeline
+- [x] Error Overlay
 
 ---
 
-## Copilot Agent Instructions
+# Known Issues
 
-デフォルトは Prototype Mode とする。
+現在確認済み。
 
-実装時は以下を優先する。
+## Event Model Mismatch
 
-1. 最小変更
-2. 既存機能維持
-3. 実装速度
-4. コード可読性
-5. テスト
+期待イベントと入力イベントの粒度が一致していない。
 
-明示的に Stabilization Mode または Release Mode が指定されていない限り、
+対象例
 
-- README更新しない
-- テスト追加しない
-- テスト更新しない
-- スクリーンショット更新しない
-- 全テスト実行しない
+- Chirp Scratch
+- 1 Click Flare Orbit
 
-実装完了後は以下のみ報告する。
+影響
 
-- 変更したファイル
-- 実装内容
-- 手動確認手順
-- 残課題
+- BPM Challenge
+- Beginner Course
+- Overlay
+- Timing Analysis
 
----
+優先度
 
-# v0.2 Learning Experience
+Critical
 
-## 初回チュートリアル
+対応
 
-### 目的
-
-初心者の離脱率を下げる
-
-### 完了条件
-
-- [x] 初回アクセス時に表示
-- [x] スキップ可能
-- [x] LocalStorage保存
-- [x] 再表示可能
+Event Model v2
 
 ---
 
-## Beginnerコース
+# Next Major Milestone
 
-### 目的
+## Event Model v2 Migration
 
-何を練習すればよいか分からない問題を解決する
+Status:
 
-### コース
+Design Frozen
 
-- [x] Baby Scratch
-- [x] Forward Scratch
-- [x] Baby Scratch BPM90
-- [x] Baby Scratch BPM100
-- [x] Chirp
+Priority:
 
-### 完了条件
-
-- [x] コース一覧表示
-- [x] 進捗表示
-- [x] クリア判定
-- [x] 次の課題を提案
+Critical
 
 ---
 
-## キーボード入力対応
+# Event Model v2
 
-### 目的
+目的
 
-MIDI機器を持たないユーザーでも遊べるようにする
+採点モデルを統一する。
 
-### キーマップ
+現在
 
-- [x] ← Forward
-- [x] → Backward
-- [x] Space Fader
+Expected Event
+≠
+Recorded Event
 
-### 完了条件
+となっている。
 
-- [x] BPM Challenge対応
-- [x] MIDIと共存可能
-- [x] 入力イベント記録対応
+これを
 
----
+Meaning Event
 
-# v0.3 Retention
-
-## 入力音モニタリング
-
-### 目的
-
-ユーザーの演奏入力を耳で確認できるようにする
-
-### 機能
-
-- [x] Forward入力時に音を再生
-- [x] Backward入力時に音を再生
-- [x] Fader Open時のみ出音
-- [x] キーボード入力対応
-- [x] MIDI入力対応
-
-### 音源分離
-
-- [x] お手本音量調整
-- [x] 入力音量調整
-- [x] お手本ミュート
-- [x] 入力音ミュート
-
-### UI
-
-- [x] SAMPLE表示
-- [x] YOU表示
-- [x] 現在再生中音源の表示
-
-### 将来拡張
-
-- [ ] 左チャンネル=SAMPLE
-- [ ] 右チャンネル=YOU
-- [ ] ステレオ分離
-
-### 完了条件
-
-- [x] BPM Challenge中に動作
-- [x] MIDI入力と同期
-- [x] キーボード入力と同期
+へ統一する。
 
 ---
 
-## コントローラー入力オーバーレイ
+## Goals
 
-### 目的
-
-譜面と実際の演奏を視覚的に比較できるようにする
-
-### 表示内容
-
-- [ ] Forward入力
-- [ ] Backward入力
-- [ ] Fader Open
-- [ ] Fader Close
-- [ ] Stop
-
-### 音声連動
-
-- [ ] SAMPLE演奏を表示
-- [ ] YOU演奏を表示
-- [ ] 再生中音源を表示
-
-### 完了条件
-
-- [ ] BPM Challenge中表示
-- [ ] 記録済み演奏を再表示可能
-- [ ] MIDI入力履歴と同期
-- [ ] 譜面スクロールと同期
-
-### 将来拡張
-
-- [ ] タイミング誤差表示
-- [ ] 色による正誤判定
-- [ ] ゴースト比較
+- 採点信頼性向上
+- Overlay整合
+- Timing整合
+- Beginner整合
+- Ghost基盤構築
 
 ---
 
-## Achievementシステム
+## Scope
 
-### 完了条件
+### Event Model
 
-- [x] Achievementモデル
-- [x] LocalStorage保存
-- [x] Achievement画面
-- [x] ポップアップ表示
+- Forward Stroke
+- Backward Stroke
+- Fader Open
+- Fader Close
+- Stop
+- Loop Boundary
 
----
+### State Model
 
-## BPM達成実績
+- currentDirection
+- faderState
+- loopState
 
-### 実績
+### Timeline
 
-- [x] BPM80達成
-- [x] BPM100達成
-- [x] BPM120達成
-- [x] BPM140達成
+- Expected Timeline
+- Recorded Timeline
 
----
+### Matching
 
-## 練習回数実績
+- Common Matching Engine
 
-### 実績
+### Analysis
 
-- [x] 10回練習
-- [x] 50回練習
-- [x] 100回練習
-- [x] 500回練習
+- Timing Analysis v2
 
----
+### Visualization
 
-## 連続練習実績
-
-### 実績
-
-- [x] 3日連続
-- [x] 7日連続
-- [x] 30日連続
+- Overlay v2
 
 ---
 
-## 練習履歴
+## Tasks
 
-### 保存内容
+### Phase 1
 
-- [x] 日付
-- [x] Pattern
-- [x] BPM
-- [x] Accuracy
+Expected Timeline v2
 
-### 完了条件
-
-- [x] 履歴保存
-- [x] 履歴一覧
-- [x] 履歴削除
+- [ ] ストローク単位モデル
+- [ ] フェーダー状態モデル
+- [ ] 共通タイムライン生成
 
 ---
 
-## 成長グラフ
+### Phase 2
 
-### 完了条件
+Boundary Rework
 
-- [x] 練習回数推移
-- [x] 最高BPM推移
-- [x] 平均Accuracy推移
-
----
-
-# v0.4 Social
-
-## 成績共有画像
-
-### 表示内容
-
-- [ ] Pattern
-- [ ] BPM
-- [ ] Accuracy
-- [ ] Rank
-
-### 完了条件
-
-- [ ] PNG生成
-- [ ] ダウンロード
+- [ ] 小節reset廃止
+- [ ] ループ境界再設計
+- [ ] Stop再設計
 
 ---
 
-## SNS共有
+### Phase 3
 
-### 完了条件
+Matching Engine v2
 
-- [ ] X共有
-- [ ] 共有テキスト生成
-
----
-
-## ランクシステム
-
-### ランク
-
-- [ ] Bronze
-- [ ] Silver
-- [ ] Gold
-- [ ] Platinum
+- [ ] 共通Matching Engine
+- [ ] 対応ペア保存
+- [ ] Accuracy再検証
 
 ---
 
-# v0.5 Analysis
+### Phase 4
 
-## タイミング精度分析
+Timing Analysis v2
 
-### 指標
-
-- [ ] Average Error
-- [ ] Max Error
-- [ ] Accuracy
-
-### 完了条件
-
-- [ ] 入力タイミング計測
-- [ ] 分析表示
-- [ ] BPM Challenge連携
+- [ ] 共通ペア利用
+- [ ] Signed Error保持
+- [ ] Overlay連携
 
 ---
 
-## ゴースト比較
+### Phase 5
 
-### 前提
+Overlay v2
 
-v0.3の入力オーバーレイ機能を利用する
-
-### 完了条件
-
-- [ ] 理想譜面表示
-- [ ] 入力オーバーレイ表示
-- [ ] タイミング誤差可視化
-- [ ] 入力ズレ強調表示
+- [ ] 共通Expected利用
+- [ ] 共通Matching利用
+- [ ] Error整合
 
 ---
 
-## 演奏リプレイ
+### Phase 6
 
-### 完了条件
+Migration
 
-- [ ] 再生機能
-- [ ] シークバー
-- [ ] イベント可視化
+- [ ] 採点データ初期化
+- [ ] Progress初期化
+- [ ] History初期化
+- [ ] Growth初期化
+- [ ] Beginner Progress初期化
 
----
+保持
 
-# v1.0 Monetization
-
-## 譜面パック
-
-### 無料
-
-- [ ] Beginner Pack
-- [ ] Intermediate Pack
-
-### 有料候補
-
-- [ ] Battle Scratch Pack
-- [ ] DMC Practice Pack
-- [ ] Advanced Flare Pack
+- [x] MIDI Mapping
+- [x] Custom Charts
+- [x] Achievement
 
 ---
 
-## Pro分析
+### Phase 7
 
-### 機能
+Integration Tests
 
-- [ ] 詳細統計
-- [ ] 成長分析
-- [ ] 苦手分析
-
----
-
-## サポーター機能
-
-### 機能
-
-- [ ] GitHub Sponsors導線
-- [ ] 支援ページ
-- [ ] 特典検討
+- [ ] Mouse → Score
+- [ ] MIDI → Score
+- [ ] Timing Accuracy
+- [ ] Overlay Accuracy
+- [ ] Chirp 100%
+- [ ] Flare 100%
 
 ---
 
-# Priority
+# Post v2 Features
 
-現在の優先順位
-
-1. 初回チュートリアル
-2. Beginnerコース
-3. キーボード入力対応
-4. 入力音モニタリング
-5. コントローラー入力オーバーレイ
-6. Achievementシステム
-7. 練習履歴
-8. 成長グラフ
-9. 成績共有画像・SNS共有・ランク
-10. タイミング分析
-11. ゴースト比較・演奏リプレイ
-12. 収益化の検討
+優先度順
 
 ---
 
-# Long Term Vision
+## Ghost Comparison
 
-理想的な練習体験
+演奏履歴比較
 
-譜面を見る ↓ お手本を聞く ↓ 自分で演奏する ↓ 入力音を聞く ↓ 譜面上で比較する ↓
-採点される ↓ ズレを確認する ↓ 改善する ↓ 成長を記録する ↓ 共有する
+- [ ] Best Run
+- [ ] Previous Run
+- [ ] Ghost Overlay
+
+優先度
+
+High
+
+---
+
+## Replay Viewer
+
+- [ ] リプレイ保存
+- [ ] 再生
+- [ ] 巻き戻し
+
+優先度
+
+Medium
+
+---
+
+## Advanced Timing Analysis
+
+- [ ] Signed Error
+- [ ] Early/Late分析
+- [ ] Heat Map
+
+優先度
+
+Medium
+
+---
+
+## Ranking
+
+- [ ] Local Ranking
+- [ ] Community Ranking
+
+優先度
+
+Low
+
+---
+
+## Share Features
+
+- [ ] Result Card
+- [ ] Screenshot Export
+- [ ] Share URL
+
+優先度
+
+Low
+
+---
+
+# Monetization
+
+検討段階
+
+実装未定
+
+候補
+
+- Ads
+- Supporter Plan
+- Premium Analytics
+
+条件
+
+Event Model v2 完了後
+
+---
+
+# Release Plan
+
+## Current
+
+v1.0-beta
+
+---
+
+## Next
+
+v2.0-alpha
+
+条件
+
+- Event Model v2 完了
+- Chirp 100%
+- Flare 100%
+- Overlay整合
+- Timing整合
+
+---
+
+## Future
+
+v2.0
+
+条件
+
+- Ghost Comparison
+- Replay
+- Integration Tests安定化
+
+---
+
+# Success Criteria
+
+v2完了時
+
+- 正しい演奏は100%
+- MouseとMIDIで同結果
+- Overlayと採点一致
+- Timingと採点一致
+- BeginnerとChallenge一致
+- Ghost比較可能
+
+以上を満たした時点で
+
+ScratchLab の採点基盤は完成とみなす。
