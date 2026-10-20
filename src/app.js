@@ -1612,6 +1612,16 @@ controls.bindControls({
     const message = saveFirstVisitGuidance("skipped");
     controls.renderFirstVisitGuidance(false, message);
   },
+  onTryBabyScratch: () => {
+    selectBeginnerCourseStage("baby-scratch");
+    setChallengeStatus(
+      "機材・MIDI設定は不要です。右下の「練習モードを有効化」を押し、Wキーを押し続けながらマウスを上下に動かしてみましょう。準備ができたら「チャレンジ開始」を押してください。",
+    );
+    document.getElementById("challenge-title").focus({ preventScroll: true });
+    document.getElementById("challenge-panel").scrollIntoView({
+      block: "start",
+    });
+  },
   onShowBuilder: () => {
     prepareViewSwitch();
     showBuilderPage();

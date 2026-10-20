@@ -2,6 +2,7 @@ export function bindControls({
   onShowGuide,
   onStartFirstVisitGuide,
   onSkipFirstVisitGuide,
+  onTryBabyScratch,
   onShowBuilder,
   onShowMidiSetup,
   onShowAchievements,
@@ -57,6 +58,10 @@ export function bindControls({
   notationGuideTab.addEventListener("click", onShowGuide);
   firstVisitGuideStart.addEventListener("click", onStartFirstVisitGuide);
   firstVisitGuideSkip.addEventListener("click", onSkipFirstVisitGuide);
+  document.getElementById("guide-try-baby-scratch").addEventListener(
+    "click",
+    onTryBabyScratch,
+  );
   builderTab.addEventListener("click", onShowBuilder);
   midiSetupTab.addEventListener("click", onShowMidiSetup);
   achievementsTab.addEventListener("click", onShowAchievements);

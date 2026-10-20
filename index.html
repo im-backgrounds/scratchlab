@@ -250,7 +250,7 @@
             aria-labelledby="challenge-title">
             <div class="section-header">
               <div>
-                <h3 id="challenge-title">BPMチャレンジ</h3>
+                <h3 id="challenge-title" tabindex="-1">BPMチャレンジ</h3>
                 <p
                   id="challenge-chart-name">選択中の譜面で、BPMを上げながら挑戦します</p>
               </div>
@@ -599,6 +599,25 @@
                 <li>難しければBPMを下げ、FとBの向きだけを先に練習します。</li>
                 <li>慣れたらフェーダー記号やC・F・Kの違いを加えます。</li>
               </ol>
+            </section>
+
+            <section class="guide-card guide-wide"
+              aria-labelledby="guide-try-title">
+              <p class="eyebrow">まず遊んでみる</p>
+              <h3 id="guide-try-title">機材なしでも遊べます</h3>
+              <p>MIDI機器やMIDIセットアップは不要です。マウスとキーボードで始められます。</p>
+              <ol class="guide-practice-steps">
+                <li>右下の「練習モードを有効化」を押す</li>
+                <li>マウスを上下に動かす（上が前進、下が後進）</li>
+                <li>Wキーを押し続けて音を出す（離すと音が止まります）</li>
+                <li>Baby Scratch Challengeに挑戦する（「チャレンジ開始」を押す）</li>
+              </ol>
+              <p
+                class="guide-note">下のボタンでBaby Scratchの譜面とBeginnerコースの最初の課題を選び、BPMチャレンジへ移動します。コースのクリアは不要です。</p>
+              <div class="button-row">
+                <button id="guide-try-baby-scratch" class="primary-button"
+                  type="button">Baby Scratchを試す</button>
+              </div>
             </section>
           </div>
         </section>
