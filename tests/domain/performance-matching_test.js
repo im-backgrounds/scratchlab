@@ -6,6 +6,7 @@ import {
 } from "../../src/domain/midi-mapping.js";
 import {
   createExpectedTimeline,
+  EVENT_MODEL_VERSION,
   matchPerformanceTimeline,
 } from "../../src/domain/performance-analysis.js";
 import {
@@ -13,6 +14,10 @@ import {
   createLoopState,
 } from "../../src/domain/playback.js";
 import { compileScoreData } from "../../src/domain/score-compiler.js";
+
+Deno.test("the official event model version is 2", () => {
+  assert.equal(EVENT_MODEL_VERSION, 2);
+});
 
 const compile = (score) =>
   compileScoreData({ name: "matching", beat: "4/4", score });

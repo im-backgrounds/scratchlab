@@ -277,6 +277,8 @@ export function routeMidiMessage(data, { mapping, learnAction, time }) {
  * The timestamp is the inactivity threshold, not the timer delivery time.
  * @param {{onStop: (event: object) => void, timeoutMs?: number,
  *   setTimer?: Function, clearTimer?: Function}} options
+ * @deprecated Use createStopObserver for input observation. Its shared timer
+ * implementation still uses this detector internally; do not remove it.
  */
 export function createStopDetector({
   onStop,
@@ -324,7 +326,7 @@ export function createStopDetector({
       }, timeoutMs);
     },
     cancel,
-    /** Legacy compatibility only; never use a flush to represent a boundary. */
+    /** @deprecated v1 regression coverage only; a boundary is not a stop. */
     flush(now = Date.now()) {
       if (timer === null) return;
       const time = Math.min(lastEvent.time + timeoutMs, now);

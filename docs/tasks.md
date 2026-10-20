@@ -2,505 +2,197 @@
 
 最終更新: 2026-10
 
----
-
-# Status Legend
+## Status Legend
 
 - [ ] 未着手
-- [~] 作業中
+- [~] 作業中・追加検証待ち
 - [x] 完了
-- [!] ブロッカー
 
----
+## Current Implementation
 
-# Current Release
+**Event Model v2 — Completed**
 
-## BPM Challenge v1
+現在のブランチを正式実装とする。
+採点モデルは`EVENT_MODEL_VERSION = 2`。保存形式のバージョンとは独立。
+Migration・データ初期化・変換・v1との互換レイヤー作成は行わない。 旧Migration
+EpicとData Reset Validationは対象外とし、残タスクへ持ち越さない。
+既存Storage・Progress・Achievementの処理とデータは維持する。
 
-Status
+## Completed
 
-[x] Completed
+### Epic 1 — Design Freeze
 
-主要機能
+- [x] [Event Model v2仕様](event-model-v2.md)を正式版として確定
 
-- [x] BPM Challenge
-- [x] Practice Mode
-- [x] Mouse Input
-- [x] Keyboard Input
-- [x] MIDI Input
-- [x] Sequence Accuracy
-- [x] Timing Analysis
-- [x] Previous Result Display
-- [x] Practice History
-- [x] Growth Charts
-- [x] Achievement System
-- [x] Controller Overlay
-- [x] Beginner Course
-- [x] First Visit Guidance
+### Epic 2 — Expected Timeline
 
----
+- [x] `createExpectedTimeline`でストローク・フェーダー変化を生成
+- [x] 同方向継続を統合、FC3の閉開を保持
+- [x] Baby・Chirp・Flareの期待イベントを再生成
+- [x] 実アプリのv1期待生成経路を置換
 
-# Critical Epic
+### Epic 3 — Boundary Rework
 
-## Event Model v2 Migration
+- [x] 小節・ループ・デモ切替で物理状態を保持
+- [x] 境界由来のreset・強制Stop生成を撤去
+- [x] Loop Boundary snapshot・半開区間を定義
+- [x] アプリ・Matching・Timing・Overlayへ接続
+- [x] 境界でのイベント増殖とループ跨ぎの回帰テスト
 
-Priority
+### Epic 4 — Stop Handling Rework
 
-Critical
+- [x] Mouse／MIDIの停止観測とタイマー処理を共通化
+- [x] 最後の入力元への引き継ぎ、操作解除時のキャンセル
+- [x] 物理StopとLoop Boundaryを分離
+- [x] Stop観測保持と方向状態更新を接続
+- [x] Stopを採点・Timing・Overlayから除外
 
-Reason
+### Epic 5 — Matching Engine
 
-Expected Event と Recorded Event の粒度が一致していない。
+- [x] レーン別の共通照合、対応ペア・Missing・Extra保持
+- [x] Initial State Validationとクリア防止
+- [x] 継続観測は一致に含め、架空入力を生成しない
+- [x] Baby・Chirp・Flareの圧縮済み理想入力100%
 
-対象例
+### Epic 6 — Timing Analysis
 
-- Chirp Scratch
-- 1 Click Flare Orbit
+- [x] Matchingと同じ対応ペアを利用
+- [x] Signed Error、Average Error、Max Error、Timing Accuracy、Measured Count
+- [x] Stop・境界・継続観測を除外
+- [x] Missing／Extraを0msで補完しない
+- [x] 測定件数0の指標はnull
 
-影響範囲
+### Epic 7 — Controller Overlay
 
-- BPM Challenge
-- Beginner Course
-- Overlay
-- Timing Analysis
+- [x] SAMPLE＝Expected、YOU＝Recorded、ERROR＝Matching
+- [x] Missing・Extra・Initial State Error表示
+- [x] Matching／Timingと件数一致
+- [x] 独自の期待生成・LCS照合処理を撤去
+- [x] デモ除外、未到来イベントのMissing防止
 
----
+### App Integration
 
-# Epic 1
+- [x] BPM Challenge・Beginner Course・直後の結果・Controller Overlayへ接続
+- [x] 同じ分析結果を共有し、別譜面へ流用しない
+- [x] 保存形式維持、過去記録の未採点と再挑戦案内
+- [x] 記録上限超過時の判定・進捗更新防止
+- [x] Mouse＋Keyboard／模擬MIDIでBaby・Chirp・Flare 100%
+- [x] Deprecated注記、README・Roadmap・リリースノート整理
 
-## Design Freeze
+既存のBPM Challenge、Practice Mode、Previous Result、Practice History、 Growth
+Charts、Achievement、Beginner Course、初回ガイドの提供は継続する。
 
-Status
+## Remaining
 
-[x] Complete
+### 実機MIDI検証
 
-成果物
+- [ ] 実コントローラーでBaby・Chirp・Flareを確認
+- [ ] フェーダー初期状態・連続入力・停止・境界跨ぎを確認
+- [ ] Mouseと実機MIDIの同結果を確認
 
-- [x] docs/event-model-v2.md
+### E2E確認
 
----
+- [~] 3対象譜面のブラウザー確認済み、全譜面・主要ブラウザーは未完了
+- [ ] Forward Scratch・Backward Scratch・Transformerを含む網羅確認
+- [ ] 中断・リトライ・初期状態エラー・記録上限の画面確認
+- [ ] 自動E2Eスイート整備
 
-# Epic 2
+### Ghost Foundation
 
-## Expected Timeline v2
+- [ ] 比較用記録と対応ペアの扱いを設計
+- [ ] Ghost保存・再生、Best Run／Previous Run比較、Ghost Overlay
 
-Priority
+### Replay Viewer
 
-Critical
+- [ ] Replay保存・再生
+- [ ] Seek・巻き戻し
 
-Status
-
-[~] Generator Implemented / Integration Pending
-
-Tasks
-
-- [x] Event Model v2実装方針確認
-- [x] Expected Timeline生成器作成
-- [x] ストローク単位へ変更
-- [x] Faderイベント分離
-- [x] Event生成テスト追加
-
-完了条件
-
-- [x] Chirp期待イベント妥当
-- [x] Flare期待イベント妥当
-- [ ] 既存イベント定義を置換
-
-生成器は `createExpectedTimeline` として独立追加。採点・Timing・Overlayを
-変更しないため、既存の `createExpectedEvents` の置換は後続フェーズへ持ち越す。
-
----
-
-# Epic 3
-
-## Boundary Rework
-
-Priority
-
-Critical
-
-Status
-
-[~] Input Fixes / Boundary Model Implemented; Integration Pending
-
-Tasks
-
-- [x] 小節reset削除
-- [x] Loop Boundary導入（独立API）
-- [x] 境界で物理状態を保持・境界由来Stop生成を撤去
-- [x] 半開区間モデルと境界時刻の所属判定
-- [ ] アプリへのv2境界モデル接続・境界ルール統一
-
-完了条件
-
-- [x] 境界でイベント増殖しない
-- [ ] ループ跨ぎ誤判定なし
-
-既存のv1採点・Timing・Overlayへのv2境界API接続は行わない。
-実入力のreset・強制Stop生成の撤去によりv1の記録列と結果は変動し得る。
-v1のループ区分はそのまま残し、半開区間の採点への適用は後続フェーズで行う。
-過去の不具合再現テストは旧処理の明示的な再現として維持する。
-
----
-
-# Epic 4
-
-## Stop Handling Rework
-
-Priority
-
-Critical
-
-Status
-
-[~] Observation API / Input Handling Implemented; Scoring Integration Pending
-
-Tasks
-
-- [x] Mouse停止整理
-- [x] MIDI停止整理
-- [x] Stop定義統一（独立した物理停止観測API）
-- [x] Loop終端との分離
-- [x] 最後の入力元への観測引き継ぎ・操作解除時の観測キャンセル
-- [x] 停止観測を保持し、方向状態のみ更新するAPI
-
-完了条件
-
-- [ ] Stopで誤減点しない
-- [ ] Stopで誤加点しない
-
-v2 APIは採点・Timing・Overlay・アプリへ未接続。
-実入力は共通停止検出器を使い、従来のStopイベント形式とv1採点を維持する。
-Stopによる誤減点・誤加点の解消はMatching Engineの接続時に検証する。
-v1のflush互換APIと過去の不具合再現テストは維持する。
-
----
-
-# Epic 5
-
-## Matching Engine v2
-
-Priority
-
-Critical
-
-Status
-
-[x] Runtime Integrated (Implementation Phase 7)
-
-Tasks
-
-- [x] 共通Matching Engine（独立API）
-- [x] 対応ペア保持（元配列インデックス、実入力／継続観測を区別）
-- [x] 初期状態チェック追加（一致率と分離）
-- [x] Accuracy検証（独立した理想入力を圧縮して照合）
-
-完了条件
-
-- [x] Baby Scratch 100%
-- [x] Chirp Scratch 100%
-- [x] Flare Orbit 100%
-
-独立Engineに加え、アプリのChallenge・Beginner Courseへ接続済み。
-Timing・Overlayも同じ分析結果を利用する。Progressの処理・保存形式は変更しない。
-Stopと境界を除外し、tick
-0の同方向継続はTiming対象外の一致として保持する。
-未確認・不一致の初期フェーダーは、ランタイムでクリア・進捗更新を阻止する。
-
----
-
-# Epic 6
-
-## Timing Analysis v2
-
-Priority
-
-High
-
-Status
-
-[x] Runtime Integrated (Implementation Phase 7)
-
-Tasks
-
-- [x] Matching結果を利用（同じ対応ペアを再照合なしで利用）
-- [x] Signed Error保持
-- [x] Average Error集計（独立API）
-- [x] Max Error集計（独立API）
-- [x] Timing Accuracy集計（独立API）
-- [x] Measured Count・測定不能時のnull出力
-- [x] 継続観測・Stop・境界の除外、Missing／Extraを0msにしない
-
-完了条件
-
-- [x] Accuracyと同じ対応ペアを利用・Sequence Accuracyを変更しない
-- [x] Overlay独立APIで同じ測定サンプル・測定件数を共有
-
-`analyzeTimelineTiming` をアプリへ接続し、Challenge TimingとOverlayで共有する。
-Average・Max・Accuracy・Measured Countを表示する。v1 APIは残すが経路では使わない。
-Migration・Achievementの処理は未変更。
-
----
-
-# Epic 7
-
-## Controller Overlay v2
-
-Priority
-
-High
-
-Status
-
-[x] Runtime Integrated (Implementation Phase 7)
-
-Tasks
-
-- [x] Expected Timeline共有
-- [x] Recorded TimelineからYOU表示データを生成
-- [x] Error表示共有（Missing・Extra・Initial State Error）
-- [x] 対応ペア・Timing測定サンプル共有
-- [x] Stop・境界を除外し、継続観測からYOU入力を捏造しない
-
-完了条件
-
-- [x] 独立APIでMissing・Extra・Timing対象件数一致（Baby・Chirp・Flare）
-- [x] UI接続後のOverlayと採点一致
-
-`createPerformanceOverlay` は表示用データのみを返す。
-独自の判定ロジックは使わず、Matching・Timingの結果を投影する。
-既存画面はv2の結果を表示し、SAMPLE・YOU・ERROR・Timing件数を共有する。
-お手本は採点せず、再生中の未到来イベントはMissingにしない。
-旧データの再採点・Migrationは行わず、Progress・Achievementの実装は維持する。
-
----
-
-# Epic 8
-
-## Migration
-
-Priority
-
-High
-
-Status
-
-[ ] Not Started
-
-方針
-
-Event Model v2導入時に採点関連データを初期化する。
-
-削除対象
-
-- [ ] Challenge Progress
-- [ ] Previous Result
-- [ ] Performance Records
-- [ ] Practice History
-- [ ] Growth Charts
-- [ ] Beginner Progress
-
-保持対象
-
-- [x] Achievement
-- [x] MIDI Mapping
-- [x] Custom Charts
-- [x] App Settings
-
-完了条件
-
-- [ ] 一度だけ実行される
-- [ ] 再実行安全
-- [ ] 古いデータで壊れない
-
----
-
-# Epic 9
-
-## Integration Test Suite
-
-Priority
-
-Critical
-
-Status
-
-[~] Phase 7 Runtime Tests Added / Full Chart Coverage Pending
-
-Tasks
-
-- [x] Input → Recording（ブラウザーでMouse＋Keyboard／模擬MIDIを確認）
-- [x] Recording → Matching
-- [x] Matching → Timing
-- [x] Matching → Overlay
-
-シナリオ
-
-- [x] Baby Scratch
-- [ ] Forward Scratch
-- [ ] Backward Scratch
-- [x] Chirp Scratch
-- [ ] Transformer Scratch
-- [x] One Click Flare Orbit
-
-完了条件
-
-- [x] 理想演奏100%（上記3譜面）
-- [x] 欠落演奏減点
-- [x] 余分演奏減点
-- [x] MIDI/Mouse同結果（上記3譜面、模擬MIDI）
-
-Phase 7ではfeature層の回帰テスト12件を追加。
-保存形式維持、過去記録の未採点、初期状態不正、記録上限超過、
-デモ除外、将来イベントのMissing防止、停止位置固定も検証する。
-実機MIDI・全譜面・Migration後の網羅確認は未完了。
-
----
-
-# Post v2
-
-## Ghost Comparison
-
-Priority
-
-High
-
-Status
-
-[ ] Backlog
-
-Tasks
-
-- [ ] Ghost保存
-- [ ] Ghost再生
-- [ ] Best Run比較
-- [ ] Previous Run比較
-
----
-
-## Replay Viewer
-
-Priority
-
-Medium
-
-Status
-
-[ ] Backlog
-
-Tasks
-
-- [ ] Replay保存
-- [ ] Replay再生
-- [ ] Seek対応
-
----
-
-## Advanced Timing Analysis
-
-Priority
-
-Medium
-
-Status
-
-[ ] Backlog
-
-Tasks
-
-- [ ] Early/Late分析
-- [ ] Signed Error表示
-- [ ] Heat Map
-
----
-
-## Share Features
-
-Priority
-
-Low
-
-Status
-
-[ ] Backlog
-
-Tasks
-
-- [ ] Screenshot Export
-- [ ] Result Card
-- [ ] Share URL
-
----
-
-## Ranking
-
-Priority
-
-Low
-
-Status
-
-[ ] Backlog
-
-Tasks
-
-- [ ] Local Ranking
-- [ ] Online Ranking
-- [ ] Season System
-
----
-
-# Technical Debt
-
-## Medium
-
-- [ ] Date.now → monotonic clock
-- [ ] Multi-tab synchronization
-- [ ] Storage version management
-
-## Low
-
-- [ ] README再整備
-- [ ] スクリーンショット更新
-- [ ] 機能仕様書更新
-
----
-
-# Release Criteria
-
-## Event Model v2 Alpha
-
-必須
-
-- [ ] Chirp 100%
-- [ ] Flare 100%
-- [ ] Overlay整合
-- [ ] Timing整合
-- [ ] Migration完了
-
----
-
-## Event Model v2 Stable
-
-必須
-
-- [ ] Integration Tests
-- [ ] Ghost Foundation
-- [ ] Data Reset Validation
-- [ ] Browser Validation
-
----
-
-# Notes
-
-最優先事項は Event Model v2。
-
-Ghost機能を先に作らない。
-
-採点基盤を完成させてから、
-
-- Ghost
-- Replay
-- Ranking
-
-へ進む。
+### その他Backlog
+
+- Advanced Timing: Early/Late分析、Signed Error表示、Heat Map
+- Share: Screenshot Export、Result Card、Share URL
+- Ranking: Local／Online Ranking、Season System
+- Technical Debt: monotonic clock、Multi-tab synchronization、 Storage version
+  management、スクリーンショット・関連機能仕様書更新
+
+## Deprecated API・利用箇所
+
+以下は残置する。新しい互換レイヤーを作らず、削除も行わない。
+正式ランタイムの採点はv2のみを使用する。
+
+| API                                  | 定義                                 | 現在の呼び出し元                                                                                                                                                                                                                                | 正式API                                   |
+| ------------------------------------ | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| `createExpectedEvents`               | `src/domain/performance-analysis.js` | 同ファイルの`analyzePerformanceTiming`、`tests/domain/performance-analysis_test.js`、`tests/domain/challenge-session_test.js`                                                                                                                   | `createExpectedTimeline`                  |
+| `analyzePerformance`                 | 同上                                 | 同ファイルの`analyzePerformanceLoops`、`tests/domain/performance-analysis_test.js`、`tests/state/performance-recording_test.js`                                                                                                                 | `matchPerformanceTimeline`                |
+| `analyzePerformanceLoops`            | 同上                                 | `tests/domain/performance-analysis_test.js`、`tests/domain/challenge-session_test.js`                                                                                                                                                           | `matchPerformanceTimeline`＋v2 Loop State |
+| `analyzePerformanceTiming`           | 同上                                 | `tests/domain/performance-analysis_test.js`                                                                                                                                                                                                     | `analyzeTimelineTiming`                   |
+| `createExpectedEventTicks`（非公開） | 同上                                 | 同ファイルの`analyzePerformanceTiming`                                                                                                                                                                                                          | `createExpectedTimeline`のtick            |
+| `createStopDetector`（公開入口）     | `src/domain/midi-mapping.js`         | 同ファイルの`createStopObserver`、`tests/domain/midi-mapping_test.js`、`tests/domain/performance-analysis_test.js`、`tests/domain/challenge-session_test.js`、`tests/state/midi-recording_test.js`、`tests/state/performance-recording_test.js` | 入力観測には`createStopObserver`          |
+| `createStopDetector().flush`         | 同上                                 | 上記テスト群のうち`midi-mapping_test.js`、`performance-analysis_test.js`、`challenge-session_test.js`                                                                                                                                           | v2にflushはない                           |
+
+`createStopDetector`は公開利用を非推奨とするが、タイマー本体は
+`createStopObserver`が現在も利用する。関数全体を単純削除してはならない。
+
+旧Overlay専用の`getExpectedOverlayEvents`・`getOverlayErrors`と旧描画本体は App
+Integrationで既に撤去済み。現在のコードに定義・利用箇所はないため、
+新たに復元したり`@deprecated`スタブを作ったりしない。
+
+### 将来の削除候補（今回の削除なし）
+
+- v1採点4 APIと非公開`createExpectedEventTicks`。
+  旧回帰テストの保存方法を決めてから検討する。
+- 停止検出の旧形式公開入口・`flush`。
+  共有タイマーとv1再現テストの依存を分離する前は削除不可。
+- テスト全体を「不要」として削除する候補は現時点ではなし。
+
+`getEventKind`・`alignSequences`・`createEmptyTally`などの共有補助関数は
+v2でも利用するため、旧APIと一緒に削除しない。
+
+## テスト分類
+
+テストの削除・移動・期待値変更は行わない。分類は次のとおり。
+旧仕様の特性テストが成功しても、v2の受入成功を意味しない。
+
+### A. Event Model v2受入テスト — 維持
+
+| ファイル                                                     | 対象                                                        |
+| ------------------------------------------------------------ | ----------------------------------------------------------- |
+| `tests/domain/performance-matching_test.js`                  | 正式モデル番号、理想入力100%、対応ペア、初期状態、半開区間  |
+| `tests/domain/timing-analysis-v2_test.js`                    | 共通ペア、4指標、対象外イベント、測定不能                   |
+| `tests/domain/performance-overlay_test.js`                   | SAMPLE／YOU／ERRORとMatching／Timing件数一致                |
+| `tests/features/performance-view_test.js`                    | 共通分析、保存形式維持、過去記録未採点、上限超過            |
+| `tests/features/practice-view_test.js`                       | デモ除外、将来Missing防止、停止位置固定、遅延Stop、結果共有 |
+| `tests/domain/performance-analysis_test.js`の`v2 timeline`群 | Meaning Event生成、同方向統合、FC3、各譜面                  |
+
+### B. 回帰テスト・現行共通機能 — 維持
+
+| ファイル・範囲                                                        | 対象                                                     |
+| --------------------------------------------------------------------- | -------------------------------------------------------- |
+| `tests/domain/playback_test.js`、`playback-controller_test.js`        | 境界API、入力増殖防止、再生制御                          |
+| `tests/domain/midi-mapping_test.js`                                   | マッピング、圧縮、停止観測、取消・古いタイマー排除       |
+| `tests/domain/challenge-session_test.js`                              | 進行制御、v2境界・Stop観測、デモから記録への状態保持     |
+| `tests/state/performance-recording_test.js`、`midi-recording_test.js` | 記録・圧縮・保存、v2境界保持                             |
+| `tests/domain/performance_test.js`、`bpm-challenge_test.js`           | 保存とChallengeの既存動作                                |
+| その他のdomain／state／uiテスト                                       | 譜面・Builder・Repository・Storage・描画・入力ログの回帰 |
+
+### C. v1特性・不整合再現テスト — 資料として維持
+
+- `performance-analysis_test.js`の旧期待生成・旧照合・旧Timing・flush群。
+- 同ファイルの`v1 regression`群: Chirp 72.3%／Flare
+  75.8%を固定。v2の目標値ではない。
+- `midi-mapping_test.js`の同方向＋フェーダーカット圧縮の`v1 regression`。
+  圧縮動作自体は現行でも正しいため残す。
+- `performance-recording_test.js`の小節／ループresetによる重複生成の
+  `v1 regression`群。旧処理を明示的に再現する。
+- `challenge-session_test.js`の旧flush／境界Stop／旧採点を使う再現群。
+- `midi-recording_test.js`と`performance-recording_test.js`の旧Stop形式を使う
+  記録テストは、既存の保存表現の回帰としても維持する。
+
+ファイルには複数分類が混在する。Cを含むという理由でファイル単位の削除をしない。
+全分類を既存の`deno test`で引き続き実行する。
+
+## Completion Decision
+
+Event Model v2のExpected・Boundary・Stop・Matching・Timing・Overlay・ App
+Integrationは完了。追加検証とGhost／Replayは残作業として独立管理する。
+データ移行・リセットは実装せず、完了判定の条件にも含めない。

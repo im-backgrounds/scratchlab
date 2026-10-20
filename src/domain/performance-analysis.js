@@ -2,6 +2,8 @@ import { COUNT_KEYS } from "./performance.js";
 import { createStopObservation } from "./midi-mapping.js";
 import { createLoopBoundary, isEventInLoop } from "./playback.js";
 
+export const EVENT_MODEL_VERSION = 2;
+
 /** Event kinds in the same vocabulary as the performance counts. */
 const KIND_LANES = {
   forward: "scratch",
@@ -33,6 +35,7 @@ export function getEventKind(event) {
  * and add no events. Events carry no timing.
  * @param {{events: object[]}} scoreData Output of compileScoreData.
  * @returns {{type: string, direction?: string, state?: string}[]}
+ * @deprecated v1 regression coverage only. Use createExpectedTimeline.
  */
 export function createExpectedEvents(scoreData) {
   const expected = [];
@@ -61,7 +64,7 @@ export function createExpectedEvents(scoreData) {
 /**
  * Builds the v2 meaning-event timeline in score ticks. The initial fader is
  * open; cuts preserve direction, and neither K nor the end implies a Stop.
- * Kept separate from the v1 scoring/timing path until its migration.
+ * Shared by runtime matching, timing analysis, and controller overlay.
  * @param {{events: object[]}} scoreData Compiled score data.
  * @returns {({type: "scratch", direction: "forward"|"backward", tick: number}
  *   | {type: "fader", state: "open"|"closed", tick: number})[]}
@@ -442,6 +445,7 @@ export function analyzeTimelineTiming(scoreData, matching, loopStates, bpm) {
   };
 }
 
+/** @deprecated v1 timing helper only. Use createExpectedTimeline ticks. */
 function createExpectedEventTicks(scoreData) {
   const ticks = [];
   let faderOpen = true;
@@ -474,6 +478,7 @@ function createExpectedEventTicks(scoreData) {
  * @param {object[]} actualEvents Timestamped performance events.
  * @param {number[]} loopEnds Ascending offsets where recorded loops end.
  * @param {number} bpm BPM used for the challenge.
+ * @deprecated v1 regression coverage only. Use analyzeTimelineTiming with v2 matching pairs.
  */
 export function analyzePerformanceTiming(
   scoreData,
@@ -564,6 +569,7 @@ export function analyzePerformanceTiming(
  * together does not matter. Timing is ignored.
  * @param {object[]} expectedEvents Output of createExpectedEvents.
  * @param {object[]} actualEvents Events of a performance.
+ * @deprecated v1 regression coverage only. Use matchPerformanceTimeline.
  */
 export function analyzePerformance(expectedEvents, actualEvents) {
   const byKind = Object.fromEntries(
@@ -613,6 +619,7 @@ export function analyzePerformance(expectedEvents, actualEvents) {
  * @param {object[]} actualEvents Events of a performance.
  * @param {number[]} [loopEnds] Ascending offsets (ms) where a loop ends. An
  *   event at exactly that offset still belongs to the loop that ends there.
+ * @deprecated v1 regression coverage only. Use matchPerformanceTimeline with v2 loop states.
  */
 export function analyzePerformanceLoops(
   expectedEvents,

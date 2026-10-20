@@ -2,442 +2,104 @@
 
 最終更新: 2026-10
 
----
+## Vision
 
-# Vision
+ScratchLabを「スクラッチ練習を可視化できるブラウザーDJトレーニングツール」
+として育てる。練習・分析・上達確認を軸に、将来のGhost比較やReplayへつなげる。
 
-ScratchLab を
+## Current Status
 
-「スクラッチ練習を可視化できる ブラウザーDJトレーニングツール」
+### Event Model v2 — Completed
 
-として育てる。
+現在のブランチをEvent Model v2の正式実装とする。
+`performance-analysis.js`の`EVENT_MODEL_VERSION = 2`で採点モデルを明示する。
+アプリ全体や保存形式のバージョンとは区別する。
 
-目標は
+| 完了項目             | 内容                                                   |
+| -------------------- | ------------------------------------------------------ |
+| Expected Timeline    | ストロークとフェーダー変化のMeaning Event生成          |
+| Boundary Rework      | 物理状態保持、半開区間、境界での余分入力防止           |
+| Stop Handling Rework | Mouse/MIDIの物理停止観測、境界・採点から分離           |
+| Matching Engine      | 共通対応ペア、Missing・Extra・Initial State Validation |
+| Timing Analysis      | 同じ対応ペアから4指標を集計、継続観測は対象外          |
+| Controller Overlay   | Expected・Recorded・Matchingの共通投影                 |
+| App Integration      | Challenge・Beginner Course・直後の結果・Overlayへ接続  |
 
-- 練習
-- 分析
-- 上達確認
+確認済み:
 
-ができること。
+- Baby Scratch・Chirp Scratch・1 Click Flare Orbitの理想入力100%。
+- Mouse＋Keyboardと模擬MIDIで同じ採点結果。
+- OverlayのMissing／Extra件数とMatching結果が一致。
+- TimingのMeasured CountとOverlayの表示件数が一致。
+- 初期フェーダー未確認／閉ではクリア・進捗更新を行わない。
+- 過去記録をv2で再採点せず、再挑戦を案内する。
 
-将来的には
+詳細: [設計仕様](event-model-v2.md) /
+[リリースノート](releases/event-model-v2.md) / [Tasks](tasks.md)
 
-- Ghost Comparison
-- ランキング
-- コミュニティ共有
+### 既存の提供機能
 
-まで発展させる。
+BPM Challenge、Practice Mode、Mouse／Keyboard／MIDI入力、Beginner Course、
+初回ガイド、Previous Result、Practice History、Growth Charts、Achievement、
+譜面作成・保存を引き続き提供する。
 
----
+### データ方針
 
-# Current Status
+- Migration・初期化・データ変換を行わない。
+- v1スコアとの互換レイヤーを作らない。
+- Storage・Progress・Achievement・LocalStorageの保存形式と既存データは変更しない。
+- 保存済みのスコアは残るが、v2へ換算・再検証しない。
+- 実行時の境界・初期状態・対応ペアはメモリー内だけで保持する。
 
-## BPM Challenge v1
+旧文書の「Migration必須」「公開前に採点データをリセットする」は撤回する。
+Migrationは未完了タスクではなく、本方針の対象外。
 
-完了
+## Remaining Work
 
-### Core
+Event Model v2の実装完了と、以下の追加検証・将来機能は分離する。
 
-- [x] MIDI入力
-- [x] Keyboard入力
-- [x] Mouse入力
-- [x] Practice Mode
-- [x] BPM Challenge
+### 実機MIDI検証 — High
 
-### Analysis
+- [ ] 実コントローラーの方向・フェーダー入力で3対象譜面を確認
+- [ ] 連続入力、停止閾値、境界跨ぎを確認
+- [ ] Mouseと実機MIDIの結果一致を確認
 
-- [x] Sequence Accuracy
-- [x] Timing Analysis
-- [x] Average Error
-- [x] Max Error
-- [x] Timing Accuracy
+### E2E確認 — High
 
-### History
+- [ ] 全対象譜面・主要ブラウザーでChallenge／Beginner Courseを確認
+- [ ] Missing・Extra・初期状態エラー・中断・再挑戦を網羅
+- [ ] Previous Result・Timing・Overlayの画面整合を確認
 
-- [x] Practice History
-- [x] Growth Charts
-- [x] Achievement System
+3対象譜面のブラウザー確認は完了済み。自動E2Eスイートと全譜面の網羅は未完了。
 
-### UX
+### Ghost Foundation — High
 
-- [x] Beginner Course
-- [x] First Visit Guidance
-- [x] Baby Scratch Quick Start
-- [x] Previous Result Display
-
-### Visualization
-
-- [x] Controller Overlay
-- [x] SAMPLE Timeline
-- [x] YOU Timeline
-- [x] Error Overlay
-
----
-
-# Known Issues
-
-現在確認済み。
-
-Phase 7 App Integrationで新規ランタイム分析はEvent Model v2へ切替済み。
-以下の粒度不整合は新規実行では解消済みだが、保存済みのv1結果には残る。
-保存形式・Progress・Achievementは変更せず、Migrationは未実施。
-
-## Event Model Mismatch
-
-期待イベントと入力イベントの粒度が一致していない。
-
-対象例
-
-- Chirp Scratch
-- 1 Click Flare Orbit
-
-影響
-
-- BPM Challenge
-- Beginner Course
-- Overlay
-- Timing Analysis
-
-優先度
-
-Critical
-
-対応
-
-Event Model v2
-
----
-
-# Next Major Milestone
-
-## Event Model v2 Migration
-
-Status:
-
-Design Frozen
-
-Priority:
-
-Critical
-
----
-
-# Event Model v2
-
-## 現在の接続状況（実装Phase 7）
-
-- [x] BPM Challenge・Beginner Courseへv2 Matching接続
-- [x] Timing・Controller Overlayが同じ対応ペアを利用
-- [x] 実入力のBoundary snapshot・Stop observationを接続
-- [x] 初期フェーダー未確認／不一致のクリア防止
-- [x] Mouse＋Keyboard／模擬MIDIでBaby・Chirp・Flare 100%
-- [x] 過去記録は再採点せず再挑戦を案内
-- [ ] 保存データMigration（別フェーズ）
-
-下記Phase 1〜5の未接続説明は独立API実装時点の履歴。
-Phase 7ではランタイムのみ接続し、保存形式と既存Progress／Achievement処理は維持する。
-
-目的
-
-採点モデルを統一する。
-
-現在
-
-Expected Event ≠ Recorded Event
-
-となっている。
-
-これを
-
-Meaning Event
-
-へ統一する。
-
----
-
-## Goals
-
-- 採点信頼性向上
-- Overlay整合
-- Timing整合
-- Beginner整合
-- Ghost基盤構築
-
----
-
-## Scope
-
-### Event Model
-
-- Forward Stroke
-- Backward Stroke
-- Fader Open
-- Fader Close
-- Stop
-- Loop Boundary
-
-### State Model
-
-- currentDirection
-- faderState
-- loopState
-
-### Timeline
-
-- Expected Timeline
-- Recorded Timeline
-
-### Matching
-
-- Common Matching Engine
-
-### Analysis
-
-- Timing Analysis v2
-
-### Visualization
-
-- Overlay v2
-
----
-
-## Tasks
-
-### Phase 1
-
-Expected Timeline v2
-
-- [x] ストローク単位モデル
-- [x] フェーダー状態モデル
-- [x] 共通タイムライン生成
-
-生成器のみ実装済み。v1採点経路は維持し、Matching・Timing・Overlayへの接続は
-後続フェーズで行う。
-
----
-
-### Phase 2
-
-Boundary Rework
-
-- [x] 小節reset廃止
-- [x] ループ境界再設計
-- [x] Stop再設計（観測API・入力処理）
-
-実入力の境界resetと境界由来のStop強制生成を撤去済み。
-v2制御イベント・状態スナップショット・半開区間APIは独立実装し、
-アプリ・v1採点・Timing・Overlayには未接続。
-
-Stop Handling（実装Phase 3 / Epic 4）ではMouse/MIDIの停止検出を共通化し、
-物理停止観測の独立APIを追加済み。操作解除とLoop BoundaryはStopを作らない。
-v2観測の接続・Stopの採点対象外化は後続作業。
-
----
-
-### Phase 3
-
-Matching Engine v2
-
-- [x] 共通Matching Engine（実装Phase 4 / Epic 5、独立API）
-- [x] 対応ペア保持（メモリー内）
-- [x] Accuracy再検証（Baby・Chirp・Flareの圧縮済み理想入力100%）
-
-Stop・Loop Boundaryは除外し、半開区間ごとに照合する。
-冒頭の同方向継続は一致として数えるがTiming対象外。
-初期フェーダー検証は一致率と別に返す。アプリ・Challenge結果・Timing・Overlayへの
-接続と永続化は未実施。
-
----
-
-### Phase 4
-
-Timing Analysis v2
-
-- [x] 共通ペア利用（実装Phase 5 / Epic 6、独立API）
-- [x] Signed Error保持
-- [x] Overlay独立APIへ測定サンプル共有
-
-Matching結果を再照合せず利用する。継続観測・Stop・境界・Missing・Extraは測定しない。
-Average Error・Max Error・Timing Accuracy・Measured Countとペア別誤差を返す。
-アプリ・Challenge結果・Overlayへの接続は未実施。既存v1 Timingは未変更。
-
----
-
-### Phase 5
-
-Overlay v2
-
-- [x] 共通Expected利用（実装Phase 6 / Epic 7、独立API）
-- [x] 共通Matching利用
-- [x] Error整合（Missing・Extra・Initial State Error）
-
-SAMPLE・YOU・ERRORの表示データを生成し、Timing結果のサンプルを共有する。
-Stop・境界・デモは表示しない。3対象譜面でMissing・Extra・測定件数を検証済み。
-既存UI・Challenge結果・Progress・保存への接続は未実施。
-
----
-
-### Phase 6
-
-Migration
-
-- [ ] 採点データ初期化
-- [ ] Progress初期化
-- [ ] History初期化
-- [ ] Growth初期化
-- [ ] Beginner Progress初期化
-
-保持
-
-- [x] MIDI Mapping
-- [x] Custom Charts
-- [x] Achievement
-
----
-
-### Phase 7
-
-Integration Tests
-
-- [ ] Mouse → Score
-- [ ] MIDI → Score
-- [ ] Timing Accuracy
-- [ ] Overlay Accuracy
-- [ ] Chirp 100%
-- [ ] Flare 100%
-
----
-
-# Post v2 Features
-
-優先度順
-
----
-
-## Ghost Comparison
-
-演奏履歴比較
-
-- [ ] Best Run
-- [ ] Previous Run
+- [ ] 比較用の記録・対応ペアの扱いを設計
+- [ ] Best Run／Previous Run比較
 - [ ] Ghost Overlay
 
-優先度
+共通Meaning Eventと対応ペアは利用できるが、Ghost機能自体は未実装。
 
-High
+### Replay Viewer — Medium
 
----
+- [ ] Replay保存・再生
+- [ ] Seek・巻き戻し
 
-## Replay Viewer
+## Post v2 Backlog
 
-- [ ] リプレイ保存
-- [ ] 再生
-- [ ] 巻き戻し
+以下は改善候補であり、実装時期や提供を確約しない。
 
-優先度
+- Advanced Timing Analysis: Signed Error表示、Early/Late分析、Heat Map。
+  符号付き誤差の保持はv2で実装済み。
+- Ranking: Local／Community Ranking。
+- Share Features: Result Card、Screenshot Export、Share URL。
+- Technical Debt: monotonic clock、Multi-tab synchronization、 Storage version
+  management、スクリーンショット・関連機能仕様書の更新。
+- Monetization: Ads、Supporter Plan、Premium Analyticsは検討段階。
 
-Medium
+## Completion Criteria
 
----
-
-## Advanced Timing Analysis
-
-- [ ] Signed Error
-- [ ] Early/Late分析
-- [ ] Heat Map
-
-優先度
-
-Medium
-
----
-
-## Ranking
-
-- [ ] Local Ranking
-- [ ] Community Ranking
-
-優先度
-
-Low
-
----
-
-## Share Features
-
-- [ ] Result Card
-- [ ] Screenshot Export
-- [ ] Share URL
-
-優先度
-
-Low
-
----
-
-# Monetization
-
-検討段階
-
-実装未定
-
-候補
-
-- Ads
-- Supporter Plan
-- Premium Analytics
-
-条件
-
-Event Model v2 完了後
-
----
-
-# Release Plan
-
-## Current
-
-v1.0-beta
-
----
-
-## Next
-
-v2.0-alpha
-
-条件
-
-- Event Model v2 完了
-- Chirp 100%
-- Flare 100%
-- Overlay整合
-- Timing整合
-
----
-
-## Future
-
-v2.0
-
-条件
-
-- Ghost Comparison
-- Replay
-- Integration Tests安定化
-
----
-
-# Success Criteria
-
-v2完了時
-
-- 正しい演奏は100%
-- MouseとMIDIで同結果
-- Overlayと採点一致
-- Timingと採点一致
-- BeginnerとChallenge一致
-- Ghost比較可能
-
-以上を満たした時点で
-
-ScratchLab の採点基盤は完成とみなす。
+Event Model v2の完了根拠は、共通モデルによる採点・Timing・Overlay・Beginner
+Courseの
+接続と3対象譜面の受入確認。Ghost／Replayの完成やデータ移行は完了条件に含めない。
+アプリ全体のリリース番号や公開操作は、この整理では変更しない。

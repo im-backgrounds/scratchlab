@@ -1,11 +1,15 @@
 # Event Model v2
 
-Status: Design Frozen (Draft)
+Status: Completed — Official Implementation
+
+`src/domain/performance-analysis.js`の`EVENT_MODEL_VERSION = 2`を正式なモデル番号とする。
+現在のブランチが正式実装であり、v1スコアとの互換レイヤーは作らない。
+この番号は保存形式のバージョンではない。
 
 ## Phase 7 App Integration（現在の実装）
 
-- Expected → Matching → Timing → Overlayを共通の分析結果としてアプリへ接続。
-  BPM Challenge・Beginner Course・直後の結果・Controller Overlayで共有する。
+- Expected → Matching → Timing → Overlayを共通の分析結果としてアプリへ接続。 BPM
+  Challenge・Beginner Course・直後の結果・Controller Overlayで共有する。
 - 実際のループ開始／終了時刻でBoundary snapshotを保持する。小節境界や
   ループ末尾のtickでは物理状態をresetしない。Mouse/MIDIのStopは物理停止観測と
   して記録し、Matching・Timing・Overlayから除外する。
@@ -19,11 +23,13 @@ Status: Design Frozen (Draft)
   記録2ループをそれぞれ表示し、Missing・Extra・Initial State Error・Timing件数は
   全ループの合計を表示する。再生中は経過区間だけを暫定判定し、
   未到来イベントをMissingにしない。お手本は採点対象外。
-- Migration・Progress／Achievementのロジック・スキーマは未変更。
-  Previous Result・履歴の旧スコアは残るため、公開前のMigrationは別途必要。
+- Migration・データ移行・初期化・変換は行わない。
+  Storage・Progress／Achievementのロジック・スキーマと既存データは維持する。
+  Previous Result・履歴の旧スコアをv2へ換算しない。
 
-以下の各Phase実装状況は、そのPhase完成時の履歴を含む。
-「未接続」の記載はPhase 7以前の状態であり、現在のランタイム経路は上記のとおり。
+Expected・Boundary・Stop・Matching・Timing・Overlay・App Integrationは完了。
+実機MIDI検証・全譜面E2E・Ghost Foundation・Replay Viewerは別の残作業とする。
+詳細は[Tasks](tasks.md)と[リリースノート](releases/event-model-v2.md)を参照。
 
 ## Background
 
@@ -51,7 +57,7 @@ Event Model v2 は、採点・表示・分析・将来の Ghost Comparison
 
 ---
 
-# Problem Statement
+# Problem Statement（解決済みのv1問題）
 
 v1 では以下の問題がある。
 
@@ -85,7 +91,7 @@ Forward
 
 ## Boundary Reset 問題
 
-小節境界やループ境界で状態をリセットしているため、
+v1では小節境界やループ境界で状態をリセットしていたため、
 
 - 存在しない入力が生成される
 - 余分な入力として採点される
@@ -96,7 +102,7 @@ Forward
 
 ## Stop 問題
 
-現在の Stop は
+v1の Stop は
 
 - MIDI 停止タイマー
 - Mouse 停止タイマー
@@ -195,11 +201,12 @@ Phase 3（Epic 4）の `midi-mapping.js` では以下を独立APIとして提供
 v2観測APIには `flush` を設けない。ループ・記録の開始／終了は物理停止ではない。
 観測がループ境界を跨いだ場合は観測時刻により区間へ所属させる。
 
-これらのAPIはアプリ・v1採点・Timing・Overlayには未接続。
-既存アプリは共通の停止検出処理から従来形式の
-`{ type: "scratch", direction: "stop", time }` を受け取り、v1経路を維持する。
-v1互換の `createStopDetector.flush` は既存テスト・互換APIとして残すが、
-アプリからは呼ばず、v2 APIにも公開しない。
+アプリは`createStopObserver`を使用し、v2観測を実行時の記録へ保持する。
+ログ・保存用のStopは既存の`{ type: "scratch", direction: "stop", time }`表現を
+維持するが、採点には使わない。
+`createStopDetector`の公開利用と`flush`は非推奨として残置する。
+タイマー本体は`createStopObserver`が内部利用するため単純削除しない。
+`flush`はアプリから呼ばず、v2 APIにも公開しない。
 
 ---
 
@@ -209,7 +216,7 @@ v1互換の `createStopDetector.flush` は既存テスト・互換APIとして�
 
 採点対象外。
 
-Phase 2では `playback.js` の `createLoopBoundary` として独立定義する。
+`playback.js` の `createLoopBoundary` として定義し、アプリから利用する。
 `type: "loop-boundary"`、`edge: "start" | "end"`、`sessionId`、`loopIndex`、
 `phase: "demo" | "recording"`、`time`、`currentDirection`、`faderState` を持つ。
 時刻は入力イベントと同じ絶対ミリ秒。状態は境界時点のコピーで、入力を生成しない。
@@ -270,12 +277,12 @@ Phase 2では `playback.js` の `createLoopBoundary` として独立定義する
 - Timing Analysis
 - Overlay
 
-Phase 2の `createLoopState` は同じセッション・ループ・フェーズの開始境界と
+`createLoopState` は同じセッション・ループ・フェーズの開始境界と
 終了境界から完了区間を作る。区間は `[startTime, endTime)` とし、
 境界時刻ちょうどの入力は次ループに属する。開始方向と開始フェーダー状態を保持する。
 
-これらのv2境界APIはまだアプリ・採点・Timing・Overlayへ接続しない。 既存v1の
-`loopEnds` による区間分割は変更しない。
+アプリ・採点・Timing・Overlayは同じv2境界を利用する。保存用の既存`loopEnds`は
+変更せず、v2の初期状態情報がない保存記録から区間を推測して再採点しない。
 
 ---
 
@@ -286,11 +293,10 @@ Phase 2の `createLoopState` は同じセッション・ループ・フェーズ
 `src/domain/performance-analysis.js` の `createExpectedTimeline` が、 Meaning
 Event と譜面上の `tick` を一緒に持つ配列を生成する。
 初期フェーダーは開。同方向の継続は統合し、カットの閉→開は維持する。
-Kと終端からStopを生成しない。Loop Boundaryの導入は後続フェーズで扱う。
+Kと終端からStopを生成しない。Loop Boundaryは独立した制御イベントとする。
 
-現在の `createExpectedEvents` はv1採点・Timingとの互換経路として維持する。
-v2生成器はまだアプリの採点・Timing・Overlayへ接続していないため、 Phase
-1だけでは画面の一致率や既存の採点不整合は変わらない。
+`createExpectedTimeline`は正式ランタイムの期待生成器。
+`createExpectedEvents`は非推奨のv1再現APIとしてのみ残し、正式経路では使わない。
 
 ## Phase 2 入力経路の修正
 
@@ -302,13 +308,13 @@ v2生成器はまだアプリの採点・Timing・Overlayへ接続していな�
 記録開始時も停止タイマーを破棄しない。Mouse/MIDIの通常の無入力タイマーと
 停止検出時間は維持し、Loop Boundary自体からStopを生成しない。
 
-採点アルゴリズム・保存形式はv1のままだが、記録イベント列の修正により結果は変動する。
-v1が要求するStopやループ冒頭のストロークが不足と判定される問題は、
-後続のMatching Engine・初期状態検証・Stop Handlingで解決する。
+採点はv2へ接続済み。境界snapshotにより冒頭の継続を確認し、存在しない
+ストロークや終端Stopを要求しない。保存形式は変更しない。
 
 ## Phase 3 Stop入力経路の整理
 
-MouseとMIDIの無入力検出を `createStopDetector` の共通処理に統一する。
+MouseとMIDIの無入力検出を `createStopObserver` へ統一する。 内部のタイマー処理は
+`createStopDetector` と共有する。
 Mouseでは圧縮前・120ms間引き前の全移動で停止タイマーを更新する。
 複数入力元を使う場合は、最後に移動入力が来た入力元へ停止観測を引き継ぐ。
 古い入力元のタイマーはキャンセルし、同時操作中の偽のStopを防ぐ。
@@ -318,8 +324,7 @@ Esc・練習モード解除・フォーカス喪失・画面切り替えは観�
 物理Stopは生成しない。必要な音声停止は記録イベントを介さず実行する。
 キャンセルでは圧縮器へ停止状態を捏造せず、境界でも物理状態を破棄しない。
 
-v1のStop採点とTimingは変更していないため、Stop不足による減点などは残る。
-v2観測の採点対象外化と実入力への接続は、後続フェーズで行う。
+v2観測は実入力へ接続済み。Stop不足・過剰は採点やTiming件数に影響しない。
 
 ## 原則
 
@@ -487,12 +492,13 @@ K後などtick
 `unconfirmed`、closedなら `mismatch`、openなら `valid`。
 後続の開閉イベントでは初期状態を推測しない。冒頭のCloseも通常どおり照合する。
 一致率100%でも初期状態が未確認・不一致ならクリア不可とするため、
-将来の呼び出し側は一致率とは別に `initialStateValid` を確認する。
+アプリは一致率とは別に `initialStateValid` を確認する。
 Engine自体はChallengeの合否・進捗更新・Timing計算を行わない。
 
 Baby・Chirp・1 Click Flareは、期待生成器とは独立した理想操作列を圧縮して
 2ループとも100%となることを検証済み。
-アプリ・UI・Challenge結果・Timing・Overlay・保存にはまだ接続していない。
+アプリ・UI・Challenge結果・Timing・Overlayへ接続済み。
+対応ペアと境界snapshotは保存せず、メモリー内で共有する。
 
 ## レーン分離
 
@@ -595,9 +601,9 @@ Missing・Extra・区間外イベントは対応ペアに含まれず、0msと�
 初期フェーダー検証・Sequence Accuracy・Challenge合否には影響しない。
 不正なBPM・tick換算・測定対象ペア・参照ループは例外で通知する。
 
-既存 `analyzePerformanceTiming` は未変更。 v2
-Timingは独立Matching結果を利用するが、アプリ・UI・Challenge結果・Overlay・
-Migration・Achievementには接続していない。
+`analyzePerformanceTiming`は非推奨のv1再現APIとして残置する。
+正式ランタイムは`analyzeTimelineTiming`を使用し、ChallengeのTiming表示と
+Overlayへ同じ結果を渡す。MigrationとAchievementの実装は変更しない。
 
 ## 対象
 
@@ -692,14 +698,15 @@ Stop（v2観測・従来形式）・Loop Boundary・デモ・区間外入力は�
 Missing・Extra・継続観測には `timing: null` を返す。
 
 SAMPLEの位置単位はtick、YOUの位置単位はループ内ミリ秒として明示する。
-描画時の座標変換・色・DOMは後続のUI接続で扱う。
+描画時の座標変換・色・DOMは`src/ui/performance.js`で扱う。
 入力の参照・集計・Timing件数が一致しない場合は例外で通知し、
 独自の判定や成功扱いの代替結果は生成しない。
 
 Baby・Chirp・1 Click
 Flareの2ループについて、正常・Missing/Extra・初期状態エラーで
-MatchingのMissing/Extra件数とTimingの測定件数の一致を検証した。 既存Overlay
-v1・UI・Challenge結果・Progress・Achievement・Migrationは未変更。
+MatchingのMissing/Extra件数とTimingの測定件数の一致を検証した。
+既存画面をv2へ接続し、旧Overlayの期待生成・独自LCS照合は撤去済み。
+Progress・Achievementの処理と保存形式は変更しない。
 
 ## SAMPLE
 
@@ -757,68 +764,39 @@ Achievement 判定は v2 の結果を利用する。
 
 ---
 
-# Migration Strategy
+# Data Policy（Migrationなし）
 
-## 方針
+旧方針の「導入時に採点関連データを初期化する」は撤回する。
 
-v1 と v2 は共存しない。
+- Migration・LocalStorage削除・Progress初期化・データ変換は行わない。
+- Storage・Achievementの処理、保存形式、既存データは変更しない。
+- v1結果とv2結果の相互換算・再採点・互換レイヤーは作らない。
+- 正式ランタイムはv2のみ。旧v1 APIは非推奨の再現テスト用として残置する。
+- 過去のPrevious Result・履歴は保持するが、v2で検証済みとは扱わない。
+- 再読込・インポートした記録には境界・初期状態情報がないため、
+  v2で再採点せず再挑戦を案内する。
 
-Event Model v2 導入時に
-
-採点関連データのみ初期化する。
-
----
-
-## リセット対象
-
-- Challenge Progress
-- Previous Result
-- Performance Records
-- Practice History
-- Growth Charts
-- Beginner Course Progress
+Event Model番号と保存形式の番号は独立であり、`EVENT_MODEL_VERSION = 2`は
+保存形式version 1の変更を意味しない。
 
 ---
 
-## 維持対象
-
-- MIDI Mapping
-- Custom Charts
-- 編集中データ
-- UI設定
-- 初回ガイド状態
-- Achievement
-
----
-
-## リセット理由
-
-v1 データは
-
-- 欠落イベント
-- Stop情報不足
-- 境界処理の差異
-
-を含むため、
-
-v2へ再採点できない。
-
----
-
-# Required Refactors
+# Implementation Inventory（完了・追加リファクタなし）
 
 ## Domain
 
 - performance-analysis.js
-- performance.js
 - midi-mapping.js
+- playback.js
 - challenge-session.js
-- bpm-challenge.js
-- beginner-course.js
-- achievement-system.js
+- performance-overlay.js
+
+保存・Progress・Achievementの変更は対象外。`performance.js`、
+`bpm-challenge.js`、`beginner-course.js`、`achievement-system.js`の追加変更は要求しない。
 
 ## Features
 
+- app.js（接続）
 - performance-view.js
 - practice-view.js
 
@@ -869,9 +847,10 @@ v2へ再採点できない。
 
 - Overlay の Missing / Extra が採点結果と一致する
 
-## Migration
+## Data Preservation
 
-- v1データによって v2 が壊れない
+- Storage・Progress・Achievementの形式や既存データを変更しない
+- 境界情報のない記録をv2で再採点しない
 
 ---
 
@@ -880,7 +859,7 @@ v2へ再採点できない。
 ## High
 
 - Event Model刷新による採点結果変化
-- 既存ベストスコア消失
+- 過去のベストスコアとv2スコアの条件が異なる（換算・削除は行わない）
 
 ## Medium
 
