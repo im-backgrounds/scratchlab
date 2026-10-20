@@ -8,7 +8,11 @@ import {
   isSessionRunning,
   transitionSession,
 } from "../../src/domain/challenge-session.js";
-import { createStopDetector } from "../../src/domain/midi-mapping.js";
+import {
+  createEventCompressor,
+  createStopDetector,
+} from "../../src/domain/midi-mapping.js";
+import { createLoopBoundary } from "../../src/domain/playback.js";
 import {
   analyzePerformanceLoops,
   createExpectedEvents,
@@ -206,12 +210,13 @@ for (const pendingStop of [false, true]) {
         (loop - 1) * Number(pendingStop),
       );
 
-      // The state machine emits no input; app.js separately flushes MIDI stops.
+      // Historical v1 reproduction: app.js used to flush MIDI stops here.
       detector.flush(boundaryAt);
       assert.equal(scheduled, null);
       if (loop === 1) loopEnds.push(boundaryAt - startedAt);
       session = next.session;
     }
+
     const performance = createPerformance(recorded, {
       startedAt,
       endedAt: startedAt + 2000,
@@ -238,3 +243,68 @@ for (const pendingStop of [false, true]) {
     assert.equal(analysis.accuracy, pendingStop ? 100 : 50);
   });
 }
+
+Deno.test("v2 boundaries preserve demo input, recording state and the real stop timer", () => {
+  const compressor = createEventCompressor();
+  const recorded = [];
+  let scheduled;
+  let session = run([START]).session;
+  const feed = (event) => {
+    const kept = compressor.accept(event);
+    if (kept && session.phase === CHALLENGE_PHASES.RECORDING) {
+      recorded.push(kept);
+    }
+  };
+  const detector = createStopDetector({
+    onStop: feed,
+    setTimer: (callback) => {
+      scheduled = callback;
+      return 1;
+    },
+    clearTimer: () => {
+      scheduled = null;
+    },
+  });
+  feed({ type: "fader", state: "closed", time: 990 });
+  const forward = { type: "scratch", direction: "forward", time: 995 };
+  feed(forward);
+  detector.observe(forward);
+  const pending = scheduled;
+  for (const time of [1000, 1050]) {
+    session = transitionSession(session, LOOP_END).session;
+    const start = createLoopBoundary({
+      edge: "start",
+      sessionId: "test-session",
+      loopIndex: session.take,
+      phase: "recording",
+      time,
+      inputState: compressor.getState(),
+    });
+    feed({ ...forward, time });
+    feed({ type: "fader", state: "closed", time });
+    assert.deepEqual(recorded, []);
+    assert.equal(start.currentDirection, "forward");
+    assert.equal(start.faderState, "closed");
+    assert.equal(scheduled, pending);
+  }
+  scheduled();
+  assert.deepEqual(recorded, [
+    { type: "scratch", direction: "stop", time: 1145 },
+  ]);
+  assert.equal(compressor.getState().currentDirection, "stopped");
+  feed({ ...forward, time: 1150 });
+  assert.equal(recorded.length, 2);
+  const end = createLoopBoundary({
+    edge: "end",
+    sessionId: "test-session",
+    loopIndex: 2,
+    phase: "recording",
+    time: 1200,
+    inputState: compressor.getState(),
+  });
+  session = transitionSession(session, LOOP_END).session;
+  assert.equal(session.phase, CHALLENGE_PHASES.ANALYZING);
+  assert.equal(recorded.length, 2);
+  assert.equal(end.currentDirection, "forward");
+  assert.equal(end.faderState, "closed");
+});

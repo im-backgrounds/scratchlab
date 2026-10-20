@@ -764,3 +764,32 @@ Deno.test("a 800-message stroke stream becomes one event per stroke", () => {
     "stop",
   ]);
 });
+Deno.test("compressor state snapshots are detached and boundaries cannot reset them", () => {
+  const compressor = createEventCompressor();
+  assert.deepEqual(compressor.getState(), {
+    currentDirection: "unknown",
+    faderState: "unknown",
+  });
+  compressor.accept({ type: "scratch", direction: "backward", time: 10 });
+  compressor.accept({ type: "fader", state: "open", time: 20 });
+  const snapshot = compressor.getState();
+  snapshot.currentDirection = "forward";
+  snapshot.faderState = "closed";
+  assert.deepEqual(compressor.getState(), {
+    currentDirection: "backward",
+    faderState: "open",
+  });
+  assert.equal(
+    compressor.accept({ type: "loop-boundary", edge: "end", time: 30 }),
+    null,
+  );
+  assert.deepEqual(compressor.getState(), {
+    currentDirection: "backward",
+    faderState: "open",
+  });
+  compressor.accept({ type: "scratch", direction: "stop", time: 40 });
+  assert.equal(compressor.getState().currentDirection, "stopped");
+  assert.ok(
+    compressor.accept({ type: "scratch", direction: "backward", time: 50 }),
+  );
+});

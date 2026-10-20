@@ -320,7 +320,8 @@ export function createStopDetector({
  * is dropped when the previous scratch event had the same direction, and a
  * fader event when the previous one had the same state. A stop counts as a
  * direction, so the next stroke after a stop is kept again.
- * @returns {{accept: (event: object) => object|null, reset: () => void}}
+ * @returns {{accept: (event: object) => object|null, reset: () => void,
+ *   getState: () => {currentDirection: string, faderState: string}}}
  */
 export function createEventCompressor() {
   let lastDirection = null;
@@ -342,6 +343,14 @@ export function createEventCompressor() {
     reset() {
       lastDirection = null;
       lastFaderState = null;
+    },
+    getState() {
+      return {
+        currentDirection: lastDirection === "stop"
+          ? "stopped"
+          : lastDirection ?? "unknown",
+        faderState: lastFaderState ?? "unknown",
+      };
     },
   };
 }

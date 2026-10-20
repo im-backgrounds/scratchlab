@@ -280,3 +280,77 @@ export function updatePlaybackCursor(currentStep, totalSteps, repeat) {
   if (boundary === "loop") return { currentStep: 0, shouldStop: false };
   return { currentStep: currentStep + 1, shouldStop: false };
 }
+
+/**
+ * Captures a v2 control boundary without generating input or changing its state.
+ * Times use the same absolute millisecond clock as input events.
+ * @param {{edge: "start"|"end", sessionId: string, loopIndex: number,
+ *   phase: "demo"|"recording", time: number,
+ *   inputState: {currentDirection: string, faderState: string}}} options
+ */
+export function createLoopBoundary({
+  edge,
+  sessionId,
+  loopIndex,
+  phase,
+  time,
+  inputState,
+}) {
+  if (
+    !["start", "end"].includes(edge) ||
+    typeof sessionId !== "string" || !sessionId.length ||
+    !Number.isInteger(loopIndex) || loopIndex < 0 ||
+    !["demo", "recording"].includes(phase) ||
+    !Number.isFinite(time) ||
+    !["unknown", "forward", "backward", "stopped"].includes(
+      inputState?.currentDirection,
+    ) ||
+    !["unknown", "open", "closed"].includes(inputState?.faderState)
+  ) {
+    throw new TypeError("Invalid loop boundary");
+  }
+  return Object.freeze({
+    type: "loop-boundary",
+    edge,
+    sessionId,
+    loopIndex,
+    phase,
+    time,
+    currentDirection: inputState.currentDirection,
+    faderState: inputState.faderState,
+  });
+}
+
+/**
+ * Builds a completed v2 loop state. Boundary events remain separate from input.
+ * @param {ReturnType<typeof createLoopBoundary>} start
+ * @param {ReturnType<typeof createLoopBoundary>} end
+ */
+export function createLoopState(start, end) {
+  if (
+    start.edge !== "start" || end.edge !== "end" ||
+    start.sessionId !== end.sessionId ||
+    start.loopIndex !== end.loopIndex || start.phase !== end.phase ||
+    end.time <= start.time
+  ) {
+    throw new TypeError("Loop boundaries must describe the same nonempty loop");
+  }
+  return Object.freeze({
+    sessionId: start.sessionId,
+    loopIndex: start.loopIndex,
+    phase: start.phase,
+    startTime: start.time,
+    endTime: end.time,
+    startDirection: start.currentDirection,
+    startFaderState: start.faderState,
+  });
+}
+
+/**
+ * A boundary-time input belongs to the next loop: [startTime, endTime).
+ * @param {{time: number}} event
+ * @param {ReturnType<typeof createLoopState>} loop
+ */
+export function isEventInLoop(event, loop) {
+  return event.time >= loop.startTime && event.time < loop.endTime;
+}

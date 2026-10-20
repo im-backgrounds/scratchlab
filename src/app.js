@@ -412,11 +412,6 @@ function advancePlayback() {
     playbackLoopNumber += 1;
     playbackLoopEvents = [];
     playbackLoopCurrentStep = 0;
-    eventCompressor.reset();
-  } else if (
-    cursor.currentStep % chart.scoreData?.ticksPerBar === 0
-  ) {
-    eventCompressor.reset();
   }
   actions.setPlaybackState({ currentStep: cursor.currentStep });
 }
@@ -1373,7 +1368,6 @@ function applyChallengeEvent(event, now = Date.now()) {
   } else if (effect === "start-recording") {
     beginChallengeRecording(now);
   } else if (effect === "next-recording") {
-    stopDetector.flush(now);
     challengeRun.loopEnds.push(now - challengeRun.startedAt);
   } else if (effect === "finish-recording") {
     const run = challengeRun;
@@ -1519,8 +1513,6 @@ function cancelChallenge(reason) {
 }
 
 function beginChallengeRecording(now) {
-  stopDetector.cancel();
-  eventCompressor.reset();
   recordedRawCount = 0;
   actions.clearMidiRecord();
   actions.setMidiState({ recordingMidi: true });
@@ -1533,7 +1525,6 @@ function beginChallengeRecording(now) {
 }
 
 function finishChallengeRecording(run, now) {
-  stopDetector.flush(now);
   const performance = createPerformance(state.midiActionRecord, {
     startedAt: run.startedAt,
     endedAt: now,

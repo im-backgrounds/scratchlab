@@ -153,7 +153,7 @@ for (const boundary of ["bar", "loop"]) {
       true,
     );
     assert.equal(cursor.shouldStop, false);
-    // Mirrors advancePlayback's reset after advancing the cursor, not the clock.
+    // Historical v1 reproduction: advancePlayback used to reset before the clock.
     if (
       cursor.currentStep === 0 ||
       cursor.currentStep % score.ticksPerBar === 0
@@ -183,4 +183,54 @@ for (const boundary of ["bar", "loop"]) {
     assert.equal(analysis.byKind.backward.extra, 1);
     assert.equal(analysis.accuracy, 75);
   });
+}
+
+for (const boundary of ["bar", "loop"]) {
+  for (const source of ["mouse", "midi"]) {
+    Deno.test(`v2 boundary: ${source} keeps physical state across ${boundary}`, () => {
+      const app = createTestApp();
+      const score = compileScoreData(chartCatalog[0]);
+      const boundaryTick = boundary === "bar"
+        ? score.ticksPerBar
+        : score.totalTicks;
+      const boundaryAt = 10_000 + boundaryTick * 100;
+      const compressor = createEventCompressor();
+      const mapping = createMapping();
+      app.actions.setMidiState({ recordingMidi: true });
+      const feed = (direction, time) => {
+        const event = source === "midi"
+          ? routeMidiMessage(
+            direction === "forward" ? [0x90, 36, 100] : [0x90, 37, 90],
+            { mapping, learnAction: null, time },
+          ).event
+          : { type: "scratch", direction, time };
+        const kept = compressor.accept(event);
+        if (kept) app.actions.recordMidiAction(kept);
+      };
+      const fader = { type: "fader", state: "closed", time: boundaryAt - 90 };
+      app.actions.recordMidiAction(compressor.accept(fader));
+      feed("backward", boundaryAt - 80);
+      const before = compressor.getState();
+      const cursor = updatePlaybackCursor(
+        boundaryTick - 1,
+        score.totalTicks,
+        true,
+      );
+      assert.equal(cursor.currentStep, boundary === "bar" ? boundaryTick : 0);
+      feed("backward", boundaryAt - 10);
+      feed("backward", boundaryAt);
+      feed("backward", boundaryAt + 10);
+      assert.equal(compressor.accept({ ...fader, time: boundaryAt }), null);
+      assert.deepEqual(compressor.getState(), before);
+      assert.equal(app.state.midiActionRecord.length, 2);
+      feed("forward", boundaryAt + 20);
+      assert.equal(app.state.midiActionRecord.length, 3);
+      assert.deepEqual(
+        app.state.midiActionRecord.map((event) =>
+          event.direction ?? event.state
+        ),
+        ["closed", "backward", "forward"],
+      );
+    });
+  }
 }

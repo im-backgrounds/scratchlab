@@ -121,19 +121,25 @@ Critical
 
 Status
 
-[ ] Not Started
+[~] Input Fixes / Boundary Model Implemented; Integration Pending
 
 Tasks
 
-- [ ] 小節reset削除
-- [ ] Loop Boundary導入
-- [ ] 境界ルール統一
-- [ ] 半開区間運用
+- [x] 小節reset削除
+- [x] Loop Boundary導入（独立API）
+- [x] 境界で物理状態を保持・境界由来Stop生成を撤去
+- [x] 半開区間モデルと境界時刻の所属判定
+- [ ] アプリへのv2境界モデル接続・境界ルール統一
 
 完了条件
 
-- [ ] 境界でイベント増殖しない
+- [x] 境界でイベント増殖しない
 - [ ] ループ跨ぎ誤判定なし
+
+既存のv1採点・Timing・Overlayへのv2境界API接続は行わない。
+実入力のreset・強制Stop生成の撤去によりv1の記録列と結果は変動し得る。
+v1のループ区分はそのまま残し、半開区間の採点への適用は後続フェーズで行う。
+過去の不具合再現テストは旧処理の明示的な再現として維持する。
 
 ---
 

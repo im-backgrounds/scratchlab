@@ -161,6 +161,11 @@ Forward
 
 採点対象外。
 
+Phase 2では `playback.js` の `createLoopBoundary` として独立定義する。
+`type: "loop-boundary"`、`edge: "start" | "end"`、`sessionId`、`loopIndex`、
+`phase: "demo" | "recording"`、`time`、`currentDirection`、`faderState` を持つ。
+時刻は入力イベントと同じ絶対ミリ秒。状態は境界時点のコピーで、入力を生成しない。
+
 ---
 
 # State Model
@@ -217,6 +222,13 @@ Forward
 - Timing Analysis
 - Overlay
 
+Phase 2の `createLoopState` は同じセッション・ループ・フェーズの開始境界と
+終了境界から完了区間を作る。区間は `[startTime, endTime)` とし、
+境界時刻ちょうどの入力は次ループに属する。開始方向と開始フェーダー状態を保持する。
+
+これらのv2境界APIはまだアプリ・採点・Timing・Overlayへ接続しない。 既存v1の
+`loopEnds` による区間分割は変更しない。
+
 ---
 
 # Expected Timeline
@@ -231,6 +243,20 @@ Kと終端からStopを生成しない。Loop Boundaryの導入は後続フェ�
 現在の `createExpectedEvents` はv1採点・Timingとの互換経路として維持する。
 v2生成器はまだアプリの採点・Timing・Overlayへ接続していないため、 Phase
 1だけでは画面の一致率や既存の採点不整合は変わらない。
+
+## Phase 2 入力経路の修正
+
+実入力の圧縮状態を、小節境界・ループ境界・デモから記録への移行でリセットしない。
+`createEventCompressor.getState()` は境界モデル用の独立した状態コピーを返す。
+方向とフェーダーは継続し、実際の方向変化・開閉変化・無入力によるStopだけで更新する。
+
+記録ループ切り替え・記録終了時のMIDI Stop強制flushを廃止する。
+記録開始時も停止タイマーを破棄しない。Mouse/MIDIの通常の無入力タイマーと
+停止検出時間は維持し、Loop Boundary自体からStopを生成しない。
+
+採点アルゴリズム・保存形式はv1のままだが、記録イベント列の修正により結果は変動する。
+v1が要求するStopやループ冒頭のストロークが不足と判定される問題は、
+後続のMatching Engine・初期状態検証・Stop Handlingで解決する。
 
 ## 原則
 

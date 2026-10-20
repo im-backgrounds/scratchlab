@@ -203,9 +203,13 @@ Expected Timeline v2
 
 Boundary Rework
 
-- [ ] 小節reset廃止
-- [ ] ループ境界再設計
+- [x] 小節reset廃止
+- [x] ループ境界再設計
 - [ ] Stop再設計
+
+実入力の境界resetと境界由来のStop強制生成を撤去済み。
+v2制御イベント・状態スナップショット・半開区間APIは独立実装し、
+アプリ・v1採点・Timing・Overlayには未接続。Stopの採点対象外化などは後続作業。
 
 ---
 
