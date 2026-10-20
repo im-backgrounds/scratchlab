@@ -15,10 +15,14 @@ const LANE_KIND_LABELS = {
   closed: "Fader Close",
 };
 
-export function bindPerformance({ onExport }) {
+export function bindPerformance({ onExport, onExportSummary }) {
   document.getElementById("performance-export").addEventListener(
     "click",
     onExport,
+  );
+  document.getElementById("performance-summary-export").addEventListener(
+    "click",
+    onExportSummary,
   );
 }
 
@@ -115,6 +119,63 @@ export function downloadPerformance(text, filename) {
   link.click();
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+export function renderPerformanceSummaryAvailability(available) {
+  document.getElementById("performance-summary-export").disabled = !available;
+}
+
+export function downloadPerformanceSummary({ pattern, bpm, accuracy }) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1200;
+  canvas.height = 630;
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("画像を作成できませんでした。");
+
+  context.fillStyle = "#101923";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = "#38bdf8";
+  context.fillRect(0, 0, 14, canvas.height);
+  context.fillStyle = "#91a4b7";
+  context.font = "700 25px sans-serif";
+  context.fillText("SCRATCHLAB  /  PERFORMANCE", 72, 92);
+  context.fillStyle = "#f4f8fc";
+  context.font = "700 56px sans-serif";
+  context.fillText("練習結果", 72, 174);
+  context.fillStyle = "#91a4b7";
+  context.font = "500 24px sans-serif";
+  context.fillText("PATTERN", 72, 270);
+  context.fillText("BPM", 510, 270);
+  context.fillText("ACCURACY", 760, 270);
+  context.fillText("RANK", 72, 430);
+  context.fillStyle = "#f4f8fc";
+  context.font = "700 38px sans-serif";
+  context.fillText(pattern, 72, 326, 400);
+  context.fillText(String(bpm), 510, 326);
+  context.fillText(`${accuracy.toFixed(1)}%`, 760, 326);
+  context.fillStyle = "#38bdf8";
+  context.font = "700 44px sans-serif";
+  context.fillText("未設定", 72, 490);
+  context.fillStyle = "#91a4b7";
+  context.font = "400 20px sans-serif";
+  context.fillText("Keep practicing.", 72, 566);
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        reject(new Error("PNG画像を作成できませんでした。"));
+        return;
+      }
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "scratchlab-performance-summary.png";
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      resolve();
+    }, "image/png");
+  });
 }
 
 const ANALYSIS_TOTALS = [

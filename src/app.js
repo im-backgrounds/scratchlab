@@ -114,6 +114,7 @@ let recordedRawCount = 0;
 const eventCompressor = createEventCompressor();
 const performanceRepository = createPerformanceRepository();
 let latestPerformance = performanceRepository.load();
+let latestChallengeSummary = null;
 const challengeRepository = createChallengeRepository();
 const achievementRepository = createAchievementRepository();
 let achievementMessage = "";
@@ -1307,6 +1308,16 @@ function evaluateChallengeAttempt(performance, run) {
     renderBeginnerCourse();
     return;
   }
+  latestChallengeSummary = analysis.accuracy === null
+    ? null
+    : {
+      pattern: chart.name,
+      bpm: run.bpm,
+      accuracy: analysis.accuracy,
+    };
+  performanceUi.renderPerformanceSummaryAvailability(
+    latestChallengeSummary !== null,
+  );
   const outcome = challengeRepository.recordAttempt(chartKey, {
     bpm: run.bpm,
     accuracy: analysis.accuracy,
@@ -1530,6 +1541,18 @@ function exportPerformance() {
   performanceUi.renderPerformanceStatus("記録をJSONで書き出しました。");
 }
 
+async function exportPerformanceSummary() {
+  if (!latestChallengeSummary) return;
+  try {
+    await performanceUi.downloadPerformanceSummary(latestChallengeSummary);
+    performanceUi.renderPerformanceStatus("成績画像をPNGで書き出しました。");
+  } catch (error) {
+    performanceUi.renderPerformanceStatus(
+      `成績画像を書き出せませんでした: ${error.message}`,
+    );
+  }
+}
+
 controls.bindControls({
   onShowGuide: () => {
     prepareViewSwitch();
@@ -1592,6 +1615,7 @@ achievementUi.bindAchievements({
 
 performanceUi.bindPerformance({
   onExport: exportPerformance,
+  onExportSummary: exportPerformanceSummary,
 });
 
 audioMonitoringUi.bindAudioMonitoring({
