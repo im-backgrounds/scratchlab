@@ -8,8 +8,7 @@
 
 ScratchLab を
 
-「スクラッチ練習を可視化できる
-ブラウザーDJトレーニングツール」
+「スクラッチ練習を可視化できる ブラウザーDJトレーニングツール」
 
 として育てる。
 
@@ -127,9 +126,7 @@ Critical
 
 現在
 
-Expected Event
-≠
-Recorded Event
+Expected Event ≠ Recorded Event
 
 となっている。
 
@@ -193,9 +190,12 @@ Meaning Event
 
 Expected Timeline v2
 
-- [ ] ストローク単位モデル
-- [ ] フェーダー状態モデル
-- [ ] 共通タイムライン生成
+- [x] ストローク単位モデル
+- [x] フェーダー状態モデル
+- [x] 共通タイムライン生成
+
+生成器のみ実装済み。v1採点経路は維持し、Matching・Timing・Overlayへの接続は
+後続フェーズで行う。
 
 ---
 

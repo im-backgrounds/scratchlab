@@ -4,7 +4,8 @@ Status: Design Frozen (Draft)
 
 ## Background
 
-BPM Challenge v1 の採点モデル調査により、期待イベントと入力イベントの粒度が一致していないことが判明した。
+BPM Challenge v1
+の採点モデル調査により、期待イベントと入力イベントの粒度が一致していないことが判明した。
 
 代表例:
 
@@ -22,7 +23,8 @@ BPM Challenge v1 の採点モデル調査により、期待イベントと入力
 
 の信頼性に影響する可能性がある。
 
-Event Model v2 は、採点・表示・分析・将来の Ghost Comparison を同一のイベントモデルで扱うことを目的とする。
+Event Model v2 は、採点・表示・分析・将来の Ghost Comparison
+を同一のイベントモデルで扱うことを目的とする。
 
 ---
 
@@ -218,6 +220,17 @@ Forward
 ---
 
 # Expected Timeline
+
+## Phase 1 実装状況
+
+`src/domain/performance-analysis.js` の `createExpectedTimeline` が、 Meaning
+Event と譜面上の `tick` を一緒に持つ配列を生成する。
+初期フェーダーは開。同方向の継続は統合し、カットの閉→開は維持する。
+Kと終端からStopを生成しない。Loop Boundaryの導入は後続フェーズで扱う。
+
+現在の `createExpectedEvents` はv1採点・Timingとの互換経路として維持する。
+v2生成器はまだアプリの採点・Timing・Overlayへ接続していないため、 Phase
+1だけでは画面の一致率や既存の採点不整合は変わらない。
 
 ## 原則
 
@@ -670,7 +683,8 @@ v2へ再採点できない。
 
 Event Model v2 を採用する。
 
-採点・Timing・Overlay・Beginner Course が共通の Expected Timeline と Matching Engine を利用する。
+採点・Timing・Overlay・Beginner Course が共通の Expected Timeline と Matching
+Engine を利用する。
 
 v1 の採点結果との互換性は維持しない。
 

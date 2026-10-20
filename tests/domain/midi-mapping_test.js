@@ -710,6 +710,19 @@ Deno.test("reset forgets the previous direction", () => {
   assert.ok(compressor.accept(scratchEvent("forward")));
 });
 
+Deno.test("v1 regression: a fader cut does not preserve a second forward event", () => {
+  const input = [
+    scratchEvent("forward", 10),
+    faderEvent("closed", 20),
+    faderEvent("open", 30),
+    scratchEvent("forward", 149),
+  ];
+  const kept = compress(input);
+  assert.deepEqual(kept, input.slice(0, 3));
+  assert.deepEqual(summary(kept), ["forward", "closed", "open"]);
+  assert.deepEqual(kept.map((event) => event.time), [10, 20, 30]);
+});
+
 Deno.test("a 800-message stroke stream becomes one event per stroke", () => {
   const mapping = assignMapping(
     assignMapping(

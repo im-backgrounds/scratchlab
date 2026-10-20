@@ -90,21 +90,24 @@ Critical
 
 Status
 
-[ ] Not Started
+[~] Generator Implemented / Integration Pending
 
 Tasks
 
-- [ ] Event Model v2実装方針確認
-- [ ] Expected Timeline生成器作成
-- [ ] ストローク単位へ変更
-- [ ] Faderイベント分離
-- [ ] Event生成テスト追加
+- [x] Event Model v2実装方針確認
+- [x] Expected Timeline生成器作成
+- [x] ストローク単位へ変更
+- [x] Faderイベント分離
+- [x] Event生成テスト追加
 
 完了条件
 
-- [ ] Chirp期待イベント妥当
-- [ ] Flare期待イベント妥当
+- [x] Chirp期待イベント妥当
+- [x] Flare期待イベント妥当
 - [ ] 既存イベント定義を置換
+
+生成器は `createExpectedTimeline` として独立追加。採点・Timing・Overlayを
+変更しないため、既存の `createExpectedEvents` の置換は後続フェーズへ持ち越す。
 
 ---
 

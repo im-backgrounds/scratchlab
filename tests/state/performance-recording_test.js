@@ -4,10 +4,13 @@ import { compileScoreData } from "../../src/domain/score-compiler.js";
 import {
   assignMapping,
   createEmptyMapping,
+  createEventCompressor,
   createStopDetector,
   getMidiSignature,
   routeMidiMessage,
 } from "../../src/domain/midi-mapping.js";
+import { analyzePerformance } from "../../src/domain/performance-analysis.js";
+import { updatePlaybackCursor } from "../../src/domain/playback.js";
 import {
   createPerformance,
   createPerformanceRepository,
@@ -122,3 +125,62 @@ Deno.test("clearing the MIDI record does not change a finished performance", () 
   assert.equal(performance.events.length, 1);
   assert.equal(performance.events[0].t, 50);
 });
+
+for (const boundary of ["bar", "loop"]) {
+  Deno.test(`v1 regression: ${boundary} reset records a duplicate before the boundary`, () => {
+    const app = createTestApp();
+    const score = compileScoreData(chartCatalog[0]);
+    const boundaryTick = boundary === "bar"
+      ? score.ticksPerBar
+      : score.totalTicks;
+    const tickMs = score.tickDurationSeconds * 60000 / 80;
+    const startedAt = 10_000;
+    const boundaryAt = startedAt + boundaryTick * tickMs;
+    const previousTickAt = boundaryAt - tickMs;
+    const compressor = createEventCompressor();
+    app.actions.setMidiState({ recordingMidi: true });
+    const feed = (direction, time) => {
+      const kept = compressor.accept({ type: "scratch", direction, time });
+      if (kept) app.actions.recordMidiAction(kept);
+    };
+    feed("backward", previousTickAt + 10);
+    feed("backward", previousTickAt + 20);
+    assert.equal(app.state.midiActionRecord.length, 1);
+
+    const cursor = updatePlaybackCursor(
+      boundaryTick - 1,
+      score.totalTicks,
+      true,
+    );
+    assert.equal(cursor.shouldStop, false);
+    // Mirrors advancePlayback's reset after advancing the cursor, not the clock.
+    if (
+      cursor.currentStep === 0 ||
+      cursor.currentStep % score.ticksPerBar === 0
+    ) compressor.reset();
+    feed("backward", previousTickAt + 30);
+    assert.equal(app.state.midiActionRecord.length, 2);
+    assert.ok(app.state.midiActionRecord[1].time < boundaryAt);
+    feed("forward", boundaryAt + 10);
+    feed("stop", boundaryAt + 100);
+
+    const performance = createPerformance(app.state.midiActionRecord, {
+      startedAt,
+      endedAt: boundaryAt + 100,
+    });
+    assert.deepEqual(
+      performance.events.map((event) => event.direction),
+      ["backward", "backward", "forward", "stop"],
+    );
+    const expected = ["backward", "forward", "stop"].map((direction) => ({
+      type: "scratch",
+      direction,
+    }));
+    const analysis = analyzePerformance(expected, performance.events);
+    assert.equal(analysis.matched, 3);
+    assert.equal(analysis.missing, 0);
+    assert.equal(analysis.extra, 1);
+    assert.equal(analysis.byKind.backward.extra, 1);
+    assert.equal(analysis.accuracy, 75);
+  });
+}

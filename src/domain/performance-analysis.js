@@ -57,6 +57,42 @@ export function createExpectedEvents(scoreData) {
 }
 
 /**
+ * Builds the v2 meaning-event timeline in score ticks. The initial fader is
+ * open; cuts preserve direction, and neither K nor the end implies a Stop.
+ * Kept separate from the v1 scoring/timing path until its migration.
+ * @param {{events: object[]}} scoreData Compiled score data.
+ * @returns {({type: "scratch", direction: "forward"|"backward", tick: number}
+ *   | {type: "fader", state: "open"|"closed", tick: number})[]}
+ */
+export function createExpectedTimeline(scoreData) {
+  const timeline = [];
+  let currentDirection = null;
+  let faderOpen = true;
+  const fader = (open, tick) => {
+    if (open === faderOpen) return;
+    timeline.push({ type: "fader", state: open ? "open" : "closed", tick });
+    faderOpen = open;
+  };
+
+  for (const event of scoreData.events) {
+    if (event.keep) continue;
+    fader(event.faderOpen, event.startTick);
+    const direction = event.direction === "F" ? "forward" : "backward";
+    if (direction !== currentDirection) {
+      timeline.push({ type: "scratch", direction, tick: event.startTick });
+      currentDirection = direction;
+    }
+    for (let cut = 0; event.faderOpen && cut < event.cutCount; cut += 1) {
+      const tick = event.startTick +
+        event.durationTicks * (cut + 1) / (event.cutCount + 1);
+      fader(false, tick);
+      fader(true, tick);
+    }
+  }
+  return timeline;
+}
+
+/**
  * Aligns two kind sequences with a longest common subsequence and returns
  * which indexes of each side were matched.
  */
