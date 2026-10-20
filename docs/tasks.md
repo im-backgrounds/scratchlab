@@ -153,19 +153,26 @@ Critical
 
 Status
 
-[ ] Not Started
+[~] Observation API / Input Handling Implemented; Scoring Integration Pending
 
 Tasks
 
-- [ ] Mouse停止整理
-- [ ] MIDI停止整理
-- [ ] Stop定義統一
-- [ ] Loop終端との分離
+- [x] Mouse停止整理
+- [x] MIDI停止整理
+- [x] Stop定義統一（独立した物理停止観測API）
+- [x] Loop終端との分離
+- [x] 最後の入力元への観測引き継ぎ・操作解除時の観測キャンセル
+- [x] 停止観測を保持し、方向状態のみ更新するAPI
 
 完了条件
 
 - [ ] Stopで誤減点しない
 - [ ] Stopで誤加点しない
+
+v2 APIは採点・Timing・Overlay・アプリへ未接続。
+実入力は共通停止検出器を使い、従来のStopイベント形式とv1採点を維持する。
+Stopによる誤減点・誤加点の解消はMatching Engineの接続時に検証する。
+v1のflush互換APIと過去の不具合再現テストは維持する。
 
 ---
 

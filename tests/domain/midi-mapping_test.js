@@ -7,6 +7,8 @@ import {
   createEventCompressor,
   createMidiMappingRepository,
   createStopDetector,
+  createStopObservation,
+  createStopObserver,
   describeSignature,
   formatMidiActionEvent,
   getMidiSignature,
@@ -791,5 +793,185 @@ Deno.test("compressor state snapshots are detached and boundaries cannot reset t
   assert.equal(compressor.getState().currentDirection, "stopped");
   assert.ok(
     compressor.accept({ type: "scratch", direction: "backward", time: 50 }),
+  );
+});
+
+for (const [source, timeoutMs] of [["mouse", 180], ["midi", 150]]) {
+  Deno.test(`v2 ${source} stop retains inactivity time and restarts a stroke without a scored stop`, () => {
+    const timers = createFakeTimers();
+    const observations = [];
+    const meaningEvents = [];
+    const compressor = createEventCompressor();
+    const observer = createStopObserver({
+      source,
+      ...timers,
+      onStop: (observation) => {
+        observations.push(observation);
+        compressor.observeStop(observation);
+      },
+    });
+    const feed = (event) => {
+      observer.observe(event);
+      const kept = compressor.accept(event);
+      if (kept) meaningEvents.push(kept);
+    };
+    feed({ type: "fader", state: "closed", time: 900 });
+    feed({ type: "scratch", direction: "forward", time: 1000 });
+    feed({ type: "scratch", direction: "forward", time: 1100 });
+    feed({ type: "fader", state: "open", time: 1120 });
+    assert.deepEqual(observations, []);
+    assert.equal(timers.pending(), 1);
+    timers.fire();
+    assert.deepEqual(observations, [{
+      type: "stop",
+      reason: "inactivity",
+      source,
+      lastMovementAt: 1100,
+      timeoutMs,
+      time: 1100 + timeoutMs,
+    }]);
+    assert.ok(Object.isFrozen(observations[0]));
+    assert.equal(compressor.accept(observations[0]), null);
+    assert.deepEqual(compressor.getState(), {
+      currentDirection: "stopped",
+      faderState: "open",
+    });
+    feed({ type: "scratch", direction: "forward", time: 1500 });
+    assert.deepEqual(
+      meaningEvents.map((event) => event.direction ?? event.state),
+      [
+        "closed",
+        "forward",
+        "open",
+        "forward",
+      ],
+    );
+    assert.equal(observations.length, 1);
+    assert.equal("flush" in observer, false);
+    observer.cancel();
+    assert.equal(timers.pending(), 0);
+    assert.equal(observations.length, 1);
+  });
+}
+
+Deno.test("v2 stop ignores Stop, fader and boundary inputs without losing movement", () => {
+  const timers = createFakeTimers();
+  const observations = [];
+  const observer = createStopObserver({
+    source: "midi",
+    ...timers,
+    onStop: (event) => observations.push(event),
+  });
+  const ignored = [
+    { type: "scratch", direction: "stop", time: 2000 },
+    { type: "fader", state: "open", time: 2000 },
+    { type: "loop-boundary", edge: "end", time: 2000 },
+  ];
+  for (const event of ignored) observer.observe(event);
+  assert.equal(timers.pending(), 0);
+  const movement = { type: "scratch", direction: "backward", time: 1000 };
+  observer.observe(movement);
+  movement.time = 9999;
+  for (const event of ignored) observer.observe(event);
+  assert.equal(timers.pending(), 1);
+  timers.fire();
+  assert.equal(observations[0].time, 1150);
+  assert.equal(observations[0].lastMovementAt, 1000);
+});
+
+Deno.test("stop cancellation and superseded callbacks never fabricate an observation", () => {
+  for (const create of [createStopDetector, createStopObserver]) {
+    const callbacks = [];
+    const stops = [];
+    const detector = create({
+      source: "mouse",
+      onStop: (event) => stops.push(event),
+      setTimer: (callback) => {
+        callbacks.push(callback);
+        return callbacks.length;
+      },
+      clearTimer: () => {},
+    });
+    detector.observe({ type: "scratch", direction: "forward", time: 1000 });
+    detector.observe({ type: "scratch", direction: "backward", time: 1100 });
+    callbacks[0]();
+    assert.deepEqual(stops, []);
+    detector.cancel();
+    callbacks[1]();
+    assert.deepEqual(stops, []);
+    detector.observe({ type: "scratch", direction: "forward", time: 1500 });
+    callbacks[2]();
+    callbacks[2]();
+    assert.equal(stops.length, 1);
+  }
+});
+
+Deno.test("v2 source handover leaves only the latest movement's stop", () => {
+  const timers = createFakeTimers();
+  const stops = [];
+  const options = { ...timers, onStop: (event) => stops.push(event) };
+  const mouse = createStopObserver({ ...options, source: "mouse" });
+  const midi = createStopObserver({ ...options, source: "midi" });
+  midi.observe({ type: "scratch", direction: "backward", time: 1000 });
+  midi.cancel();
+  mouse.observe({ type: "scratch", direction: "forward", time: 1100 });
+  mouse.cancel();
+  midi.observe({ type: "scratch", direction: "backward", time: 1200 });
+  assert.equal(timers.pending(), 1);
+  timers.fire();
+  assert.deepEqual(stops.map(({ source, time }) => ({ source, time })), [
+    { source: "midi", time: 1350 },
+  ]);
+});
+
+Deno.test("v2 stop rejects invalid observations instead of silently changing state", () => {
+  const valid = { source: "mouse", lastMovementAt: 1000, timeoutMs: 180 };
+  for (
+    const overrides of [
+      { source: "loop" },
+      { lastMovementAt: NaN },
+      { timeoutMs: 0 },
+      { timeoutMs: -1 },
+      { timeoutMs: Infinity },
+      { lastMovementAt: Number.MAX_VALUE, timeoutMs: Number.MAX_VALUE },
+    ]
+  ) {
+    assert.throws(
+      () => createStopObservation({ ...valid, ...overrides }),
+      TypeError,
+    );
+  }
+  const observation = createStopObservation(valid);
+  const compressor = createEventCompressor();
+  compressor.accept({ type: "scratch", direction: "forward", time: 900 });
+  for (
+    const overrides of [
+      { type: "loop-boundary" },
+      { reason: "recording-end" },
+      { time: 1000 },
+    ]
+  ) {
+    assert.throws(
+      () => compressor.observeStop({ ...observation, ...overrides }),
+      TypeError,
+    );
+    assert.equal(compressor.getState().currentDirection, "forward");
+  }
+  assert.throws(
+    () => createStopObserver({ source: "loop", onStop: () => {} }),
+    TypeError,
+  );
+  for (const timeoutMs of [0, -1, NaN, Infinity]) {
+    assert.throws(
+      () =>
+        createStopObserver({ source: "mouse", timeoutMs, onStop: () => {} }),
+      TypeError,
+    );
+  }
+  const observer = createStopObserver({ source: "midi", onStop: () => {} });
+  assert.throws(
+    () =>
+      observer.observe({ type: "scratch", direction: "forward", time: NaN }),
+    TypeError,
   );
 });

@@ -8,6 +8,7 @@ export const MIDI_MAPPING_VERSION = 4;
 export const MIDI_ACTIONS = ["forward", "backward", "fader"];
 export const FIXED_VELOCITY_ACTIONS = ["forward", "backward"];
 export const STOP_TIMEOUT_MS = 150;
+export const MOUSE_STOP_TIMEOUT_MS = 180;
 // A fader is described by three points: the value at the open end, a
 // threshold, and the value at the closed end. Values from the open end up to
 // the threshold (inclusive) are open and the rest are closed, whichever end
@@ -272,7 +273,8 @@ export function routeMidiMessage(data, { mapping, learnAction, time }) {
 
 /**
  * Emits a stop event once no Forward/Backward event has arrived for
- * `timeoutMs`. The stop is stamped with the moment it was recognized.
+ * `timeoutMs`. Preserves the legacy event shape; v2 uses createStopObserver.
+ * The timestamp is the inactivity threshold, not the timer delivery time.
  * @param {{onStop: (event: object) => void, timeoutMs?: number,
  *   setTimer?: Function, clearTimer?: Function}} options
  */
@@ -282,9 +284,14 @@ export function createStopDetector({
   setTimer = setTimeout,
   clearTimer = clearTimeout,
 }) {
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+    throw new TypeError("Stop timeout must be a positive finite number");
+  }
   let timer = null;
   let lastEvent = null;
+  let generation = 0;
   const cancel = () => {
+    generation += 1;
     if (timer !== null) clearTimer(timer);
     timer = null;
     lastEvent = null;
@@ -294,17 +301,30 @@ export function createStopDetector({
   };
   return {
     observe(event) {
-      if (event.type !== "scratch") return;
+      if (
+        event.type !== "scratch" ||
+        !["forward", "backward"].includes(event.direction)
+      ) return;
+      if (
+        !Number.isFinite(event.time) ||
+        !Number.isFinite(event.time + timeoutMs)
+      ) {
+        throw new TypeError("Scratch movement must have a finite time");
+      }
       cancel();
-      lastEvent = event;
+      lastEvent = { time: event.time };
+      const time = event.time + timeoutMs;
+      const observedGeneration = generation;
       timer = setTimer(() => {
+        if (generation !== observedGeneration) return;
         timer = null;
         lastEvent = null;
-        emit(event.time + timeoutMs);
+        generation += 1;
+        emit(time);
       }, timeoutMs);
     },
     cancel,
-    /** Emits the pending stop immediately, never stamped after `now`. */
+    /** Legacy compatibility only; never use a flush to represent a boundary. */
     flush(now = Date.now()) {
       if (timer === null) return;
       const time = Math.min(lastEvent.time + timeoutMs, now);
@@ -315,12 +335,76 @@ export function createStopDetector({
 }
 
 /**
+ * A v2 physical observation, not a stroke, scored action, or loop boundary.
+ * `time` is the inactivity threshold, independent of timer delivery delay.
+ * @param {{source: "mouse"|"midi", lastMovementAt: number, timeoutMs: number}} options
+ * @returns {Readonly<{type: "stop", reason: "inactivity", source: "mouse"|"midi",
+ *   lastMovementAt: number, timeoutMs: number, time: number}>}
+ */
+export function createStopObservation({ source, lastMovementAt, timeoutMs }) {
+  if (
+    !["mouse", "midi"].includes(source) ||
+    !Number.isFinite(lastMovementAt) ||
+    !Number.isFinite(timeoutMs) || timeoutMs <= 0 ||
+    !Number.isFinite(lastMovementAt + timeoutMs)
+  ) {
+    throw new TypeError("Invalid physical stop observation");
+  }
+  return Object.freeze({
+    type: "stop",
+    reason: "inactivity",
+    source,
+    lastMovementAt,
+    timeoutMs,
+    time: lastMovementAt + timeoutMs,
+  });
+}
+
+/**
+ * Shares inactivity detection with legacy input, but exposes only v2
+ * observations. Cancellation is not a physical stop; there is no flush API.
+ * @param {{source: "mouse"|"midi",
+ *   onStop: (observation: ReturnType<typeof createStopObservation>) => void,
+ *   timeoutMs?: number, setTimer?: Function, clearTimer?: Function}} options
+ */
+export function createStopObserver({
+  source,
+  onStop,
+  timeoutMs = source === "mouse" ? MOUSE_STOP_TIMEOUT_MS : STOP_TIMEOUT_MS,
+  setTimer = setTimeout,
+  clearTimer = clearTimeout,
+}) {
+  if (!["mouse", "midi"].includes(source)) {
+    throw new TypeError("Stop source must be mouse or midi");
+  }
+  let lastMovementAt;
+  const detector = createStopDetector({
+    timeoutMs,
+    setTimer,
+    clearTimer,
+    onStop: () =>
+      onStop(createStopObservation({ source, lastMovementAt, timeoutMs })),
+  });
+  return {
+    observe(event) {
+      detector.observe(event);
+      if (
+        event.type === "scratch" &&
+        ["forward", "backward"].includes(event.direction)
+      ) lastMovementAt = event.time;
+    },
+    cancel: detector.cancel,
+  };
+}
+
+/**
  * Turns the stream of converted events into performance events. A controller
  * sends many messages per stroke, so only changes are kept: a scratch event
  * is dropped when the previous scratch event had the same direction, and a
  * fader event when the previous one had the same state. A stop counts as a
  * direction, so the next stroke after a stop is kept again.
  * @returns {{accept: (event: object) => object|null, reset: () => void,
+ *   observeStop: (observation: ReturnType<typeof createStopObservation>) => void,
  *   getState: () => {currentDirection: string, faderState: string}}}
  */
 export function createEventCompressor() {
@@ -343,6 +427,17 @@ export function createEventCompressor() {
     reset() {
       lastDirection = null;
       lastFaderState = null;
+    },
+    observeStop(observation) {
+      const validated = createStopObservation(observation);
+      if (
+        observation.type !== validated.type ||
+        observation.reason !== validated.reason ||
+        observation.time !== validated.time
+      ) {
+        throw new TypeError("Expected a physical stop observation");
+      }
+      lastDirection = "stop";
     },
     getState() {
       return {

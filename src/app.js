@@ -14,6 +14,7 @@ import {
   FIXED_VELOCITY_ACTIONS,
   MIDI_ACTION_LABELS,
   MidiMappingConflictError,
+  MOUSE_STOP_TIMEOUT_MS,
   routeMidiMessage,
   swapFaderDirection,
 } from "./domain/midi-mapping.js";
@@ -266,6 +267,7 @@ function showBuilderPage() {
 
 function stopInputMonitoring() {
   keyboardInput.releaseAll();
+  stopDetector.cancel();
   stopMouseScratch();
   audioMonitorSettings.faderOpen = false;
   setInputFaderState(false);
@@ -883,22 +885,24 @@ const keyboardInput = bindKeyboardInput({
   },
 });
 
-let activeMouseDirection = null;
 let lastMouseDirection = null;
 let lastMouseInputAt = 0;
-let mouseStopTimer = null;
+const mouseStopDetector = createStopDetector({
+  timeoutMs: MOUSE_STOP_TIMEOUT_MS,
+  onStop: (event) => {
+    lastMouseDirection = null;
+    handleInputAudioEvent(event);
+  },
+});
 
 function stopMouseScratch() {
-  clearTimeout(mouseStopTimer);
-  mouseStopTimer = null;
-  if (!activeMouseDirection) return;
-  activeMouseDirection = null;
+  mouseStopDetector.cancel();
+  if (lastMouseDirection === null) return;
   lastMouseDirection = null;
-  handleInputAudioEvent({
-    type: "scratch",
-    direction: "stop",
-    time: Date.now(),
-  });
+  silenceInput();
+  audioMonitorSettings.youPlaying = false;
+  clearTimeout(youActivityTimer);
+  renderAudioMonitoring();
 }
 
 function syncPracticeModeButton() {
@@ -939,20 +943,19 @@ document.addEventListener("pointermove", (event) => {
 
   const direction = event.movementY < 0 ? "forward" : "backward";
   const now = Date.now();
+  const movement = { type: "scratch", direction, time: now };
+  stopDetector.cancel();
+  mouseStopDetector.observe(movement);
   if (direction !== lastMouseDirection || now - lastMouseInputAt >= 120) {
-    activeMouseDirection = direction;
     lastMouseDirection = direction;
     lastMouseInputAt = now;
-    stopDetector.cancel();
-    handleInputAudioEvent({ type: "scratch", direction, time: now });
+    handleInputAudioEvent(movement);
   }
-  clearTimeout(mouseStopTimer);
-  mouseStopTimer = setTimeout(stopMouseScratch, 180);
 });
-document.defaultView?.addEventListener("blur", stopMouseScratch);
+document.defaultView?.addEventListener("blur", stopInputMonitoring);
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden") {
-    stopMouseScratch();
+    stopInputMonitoring();
     setPracticeModeEnabled(false);
   }
 });
@@ -1081,14 +1084,12 @@ function handleMidiMessage(data) {
       keyboardInput.setFaderState(
         currentView === "practice" ? routed.event.state : "closed",
       );
-    } else if (activeMouseDirection !== null) {
-      stopDetector.cancel();
+    } else if (routed.event.type === "scratch") {
+      mouseStopDetector.cancel();
+      lastMouseDirection = null;
     }
     handleInputAudioEvent(routed.event);
-    if (
-      routed.event.type === "scratch" &&
-      activeMouseDirection === null
-    ) stopDetector.observe(routed.event);
+    stopDetector.observe(routed.event);
   }
 
   controls.renderMidiLog(

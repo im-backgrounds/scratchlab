@@ -11,8 +11,13 @@ import {
 import {
   createEventCompressor,
   createStopDetector,
+  createStopObserver,
 } from "../../src/domain/midi-mapping.js";
-import { createLoopBoundary } from "../../src/domain/playback.js";
+import {
+  createLoopBoundary,
+  createLoopState,
+  isEventInLoop,
+} from "../../src/domain/playback.js";
 import {
   analyzePerformanceLoops,
   createExpectedEvents,
@@ -307,4 +312,57 @@ Deno.test("v2 boundaries preserve demo input, recording state and the real stop 
   assert.equal(recorded.length, 2);
   assert.equal(end.currentDirection, "forward");
   assert.equal(end.faderState, "closed");
+});
+
+Deno.test("v2 physical stops survive loop transitions without becoming boundaries or scored events", () => {
+  const observations = [];
+  const compressor = createEventCompressor();
+  let fireStop;
+  const observer = createStopObserver({
+    source: "midi",
+    onStop: (observation) => {
+      observations.push(observation);
+      compressor.observeStop(observation);
+    },
+    setTimer: (callback) => {
+      fireStop = callback;
+      return 1;
+    },
+    clearTimer: () => {},
+  });
+  let session = run([START, LOOP_END]).session;
+  const boundary = (edge, loopIndex, time) =>
+    createLoopBoundary({
+      edge,
+      loopIndex,
+      time,
+      sessionId: "stop-test",
+      phase: "recording",
+      inputState: compressor.getState(),
+    });
+  const firstStart = boundary("start", 1, 1000);
+  const movement = { type: "scratch", direction: "forward", time: 1990 };
+  compressor.accept(movement);
+  observer.observe(movement);
+  const firstEnd = boundary("end", 1, 2000);
+  session = transitionSession(session, LOOP_END).session;
+  assert.equal(session.take, 2);
+  const secondStart = boundary("start", 2, 2000);
+  assert.deepEqual(observations, []);
+  fireStop();
+  assert.equal(observations[0].time, 2140);
+  assert.equal(
+    isEventInLoop(observations[0], createLoopState(firstStart, firstEnd)),
+    false,
+  );
+  const secondEnd = boundary("end", 2, 3000);
+  assert.equal(
+    isEventInLoop(observations[0], createLoopState(secondStart, secondEnd)),
+    true,
+  );
+  assert.equal(secondEnd.currentDirection, "stopped");
+  session = transitionSession(session, LOOP_END).session;
+  assert.equal(session.phase, CHALLENGE_PHASES.ANALYZING);
+  assert.equal(observations.length, 1);
+  assert.equal(compressor.accept(observations[0]), null);
 });

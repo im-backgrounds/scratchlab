@@ -153,6 +153,31 @@ Forward
 
 採点対象外。
 
+Phase 3（Epic 4）の `midi-mapping.js` では以下を独立APIとして提供する。
+
+- `createStopObservation`：不変の物理停止観測を生成する。
+  `type: "stop"`、`reason: "inactivity"`、`source: "mouse" | "midi"`、
+  `lastMovementAt`、`timeoutMs`、`time` を保持する。
+- `createStopObserver`：Forward/Backwardの生入力ごとにタイマーを更新し、
+  無入力時に観測を通知する。フェーダー・Stop・Loop
+  Boundaryはタイマーを更新しない。
+- `createEventCompressor.observeStop`：方向だけを `stopped` にし、
+  フェーダー状態は保持する。採点用イベントは返さず、観測は通知先が別途保持する。
+
+`time` は最後の移動時刻＋停止閾値の絶対ミリ秒。
+タイマー配送の遅延や記録区間の終端に合わせて時刻を変更しない。
+初回移動前にはStopを生成しない。キャンセル済み・古い・重複タイマー通知も生成しない。
+閾値はMouse 180ms、MIDI 150msを維持する。
+
+v2観測APIには `flush` を設けない。ループ・記録の開始／終了は物理停止ではない。
+観測がループ境界を跨いだ場合は観測時刻により区間へ所属させる。
+
+これらのAPIはアプリ・v1採点・Timing・Overlayには未接続。
+既存アプリは共通の停止検出処理から従来形式の
+`{ type: "scratch", direction: "stop", time }` を受け取り、v1経路を維持する。
+v1互換の `createStopDetector.flush` は既存テスト・互換APIとして残すが、
+アプリからは呼ばず、v2 APIにも公開しない。
+
 ---
 
 ### Loop Boundary
@@ -257,6 +282,21 @@ v2生成器はまだアプリの採点・Timing・Overlayへ接続していな�
 採点アルゴリズム・保存形式はv1のままだが、記録イベント列の修正により結果は変動する。
 v1が要求するStopやループ冒頭のストロークが不足と判定される問題は、
 後続のMatching Engine・初期状態検証・Stop Handlingで解決する。
+
+## Phase 3 Stop入力経路の整理
+
+MouseとMIDIの無入力検出を `createStopDetector` の共通処理に統一する。
+Mouseでは圧縮前・120ms間引き前の全移動で停止タイマーを更新する。
+複数入力元を使う場合は、最後に移動入力が来た入力元へ停止観測を引き継ぐ。
+古い入力元のタイマーはキャンセルし、同時操作中の偽のStopを防ぐ。
+フェーダー入力ではこの引き継ぎを行わない。
+
+Esc・練習モード解除・フォーカス喪失・画面切り替えは観測キャンセルであり、
+物理Stopは生成しない。必要な音声停止は記録イベントを介さず実行する。
+キャンセルでは圧縮器へ停止状態を捏造せず、境界でも物理状態を破棄しない。
+
+v1のStop採点とTimingは変更していないため、Stop不足による減点などは残る。
+v2観測の採点対象外化と実入力への接続は、後続フェーズで行う。
 
 ## 原則
 

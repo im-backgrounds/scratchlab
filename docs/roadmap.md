@@ -205,11 +205,15 @@ Boundary Rework
 
 - [x] 小節reset廃止
 - [x] ループ境界再設計
-- [ ] Stop再設計
+- [x] Stop再設計（観測API・入力処理）
 
 実入力の境界resetと境界由来のStop強制生成を撤去済み。
 v2制御イベント・状態スナップショット・半開区間APIは独立実装し、
-アプリ・v1採点・Timing・Overlayには未接続。Stopの採点対象外化などは後続作業。
+アプリ・v1採点・Timing・Overlayには未接続。
+
+Stop Handling（実装Phase 3 / Epic 4）ではMouse/MIDIの停止検出を共通化し、
+物理停止観測の独立APIを追加済み。操作解除とLoop BoundaryはStopを作らない。
+v2観測の接続・Stopの採点対象外化は後続作業。
 
 ---
 
