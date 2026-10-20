@@ -15,6 +15,7 @@ export function renderTimingAnalysis(analysis) {
   const section = document.getElementById("challenge-timing-analysis");
   section.hidden = !analysis;
   if (!analysis) return;
+  setText("challenge-measured-count", String(analysis.measuredCount));
   setText(
     "challenge-average-error",
     analysis.averageErrorMs === null

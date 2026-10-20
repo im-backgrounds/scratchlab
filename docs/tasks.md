@@ -186,20 +186,26 @@ Critical
 
 Status
 
-[ ] Not Started
+[x] Runtime Integrated (Implementation Phase 7)
 
 Tasks
 
-- [ ] 共通Matching Engine
-- [ ] 対応ペア保持
-- [ ] 初期状態チェック追加
-- [ ] Accuracy検証
+- [x] 共通Matching Engine（独立API）
+- [x] 対応ペア保持（元配列インデックス、実入力／継続観測を区別）
+- [x] 初期状態チェック追加（一致率と分離）
+- [x] Accuracy検証（独立した理想入力を圧縮して照合）
 
 完了条件
 
-- [ ] Baby Scratch 100%
-- [ ] Chirp Scratch 100%
-- [ ] Flare Orbit 100%
+- [x] Baby Scratch 100%
+- [x] Chirp Scratch 100%
+- [x] Flare Orbit 100%
+
+独立Engineに加え、アプリのChallenge・Beginner Courseへ接続済み。
+Timing・Overlayも同じ分析結果を利用する。Progressの処理・保存形式は変更しない。
+Stopと境界を除外し、tick
+0の同方向継続はTiming対象外の一致として保持する。
+未確認・不一致の初期フェーダーは、ランタイムでクリア・進捗更新を阻止する。
 
 ---
 
@@ -213,20 +219,26 @@ High
 
 Status
 
-[ ] Not Started
+[x] Runtime Integrated (Implementation Phase 7)
 
 Tasks
 
-- [ ] Matching結果を利用
-- [ ] Signed Error保持
-- [ ] Average Error統合
-- [ ] Max Error統合
-- [ ] Timing Accuracy統合
+- [x] Matching結果を利用（同じ対応ペアを再照合なしで利用）
+- [x] Signed Error保持
+- [x] Average Error集計（独立API）
+- [x] Max Error集計（独立API）
+- [x] Timing Accuracy集計（独立API）
+- [x] Measured Count・測定不能時のnull出力
+- [x] 継続観測・Stop・境界の除外、Missing／Extraを0msにしない
 
 完了条件
 
-- [ ] Accuracyと整合
-- [ ] Overlayと整合
+- [x] Accuracyと同じ対応ペアを利用・Sequence Accuracyを変更しない
+- [x] Overlay独立APIで同じ測定サンプル・測定件数を共有
+
+`analyzeTimelineTiming` をアプリへ接続し、Challenge TimingとOverlayで共有する。
+Average・Max・Accuracy・Measured Countを表示する。v1 APIは残すが経路では使わない。
+Migration・Achievementの処理は未変更。
 
 ---
 
@@ -240,17 +252,26 @@ High
 
 Status
 
-[ ] Not Started
+[x] Runtime Integrated (Implementation Phase 7)
 
 Tasks
 
-- [ ] Expected Timeline共有
-- [ ] Error表示共有
-- [ ] 対応ペア共有
+- [x] Expected Timeline共有
+- [x] Recorded TimelineからYOU表示データを生成
+- [x] Error表示共有（Missing・Extra・Initial State Error）
+- [x] 対応ペア・Timing測定サンプル共有
+- [x] Stop・境界を除外し、継続観測からYOU入力を捏造しない
 
 完了条件
 
-- [ ] Overlayと採点一致
+- [x] 独立APIでMissing・Extra・Timing対象件数一致（Baby・Chirp・Flare）
+- [x] UI接続後のOverlayと採点一致
+
+`createPerformanceOverlay` は表示用データのみを返す。
+独自の判定ロジックは使わず、Matching・Timingの結果を投影する。
+既存画面はv2の結果を表示し、SAMPLE・YOU・ERROR・Timing件数を共有する。
+お手本は採点せず、再生中の未到来イベントはMissingにしない。
+旧データの再採点・Migrationは行わず、Progress・Achievementの実装は維持する。
 
 ---
 
@@ -304,30 +325,35 @@ Critical
 
 Status
 
-[ ] Not Started
+[~] Phase 7 Runtime Tests Added / Full Chart Coverage Pending
 
 Tasks
 
-- [ ] Input → Recording
-- [ ] Recording → Matching
-- [ ] Matching → Timing
-- [ ] Matching → Overlay
+- [x] Input → Recording（ブラウザーでMouse＋Keyboard／模擬MIDIを確認）
+- [x] Recording → Matching
+- [x] Matching → Timing
+- [x] Matching → Overlay
 
 シナリオ
 
-- [ ] Baby Scratch
+- [x] Baby Scratch
 - [ ] Forward Scratch
 - [ ] Backward Scratch
-- [ ] Chirp Scratch
+- [x] Chirp Scratch
 - [ ] Transformer Scratch
-- [ ] One Click Flare Orbit
+- [x] One Click Flare Orbit
 
 完了条件
 
-- [ ] 理想演奏100%
-- [ ] 欠落演奏減点
-- [ ] 余分演奏減点
-- [ ] MIDI/Mouse同結果
+- [x] 理想演奏100%（上記3譜面）
+- [x] 欠落演奏減点
+- [x] 余分演奏減点
+- [x] MIDI/Mouse同結果（上記3譜面、模擬MIDI）
+
+Phase 7ではfeature層の回帰テスト12件を追加。
+保存形式維持、過去記録の未採点、初期状態不正、記録上限超過、
+デモ除外、将来イベントのMissing防止、停止位置固定も検証する。
+実機MIDI・全譜面・Migration後の網羅確認は未完了。
 
 ---
 

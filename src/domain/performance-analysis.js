@@ -1,4 +1,6 @@
 import { COUNT_KEYS } from "./performance.js";
+import { createStopObservation } from "./midi-mapping.js";
+import { createLoopBoundary, isEventInLoop } from "./playback.js";
 
 /** Event kinds in the same vocabulary as the performance counts. */
 const KIND_LANES = {
@@ -128,6 +130,316 @@ function alignSequences(expected, actual) {
 
 function createEmptyTally() {
   return { matched: 0, missing: 0, extra: 0 };
+}
+
+/**
+ * Independent v2 sequence matcher. Input is already compressed; timestamps
+ * determine loop ownership only. Initial-state matches have no timing pair.
+ * @param {ReturnType<typeof createExpectedTimeline>} expectedTimeline
+ * @param {object[]} recordedTimeline Absolute-time meaning/control events.
+ * @param {ReturnType<typeof import("./playback.js").createLoopState>[]} loopStates
+ */
+export function matchPerformanceTimeline(
+  expectedTimeline,
+  recordedTimeline,
+  loopStates,
+) {
+  const meaningKinds = ["forward", "backward", "faderOpen", "faderClosed"];
+  const expectedKinds = expectedTimeline.map((event, index) => {
+    const kind = getEventKind(event);
+    if (
+      !meaningKinds.includes(kind) || !Number.isFinite(event.tick) ||
+      event.tick < 0 ||
+      (index > 0 && event.tick < expectedTimeline[index - 1].tick)
+    ) {
+      throw new TypeError(
+        "Expected a chronologically ordered meaning timeline",
+      );
+    }
+    return kind;
+  });
+  const recordedKinds = recordedTimeline.map((event, index) => {
+    if (
+      !event || !Number.isFinite(event.time) ||
+      (index > 0 && event.time < recordedTimeline[index - 1].time)
+    ) {
+      throw new TypeError(
+        "Expected a chronologically ordered recorded timeline",
+      );
+    }
+    const kind = getEventKind(event);
+    if (meaningKinds.includes(kind) || kind === "stop") return kind;
+    if (event.type === "stop") {
+      const observation = createStopObservation(event);
+      if (
+        event.reason !== observation.reason || event.time !== observation.time
+      ) throw new TypeError("Invalid physical stop observation");
+      return null;
+    }
+    if (event.type === "loop-boundary") {
+      createLoopBoundary({
+        ...event,
+        inputState: {
+          currentDirection: event.currentDirection,
+          faderState: event.faderState,
+        },
+      });
+      return null;
+    }
+    throw new TypeError("Unknown recorded timeline event");
+  });
+  if (!loopStates.length) throw new TypeError("At least one loop is required");
+  loopStates.forEach((loop, index) => {
+    const previous = loopStates[index - 1];
+    if (
+      !loop || typeof loop.sessionId !== "string" || !loop.sessionId.length ||
+      !Number.isInteger(loop.loopIndex) || loop.loopIndex < 0 ||
+      !["demo", "recording"].includes(loop.phase) ||
+      !Number.isFinite(loop.startTime) || !Number.isFinite(loop.endTime) ||
+      loop.endTime <= loop.startTime ||
+      !["unknown", "forward", "backward", "stopped"].includes(
+        loop.startDirection,
+      ) ||
+      !["unknown", "open", "closed"].includes(loop.startFaderState) ||
+      (previous && (
+        loop.sessionId !== previous.sessionId ||
+        loop.loopIndex <= previous.loopIndex ||
+        loop.startTime < previous.endTime
+      ))
+    ) throw new TypeError("Invalid or overlapping loop states");
+  });
+
+  const byKind = Object.fromEntries(
+    meaningKinds.map((kind) => [kind, createEmptyTally()]),
+  );
+  const pairs = [];
+  const missingEvents = [];
+  const extraEvents = [];
+  const assignedActual = new Set();
+  const loops = loopStates.filter((loop) => loop.phase === "recording").map(
+    (loop) => {
+      const actualIndexes = recordedTimeline.flatMap((event, index) =>
+        meaningKinds.includes(recordedKinds[index]) &&
+          isEventInLoop(event, loop)
+          ? [index]
+          : []
+      );
+      actualIndexes.forEach((index) => assignedActual.add(index));
+      const loopPairs = [];
+      const loopMissing = [];
+      const loopExtra = [];
+      for (const lane of ["scratch", "fader"]) {
+        const expectedIndexes = expectedKinds.flatMap((kind, index) =>
+          KIND_LANES[kind] === lane ? [index] : []
+        );
+        const laneActualIndexes = actualIndexes.filter((index) =>
+          KIND_LANES[recordedKinds[index]] === lane
+        );
+        const first = expectedIndexes[0];
+        // Boundary state is evidence, not an invented input or timing sample.
+        if (
+          lane === "scratch" && first !== undefined &&
+          expectedTimeline[first].tick === 0 &&
+          expectedKinds[first] === loop.startDirection
+        ) {
+          expectedIndexes.shift();
+          loopPairs.push({
+            loopIndex: loop.loopIndex,
+            lane,
+            kind: expectedKinds[first],
+            expectedIndex: first,
+            actualIndex: null,
+            expectedTick: 0,
+            actualTime: null,
+            source: "initial-state",
+            timingEligible: false,
+          });
+        }
+        const { matchedExpected, matchedActual } = alignSequences(
+          expectedIndexes.map((index) => expectedKinds[index]),
+          laneActualIndexes.map((index) => recordedKinds[index]),
+        );
+        const actualMatches = [...matchedActual];
+        [...matchedExpected].forEach((index, matchIndex) => {
+          const expectedIndex = expectedIndexes[index];
+          const actualIndex = laneActualIndexes[actualMatches[matchIndex]];
+          loopPairs.push({
+            loopIndex: loop.loopIndex,
+            lane,
+            kind: expectedKinds[expectedIndex],
+            expectedIndex,
+            actualIndex,
+            expectedTick: expectedTimeline[expectedIndex].tick,
+            actualTime: recordedTimeline[actualIndex].time,
+            source: "event",
+            timingEligible: true,
+          });
+        });
+        expectedIndexes.forEach((expectedIndex, index) => {
+          if (!matchedExpected.has(index)) {
+            loopMissing.push({
+              loopIndex: loop.loopIndex,
+              expectedIndex,
+              kind: expectedKinds[expectedIndex],
+              tick: expectedTimeline[expectedIndex].tick,
+            });
+          }
+        });
+        laneActualIndexes.forEach((actualIndex, index) => {
+          if (!matchedActual.has(index)) {
+            loopExtra.push({
+              loopIndex: loop.loopIndex,
+              actualIndex,
+              kind: recordedKinds[actualIndex],
+              time: recordedTimeline[actualIndex].time,
+            });
+          }
+        });
+      }
+      loopPairs.sort((a, b) => a.expectedIndex - b.expectedIndex);
+      loopMissing.sort((a, b) => a.expectedIndex - b.expectedIndex);
+      loopExtra.sort((a, b) => a.actualIndex - b.actualIndex);
+      for (const pair of loopPairs) byKind[pair.kind].matched += 1;
+      for (const event of loopMissing) byKind[event.kind].missing += 1;
+      for (const event of loopExtra) byKind[event.kind].extra += 1;
+      pairs.push(...loopPairs);
+      missingEvents.push(...loopMissing);
+      extraEvents.push(...loopExtra);
+      const initialState = {
+        expectedFaderState: "open",
+        actualFaderState: loop.startFaderState,
+        status: loop.startFaderState === "unknown"
+          ? "unconfirmed"
+          : loop.startFaderState === "open"
+          ? "valid"
+          : "mismatch",
+        valid: loop.startFaderState === "open",
+      };
+      const total = loopPairs.length + loopMissing.length + loopExtra.length;
+      return {
+        loopIndex: loop.loopIndex,
+        matched: loopPairs.length,
+        missing: loopMissing.length,
+        extra: loopExtra.length,
+        accuracy: total
+          ? Math.round(loopPairs.length / total * 1000) / 10
+          : null,
+        initialState,
+      };
+    },
+  );
+  const matched = pairs.length;
+  const missing = missingEvents.length;
+  const extra = extraEvents.length;
+  const total = matched + missing + extra;
+  return {
+    matched,
+    missing,
+    extra,
+    expectedCount: matched + missing,
+    actualCount: pairs.filter((pair) => pair.source === "event").length + extra,
+    accuracy: total ? Math.round(matched / total * 1000) / 10 : null,
+    initialStateValid: loops.length > 0 &&
+      loops.every((loop) => loop.initialState.valid),
+    pairs,
+    missingEvents,
+    extraEvents,
+    byKind,
+    loops,
+    unassignedActualIndexes: recordedKinds.flatMap((kind, index) =>
+      meaningKinds.includes(kind) && !assignedActual.has(index) ? [index] : []
+    ),
+  };
+}
+
+/**
+ * Measures v2 timing from existing matching pairs without re-aligning events.
+ * Signed error is positive for late input and negative for early input.
+ * @param {{tickDurationSeconds: number}} scoreData Compiled score timing grid.
+ * @param {ReturnType<typeof matchPerformanceTimeline>} matching
+ * @param {ReturnType<typeof import("./playback.js").createLoopState>[]} loopStates
+ * @param {number} bpm
+ */
+export function analyzeTimelineTiming(scoreData, matching, loopStates, bpm) {
+  if (
+    !Number.isFinite(bpm) || bpm <= 0 ||
+    !Number.isFinite(scoreData.tickDurationSeconds) ||
+    scoreData.tickDurationSeconds <= 0
+  ) {
+    throw new TypeError("A positive BPM and score tick duration are required");
+  }
+  const millisecondsPerTick = scoreData.tickDurationSeconds * 60000 / bpm;
+  if (!Number.isFinite(millisecondsPerTick) || millisecondsPerTick <= 0) {
+    throw new TypeError("Milliseconds per tick must be positive and finite");
+  }
+  const loops = new Map();
+  for (const loop of loopStates) {
+    if (
+      !Number.isInteger(loop.loopIndex) || loop.loopIndex < 0 ||
+      loops.has(loop.loopIndex) ||
+      !["demo", "recording"].includes(loop.phase) ||
+      !Number.isFinite(loop.startTime) || !Number.isFinite(loop.endTime) ||
+      loop.endTime <= loop.startTime
+    ) throw new TypeError("Invalid timing loop interval");
+    loops.set(loop.loopIndex, loop);
+  }
+  const samples = [];
+  for (const pair of matching.pairs) {
+    if (
+      pair.actualIndex === null || pair.timingEligible === false ||
+      pair.source === "initial-state" ||
+      !["forward", "backward", "faderOpen", "faderClosed"].includes(pair.kind)
+    ) continue;
+    const loop = loops.get(pair.loopIndex);
+    if (
+      pair.source !== "event" || pair.timingEligible !== true ||
+      !Number.isInteger(pair.actualIndex) || pair.actualIndex < 0 ||
+      !Number.isInteger(pair.expectedIndex) || pair.expectedIndex < 0 ||
+      !Number.isFinite(pair.expectedTick) || pair.expectedTick < 0 ||
+      !Number.isFinite(pair.actualTime) ||
+      !loop || loop.phase !== "recording" ||
+      !isEventInLoop({ time: pair.actualTime }, loop)
+    ) throw new TypeError("Invalid timing-eligible matching pair");
+    const expectedTime = pair.expectedTick * millisecondsPerTick;
+    const actualTime = pair.actualTime - loop.startTime;
+    const signedErrorMs = actualTime - expectedTime;
+    if (
+      !Number.isFinite(expectedTime) || !Number.isFinite(actualTime) ||
+      !Number.isFinite(signedErrorMs)
+    ) throw new TypeError("Timing error must be finite");
+    samples.push({
+      loopIndex: pair.loopIndex,
+      expectedIndex: pair.expectedIndex,
+      actualIndex: pair.actualIndex,
+      kind: pair.kind,
+      expectedTimeMs: expectedTime,
+      actualTimeMs: actualTime,
+      signedErrorMs,
+      absoluteErrorMs: Math.abs(signedErrorMs),
+    });
+  }
+  let averageErrorMs = null;
+  let maxErrorMs = null;
+  if (samples.length) {
+    // Divide before summing to keep large finite errors from overflowing.
+    averageErrorMs = samples.reduce(
+      (sum, sample) => sum + sample.absoluteErrorMs / samples.length,
+      0,
+    );
+    maxErrorMs = samples.reduce(
+      (max, sample) => Math.max(max, sample.absoluteErrorMs),
+      0,
+    );
+  }
+  return {
+    averageErrorMs,
+    maxErrorMs,
+    timingAccuracy: averageErrorMs === null
+      ? null
+      : Math.round(Math.max(0, 100 * (1 - averageErrorMs / 100)) * 10) / 10,
+    measuredCount: samples.length,
+    samples,
+  };
 }
 
 function createExpectedEventTicks(scoreData) {

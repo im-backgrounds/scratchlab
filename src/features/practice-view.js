@@ -1,10 +1,13 @@
+import { analyzeRuntimePerformance } from "./performance-view.js";
+import { createExpectedTimeline } from "../domain/performance-analysis.js";
+
 export function createPracticeView({
   state,
   getSelectedChart,
   visualizer,
   performanceUi,
   getLatestPerformance,
-  analyzeForChart,
+  getAnalysis,
   getPlaybackSnapshot,
   renderBuilderScore,
 }) {
@@ -15,22 +18,58 @@ export function createPracticeView({
       !state.isBuilderPlayback &&
       snapshot.startedAt !== null
     ) {
-      performanceUi.renderControllerOverlay(chart.scoreData, null, null, {
-        currentStep: state.isPlaying ? state.currentStep : snapshot.currentStep,
+      const now = snapshot.stoppedAt ?? Date.now();
+      const expected = createExpectedTimeline(chart.scoreData);
+      const playback = {
+        progress: Math.min(
+          100,
+          (now - snapshot.startedAt) /
+            (chart.scoreData.totalTicks * chart.scoreData.tickDurationSeconds *
+              60000 / state.bpm) *
+            100,
+        ),
         isPlaying: state.isPlaying,
-        startedAt: snapshot.startedAt,
-        now: Date.now(),
-        bpm: state.bpm,
-        loopNumber: snapshot.loopNumber,
-        events: snapshot.events,
-      });
+        isDemo: snapshot.loopState.phase === "demo",
+      };
+      if (playback.isDemo) {
+        performanceUi.renderControllerOverlay(
+          chart.scoreData,
+          null,
+          playback,
+          expected,
+        );
+        return;
+      }
+      const tickMs = chart.scoreData.tickDurationSeconds * 60000 / state.bpm;
+      const endTime = Math.max(snapshot.startedAt + 0.001, now + 0.001);
+      const currentTick = Math.min(
+        chart.scoreData.totalTicks,
+        (now - snapshot.startedAt) / tickMs,
+      );
+      const bundle = analyzeRuntimePerformance(
+        chart.scoreData,
+        snapshot.events.filter((event) => event.time < endTime).toSorted((
+          a,
+          b,
+        ) => a.time - b.time),
+        [{ ...snapshot.loopState, endTime }],
+        state.bpm,
+        currentTick,
+      );
+      performanceUi.renderControllerOverlay(
+        chart.scoreData,
+        bundle,
+        playback,
+        expected,
+      );
       return;
     }
     const performance = getLatestPerformance();
     performanceUi.renderControllerOverlay(
       chart.scoreData,
-      performance,
-      performance ? analyzeForChart(performance, chart) : null,
+      getAnalysis(performance, chart),
+      null,
+      createExpectedTimeline(chart.scoreData),
     );
   }
 

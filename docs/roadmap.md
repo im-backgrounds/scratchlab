@@ -78,6 +78,10 @@ ScratchLab を
 
 現在確認済み。
 
+Phase 7 App Integrationで新規ランタイム分析はEvent Model v2へ切替済み。
+以下の粒度不整合は新規実行では解消済みだが、保存済みのv1結果には残る。
+保存形式・Progress・Achievementは変更せず、Migrationは未実施。
+
 ## Event Model Mismatch
 
 期待イベントと入力イベントの粒度が一致していない。
@@ -119,6 +123,19 @@ Critical
 ---
 
 # Event Model v2
+
+## 現在の接続状況（実装Phase 7）
+
+- [x] BPM Challenge・Beginner Courseへv2 Matching接続
+- [x] Timing・Controller Overlayが同じ対応ペアを利用
+- [x] 実入力のBoundary snapshot・Stop observationを接続
+- [x] 初期フェーダー未確認／不一致のクリア防止
+- [x] Mouse＋Keyboard／模擬MIDIでBaby・Chirp・Flare 100%
+- [x] 過去記録は再採点せず再挑戦を案内
+- [ ] 保存データMigration（別フェーズ）
+
+下記Phase 1〜5の未接続説明は独立API実装時点の履歴。
+Phase 7ではランタイムのみ接続し、保存形式と既存Progress／Achievement処理は維持する。
 
 目的
 
@@ -221,9 +238,14 @@ v2観測の接続・Stopの採点対象外化は後続作業。
 
 Matching Engine v2
 
-- [ ] 共通Matching Engine
-- [ ] 対応ペア保存
-- [ ] Accuracy再検証
+- [x] 共通Matching Engine（実装Phase 4 / Epic 5、独立API）
+- [x] 対応ペア保持（メモリー内）
+- [x] Accuracy再検証（Baby・Chirp・Flareの圧縮済み理想入力100%）
+
+Stop・Loop Boundaryは除外し、半開区間ごとに照合する。
+冒頭の同方向継続は一致として数えるがTiming対象外。
+初期フェーダー検証は一致率と別に返す。アプリ・Challenge結果・Timing・Overlayへの
+接続と永続化は未実施。
 
 ---
 
@@ -231,9 +253,13 @@ Matching Engine v2
 
 Timing Analysis v2
 
-- [ ] 共通ペア利用
-- [ ] Signed Error保持
-- [ ] Overlay連携
+- [x] 共通ペア利用（実装Phase 5 / Epic 6、独立API）
+- [x] Signed Error保持
+- [x] Overlay独立APIへ測定サンプル共有
+
+Matching結果を再照合せず利用する。継続観測・Stop・境界・Missing・Extraは測定しない。
+Average Error・Max Error・Timing Accuracy・Measured Countとペア別誤差を返す。
+アプリ・Challenge結果・Overlayへの接続は未実施。既存v1 Timingは未変更。
 
 ---
 
@@ -241,9 +267,13 @@ Timing Analysis v2
 
 Overlay v2
 
-- [ ] 共通Expected利用
-- [ ] 共通Matching利用
-- [ ] Error整合
+- [x] 共通Expected利用（実装Phase 6 / Epic 7、独立API）
+- [x] 共通Matching利用
+- [x] Error整合（Missing・Extra・Initial State Error）
+
+SAMPLE・YOU・ERRORの表示データを生成し、Timing結果のサンプルを共有する。
+Stop・境界・デモは表示しない。3対象譜面でMissing・Extra・測定件数を検証済み。
+既存UI・Challenge結果・Progress・保存への接続は未実施。
 
 ---
 

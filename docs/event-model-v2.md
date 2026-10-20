@@ -2,6 +2,29 @@
 
 Status: Design Frozen (Draft)
 
+## Phase 7 App Integration（現在の実装）
+
+- Expected → Matching → Timing → Overlayを共通の分析結果としてアプリへ接続。
+  BPM Challenge・Beginner Course・直後の結果・Controller Overlayで共有する。
+- 実際のループ開始／終了時刻でBoundary snapshotを保持する。小節境界や
+  ループ末尾のtickでは物理状態をresetしない。Mouse/MIDIのStopは物理停止観測と
+  して記録し、Matching・Timing・Overlayから除外する。
+- 初期フェーダーが未確認／閉なら一致率にかかわらずクリア不可。
+  この場合と記録上限超過時はProgress・Achievementへの結果通知を行わない。
+- アプリの分析コンテキストはメモリー内だけで保持する。保存形式version 1は
+  変更しない。保存用Stopは従来形式へ投影し、境界・対応ペアは保存しない。
+- 再読込／インポートした記録は初期状態情報を復元できないため、v2で再採点せず
+  再挑戦を案内する。別譜面の結果も流用しない。
+- SAMPLEはExpected v2、YOUはRecorded、ERRORはMatchingの投影。
+  記録2ループをそれぞれ表示し、Missing・Extra・Initial State Error・Timing件数は
+  全ループの合計を表示する。再生中は経過区間だけを暫定判定し、
+  未到来イベントをMissingにしない。お手本は採点対象外。
+- Migration・Progress／Achievementのロジック・スキーマは未変更。
+  Previous Result・履歴の旧スコアは残るため、公開前のMigrationは別途必要。
+
+以下の各Phase実装状況は、そのPhase完成時の履歴を含む。
+「未接続」の記載はPhase 7以前の状態であり、現在のランタイム経路は上記のとおり。
+
 ## Background
 
 BPM Challenge v1
@@ -421,6 +444,56 @@ K は物理 Stop を要求しない。
 
 # Matching Rules
 
+## Phase 4 実装状況（Epic 5）
+
+`performance-analysis.js` の `matchPerformanceTimeline`
+を独立APIとして追加した。 入力は `createExpectedTimeline` のMeaning
+Event配列、記録済みイベント配列、 `createLoopState`
+のループ区間配列。記録イベントは入力圧縮済みで、 同じ絶対ミリ秒時計の `time`
+を持ち、配列は時刻順とする。 期待配列はMeaning Eventのみを受け付け、順序付きの
+`tick` を持つ。
+
+記録配列のStop観測・従来形式Stop・Loop Boundaryは採点から除外する。
+Stopで同方向ストロークが再開された場合のイベントを再圧縮して消すことはしない。
+デモは採点しない。各記録ループの `[startTime, endTime)` 内だけで独立照合し、
+区間外・デモ内のMeaning Eventは `unassignedActualIndexes` で明示する。
+不正なイベント・時刻・重複区間・異なるセッションの区間は例外で通知する。
+
+照合は既存のLCS補助処理を再利用し、レーンごとの順序を維持する。
+曖昧な対応では既存と同じく期待側を先に進める決定的な規則を使う。
+一致率は時刻差ではなく対応数から計算し、ループ合計の件数で集計する。
+比較対象がなければ一致率は `null`。
+
+戻り値:
+
+- `pairs`：`loopIndex`、`lane`、`kind`、元配列の `expectedIndex` /
+  `actualIndex`、 `expectedTick`、`actualTime`、`source`、`timingEligible`。
+- `missingEvents` / `extraEvents`：元配列インデックス・ループ・種類・位置。
+- `matched` / `missing` / `extra`、`accuracy`、Meaning Event別の `byKind`。
+- `loops`：記録ループごとの集計と `initialState`。
+- `initialStateValid`：記録ループがあり、すべての初期フェーダー状態が検証済みか。
+- `expectedCount`：継続観測を含む期待数。 `actualCount`：区間内の実Meaning
+  Event数（継続観測やStopは含めない）。
+
+ループ開始方向がtick
+0の最初の期待ストロークと同じ場合、継続観測による一致とする。
+`source: "initial-state"`、`actualIndex: null`、`actualTime: null`、
+`timingEligible: false` で保持し、架空の入力やTimingサンプルを作らない。
+K後などtick
+0以外の開始ストロークや、unknown・stopped・逆方向はこの扱いにしない。
+通常の実入力対応は `source: "event"`、`timingEligible: true`。
+
+初期フェーダーは生成器と同じopenを要求する。境界スナップショットがunknownなら
+`unconfirmed`、closedなら `mismatch`、openなら `valid`。
+後続の開閉イベントでは初期状態を推測しない。冒頭のCloseも通常どおり照合する。
+一致率100%でも初期状態が未確認・不一致ならクリア不可とするため、
+将来の呼び出し側は一致率とは別に `initialStateValid` を確認する。
+Engine自体はChallengeの合否・進捗更新・Timing計算を行わない。
+
+Baby・Chirp・1 Click Flareは、期待生成器とは独立した理想操作列を圧縮して
+2ループとも100%となることを検証済み。
+アプリ・UI・Challenge結果・Timing・Overlay・保存にはまだ接続していない。
+
 ## レーン分離
 
 以下を独立照合する。
@@ -487,6 +560,45 @@ Loop Boundary は採点対象外。
 
 # Timing Rules
 
+## Phase 5 実装状況（Epic 6）
+
+`performance-analysis.js` の
+`analyzeTimelineTiming(scoreData, matching, loopStates, bpm)`
+を独立APIとして追加した。`matching` は `matchPerformanceTimeline`
+の戻り値を渡す。 期待イベントの再生成・LCSの再実行は行わず、`matching.pairs`
+の対応をそのまま使う。 ループ区間はMatching時と同じ `createLoopState`
+の配列を渡す。
+
+対象はForward・Backward・Fader Open・Fader Closeの実入力対応のみ。
+`actualIndex: null`、`timingEligible: false`、継続観測、Stop、Loop
+Boundaryは除外する。
+Missing・Extra・区間外イベントは対応ペアに含まれず、0msとして補完しない。
+
+計算:
+
+- `millisecondsPerTick = scoreData.tickDurationSeconds * 60000 / bpm`
+- `expectedTimeMs = pair.expectedTick * millisecondsPerTick`（ループ内相対時刻）
+- `actualTimeMs = pair.actualTime - loop.startTime`
+- `signedErrorMs = actualTimeMs - expectedTimeMs`（早い入力は負、遅い入力は正）
+
+戻り値:
+
+- `averageErrorMs`：測定対象ペアの絶対誤差の平均。
+- `maxErrorMs`：測定対象ペアの最大絶対誤差。
+- `timingAccuracy`：100ms基準の既定式で算出し、小数1桁に丸める。
+- `measuredCount`：実際に測定したペア数。継続観測を含むMatched数とは異なる。
+- `samples`：元ペアの `loopIndex`、`expectedIndex`、`actualIndex`、`kind`、
+  相対時刻・符号付き誤差・絶対誤差を保持する。
+
+複数ループは測定した全ペアで平均し、ループ別平均の単純平均は使わない。
+測定件数が0なら3指標はすべて `null`、`measuredCount: 0`、`samples: []`。
+初期フェーダー検証・Sequence Accuracy・Challenge合否には影響しない。
+不正なBPM・tick換算・測定対象ペア・参照ループは例外で通知する。
+
+既存 `analyzePerformanceTiming` は未変更。 v2
+Timingは独立Matching結果を利用するが、アプリ・UI・Challenge結果・Overlay・
+Migration・Achievementには接続していない。
+
 ## 対象
 
 Timing対象:
@@ -500,6 +612,7 @@ Timing対象:
 
 - Stop
 - Loop Boundary
+- continuation match（継続観測による一致）
 
 ---
 
@@ -549,6 +662,44 @@ Challenge Accuracy
 ---
 
 # Overlay Rules
+
+## Phase 6 実装状況（Epic 7）
+
+`performance-overlay.js` の `createPerformanceOverlay` を独立APIとして追加した。
+入力は同じ分析に使ったExpected Timeline、Recorded Timeline、Loop State配列、
+Matching結果、Timing結果。イベント生成・LCS照合・採点・Timing分析を再実行しない。
+入力は変更せず、DOM・保存処理も扱わない。
+
+戻り値:
+
+- `sample`：各記録ループのExpected Timelineを元の順序で表示する。
+  `loopIndex`、`expectedIndex`、`kind`、`tick`、`status`（matched / missing）、
+  `matchSource`、`actualIndex`、`timing` を保持する。
+- `you`：各記録ループ内の実Meaning EventをRecorded Timelineの順序で表示する。
+  `actualIndex`、絶対 `time`、ループ内相対 `timeMs`、`kind`、 `status`（matched
+  / extra）、`expectedIndex`、`timing` を保持する。
+- `errors`：MatchingのMissing / Extraをそのまま参照位置付きで投影する。
+  初期フェーダー不一致・未確認は、Matchingの初期状態結果から
+  `classification: "initial-state-error"` としてループ冒頭に表示する。
+  他の分類名は `missing` / `extra`。初期状態エラーはMissing /
+  Extra件数に含めない。
+- `counts`：`missing`、`extra`、`initialStateErrors`、`measuredCount`。
+
+Stop（v2観測・従来形式）・Loop Boundary・デモ・区間外入力は表示対象外。
+区間の所属はBoundary v2の半開区間に従う。
+継続観測はSAMPLE上の一致として保持し、架空のYOU入力を生成しない。 Timingは既存
+`samples` の元インデックスで紐付けたコピーのみを保持し、
+Missing・Extra・継続観測には `timing: null` を返す。
+
+SAMPLEの位置単位はtick、YOUの位置単位はループ内ミリ秒として明示する。
+描画時の座標変換・色・DOMは後続のUI接続で扱う。
+入力の参照・集計・Timing件数が一致しない場合は例外で通知し、
+独自の判定や成功扱いの代替結果は生成しない。
+
+Baby・Chirp・1 Click
+Flareの2ループについて、正常・Missing/Extra・初期状態エラーで
+MatchingのMissing/Extra件数とTimingの測定件数の一致を検証した。 既存Overlay
+v1・UI・Challenge結果・Progress・Achievement・Migrationは未変更。
 
 ## SAMPLE
 

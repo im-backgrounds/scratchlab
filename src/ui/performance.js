@@ -5,7 +5,6 @@ import {
   createEmptyCounts,
   formatDuration,
 } from "../domain/performance.js";
-import { analyzePerformance } from "../domain/performance-analysis.js";
 
 const LANE_KIND_LABELS = {
   forward: "Forward",
@@ -186,10 +185,14 @@ const ANALYSIS_TOTALS = [
 
 /**
  * Renders the comparison with the expected chart events.
- * @param {object|null} analysis Result of analyzePerformance, or null.
+ * @param {object|null} analysis Result of matchPerformanceTimeline, or null.
  * @param {string} chartName Name of the chart compared against.
  */
-export function renderPerformanceAnalysis(analysis, chartName) {
+export function renderPerformanceAnalysis(
+  analysis,
+  chartName,
+  unavailableMessage = "",
+) {
   const note = document.getElementById("performance-analysis-chart");
   const accuracy = document.getElementById("performance-accuracy");
   const totals = document.getElementById("performance-analysis-totals");
@@ -202,7 +205,8 @@ export function renderPerformanceAnalysis(analysis, chartName) {
   );
 
   if (!analysis) {
-    note.textContent = "記録すると、選択中の譜面と比較します。";
+    note.textContent = unavailableMessage ||
+      "記録すると、選択中の譜面と比較します。";
     accuracy.textContent = "—";
     return;
   }
@@ -226,6 +230,7 @@ export function renderPerformanceAnalysis(analysis, chartName) {
 
   for (const key of COUNT_KEYS) {
     const tally = analysis.byKind[key];
+    if (!tally) continue;
     const row = document.createElement("tr");
     const head = document.createElement("th");
     head.scope = "row";
@@ -238,36 +243,6 @@ export function renderPerformanceAnalysis(analysis, chartName) {
     }
     rows.append(row);
   }
-}
-
-function getExpectedOverlayEvents(scoreData) {
-  const events = [];
-  let faderOpen = true;
-  const addFader = (open, tick) => {
-    events.push({ kind: open ? "open" : "closed", tick });
-    faderOpen = open;
-  };
-
-  for (const event of scoreData.events) {
-    if (event.keep) continue;
-    if (event.faderOpen !== faderOpen) {
-      addFader(event.faderOpen, event.startTick);
-    }
-    events.push({
-      kind: event.direction === "F" ? "forward" : "backward",
-      tick: event.startTick,
-    });
-    for (let cut = 0; event.faderOpen && cut < event.cutCount; cut += 1) {
-      const tick = event.startTick +
-        event.durationTicks * (cut + 1) / (event.cutCount + 1);
-      addFader(false, tick);
-      addFader(true, tick);
-    }
-  }
-  if (events.length) {
-    events.push({ kind: "stop", tick: scoreData.totalTicks });
-  }
-  return events;
 }
 
 function renderOverlayLane(
@@ -338,63 +313,6 @@ function renderOverlayLane(
   container.append(row);
 }
 
-function getOverlayErrors(expected, actual, totalTicks) {
-  const errors = [];
-  for (const lane of ["scratch", "fader"]) {
-    const isInLane = (event) =>
-      lane === "scratch"
-        ? ["forward", "backward", "stop"].includes(event.kind)
-        : ["open", "closed"].includes(event.kind);
-    const expectedLane = expected.filter(isInLane);
-    const actualLane = actual.filter(isInLane);
-    const table = Array.from(
-      { length: expectedLane.length + 1 },
-      () => new Array(actualLane.length + 1).fill(0),
-    );
-    for (let i = expectedLane.length - 1; i >= 0; i -= 1) {
-      for (let j = actualLane.length - 1; j >= 0; j -= 1) {
-        table[i][j] = expectedLane[i].kind === actualLane[j].kind
-          ? table[i + 1][j + 1] + 1
-          : Math.max(table[i + 1][j], table[i][j + 1]);
-      }
-    }
-    const matchedExpected = new Set();
-    const matchedActual = new Set();
-    let i = 0;
-    let j = 0;
-    while (i < expectedLane.length && j < actualLane.length) {
-      if (expectedLane[i].kind === actualLane[j].kind) {
-        matchedExpected.add(i++);
-        matchedActual.add(j++);
-      } else if (table[i + 1][j] >= table[i][j + 1]) {
-        i += 1;
-      } else {
-        j += 1;
-      }
-    }
-    expectedLane.forEach((event, index) => {
-      if (!matchedExpected.has(index)) {
-        errors.push({
-          kind: event.kind,
-          position: event.position ??
-            Math.min(100, Math.max(0, event.tick / totalTicks * 100)),
-          error: "SAMPLE missing",
-        });
-      }
-    });
-    actualLane.forEach((event, index) => {
-      if (!matchedActual.has(index)) {
-        errors.push({
-          kind: event.kind,
-          position: event.position,
-          error: "YOU extra",
-        });
-      }
-    });
-  }
-  return errors;
-}
-
 function renderOverlayRows(
   container,
   expected,
@@ -431,153 +349,82 @@ function renderOverlayRows(
 
 export function renderControllerOverlay(
   scoreData,
-  performance,
-  analysis,
+  bundle,
   playback = null,
+  expectedTimeline = [],
 ) {
   const container = document.getElementById("controller-overlay");
   container.replaceChildren();
-  const expected = getExpectedOverlayEvents(scoreData);
-  if (playback) {
-    const durationMs = scoreData.totalTicks *
-      scoreData.tickDurationSeconds * 60000 / playback.bpm;
-    const progressMs = Math.min(
-      durationMs,
-      Math.max(0, playback.currentStep * durationMs / scoreData.totalTicks),
-    );
-    const progress = progressMs / durationMs * 100;
-    const performedEvents = playback.events
-      .filter((event) =>
-        event.time >= playback.startedAt &&
-        event.time <= playback.startedAt + durationMs
-      )
-      .map((event) => ({
-        kind: event.type === "scratch" ? event.direction : event.state,
-        position: Math.min(
-          100,
-          Math.max(
-            0,
-            (event.time - playback.startedAt) / durationMs * 100,
-          ),
-        ),
-      }));
-    const actualKinds = playback.events
-      .filter((event) =>
-        event.time >= playback.startedAt &&
-        event.time <= playback.startedAt + progressMs
-      )
-      .map((event) => ({
-        type: event.type,
-        ...(event.type === "scratch"
-          ? { direction: event.direction }
-          : { state: event.state }),
-      }));
-    const passedExpected = expected.filter((event) =>
-      event.tick < playback.currentStep ||
-      (event.kind === "stop" && (
-        actualKinds.some((actual) =>
-          actual.type === "scratch" && actual.direction === "stop"
-        ) ||
-        (playback.currentStep === 0 && playback.loopNumber > 2)
-      ))
-    );
-    const expectedKinds = passedExpected.map((event) => ({
-      type: event.kind === "open" || event.kind === "closed"
-        ? "fader"
-        : "scratch",
-      ...(event.kind === "open" || event.kind === "closed"
-        ? { state: event.kind }
-        : { direction: event.kind }),
-    }));
-    const liveAnalysis = actualKinds.length
-      ? analyzePerformance(expectedKinds, actualKinds)
-      : null;
-    const sampleEvents = expected.map((event) => ({
-      ...event,
-      position: event.tick / scoreData.totalTicks * 100,
-    }));
-    const errorEvents = getOverlayErrors(
-      passedExpected,
-      performedEvents,
-      scoreData.totalTicks,
-    );
+  const kind = (value) =>
+    value === "faderOpen" ? "open" : value === "faderClosed" ? "closed" : value;
+  const tickPosition = (tick) => tick / scoreData.totalTicks * 100;
+  if (!bundle) {
     renderOverlayRows(
       container,
-      sampleEvents,
-      performedEvents,
-      errorEvents,
-      scoreData,
-      playback.isPlaying ? progress : null,
-    );
-    const error = document.createElement("p");
-    error.className = liveAnalysis &&
-        liveAnalysis.missing + liveAnalysis.extra > 0
-      ? "controller-overlay-error-summary"
-      : "controller-overlay-status";
-    error.textContent = !playback.isPlaying
-      ? "再生停止 · 入力を保持しています。"
-      : liveAnalysis
-      ? `Error: 未一致 ${liveAnalysis.missing}件 / 余分 ${liveAnalysis.extra}件`
-      : "再生中：入力を待っています。";
-    container.append(error);
-    return;
-  }
-
-  const loops = performance?.loopEnds?.length
-    ? [...performance.loopEnds, performance.durationMs]
-    : [performance?.durationMs ?? 0];
-  const performedEvents = [];
-  const sampleEvents = expected.map((event) => ({
-    ...event,
-    position: event.tick / scoreData.totalTicks * 100,
-  }));
-  let loopStart = 0;
-  if (performance?.durationMs > 0) {
-    loopStart = loops.length > 1 ? loops[loops.length - 2] : 0;
-    const loopEnd = loops.at(-1);
-    const loopDuration = Math.max(1, loopEnd - loopStart);
-    for (const event of performance.events) {
-      if ((loopStart > 0 && event.t <= loopStart) || event.t > loopEnd) {
-        continue;
-      }
-      performedEvents.push({
+      expectedTimeline.map((event) => ({
         kind: event.type === "scratch" ? event.direction : event.state,
-        position: Math.min(
-          100,
-          Math.max(0, (event.t - loopStart) / loopDuration * 100),
-        ),
-      });
+        position: tickPosition(event.tick),
+      })),
+      [],
+      [],
+      scoreData,
+    );
+  } else {
+    const duration = scoreData.totalTicks * scoreData.tickDurationSeconds *
+      60000 / bundle.bpm;
+    for (
+      const loop of bundle.loops.filter((item) => item.phase === "recording")
+    ) {
+      const title = document.createElement("p");
+      title.textContent = `Loop ${loop.loopIndex}`;
+      container.append(title);
+      const inLoop = (items) =>
+        items.filter((item) => item.loopIndex === loop.loopIndex);
+      const samples = playback
+        ? expectedTimeline.map((event) => ({
+          kind: event.type === "scratch" ? event.direction : event.state,
+          position: tickPosition(event.tick),
+        }))
+        : inLoop(bundle.overlay.sample).map((event) => ({
+          kind: kind(event.kind),
+          position: tickPosition(event.tick),
+        }));
+      const actual = inLoop(bundle.overlay.you).map((event) => ({
+        kind: kind(event.kind),
+        position: event.timeMs / duration * 100,
+      }));
+      const errors = inLoop(bundle.overlay.errors).map((event) => ({
+        kind: event.classification === "initial-state-error"
+          ? "closed"
+          : kind(event.kind),
+        position: event.classification === "extra"
+          ? event.timeMs / duration * 100
+          : tickPosition(event.tick),
+        error: event.classification === "missing"
+          ? "Missing"
+          : event.classification === "extra"
+          ? "Extra"
+          : "Initial State Error",
+      }));
+      renderOverlayRows(
+        container,
+        samples,
+        actual,
+        errors,
+        scoreData,
+        playback?.isPlaying ? playback.progress : null,
+      );
     }
   }
-  const errorEvents = getOverlayErrors(
-    expected,
-    analysis ? performedEvents : [],
-    scoreData.totalTicks,
-  );
-  renderOverlayRows(
-    container,
-    sampleEvents,
-    performedEvents,
-    errorEvents,
-    scoreData,
-  );
-
-  const empty = document.createElement("p");
-  empty.className = "controller-overlay-empty";
-  empty.textContent = performedEvents.length
-    ? ""
-    : "演奏を記録すると、入力イベントがここに表示されます。";
-  if (!performedEvents.length) container.append(empty);
-
-  const error = document.createElement("p");
-  const hasErrors = analysis && analysis.missing + analysis.extra > 0;
-  error.className = hasErrors
-    ? "controller-overlay-error-summary"
-    : "controller-overlay-status";
-  error.textContent = hasErrors
-    ? `Error: 未一致 ${analysis.missing}件 / 余分 ${analysis.extra}件`
-    : analysis
-    ? "Error: なし"
-    : "Error: 未判定";
-  container.append(error);
+  const summary = document.createElement("p");
+  summary.className = "controller-overlay-status";
+  const counts = bundle?.overlay.counts;
+  summary.textContent = counts
+    ? `Event Model v2 · Missing ${counts.missing}件 / Extra ${counts.extra}件 / Initial State Error ${counts.initialStateErrors}件 / Timing ${counts.measuredCount}件${
+      playback ? "（再生中の暫定判定）" : ""
+    }`
+    : playback?.isDemo
+    ? "Event Model v2 · お手本再生（採点対象外）"
+    : "Event Model v2 · 未判定。新しい挑戦の記録を待っています。";
+  container.append(summary);
 }

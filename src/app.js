@@ -10,7 +10,7 @@ import {
   clearMapping,
   createEventCompressor,
   createMidiMappingRepository,
-  createStopDetector,
+  createStopObserver,
   FIXED_VELOCITY_ACTIONS,
   MIDI_ACTION_LABELS,
   MidiMappingConflictError,
@@ -26,6 +26,8 @@ import {
 } from "./domain/performance.js";
 import { createPlaybackController } from "./domain/playback-controller.js";
 import {
+  createLoopBoundary,
+  createLoopState,
   getClickActions,
   getPlaybackEvent,
   getScratchActions,
@@ -131,6 +133,8 @@ let playbackLoopStartedAt = null;
 let playbackLoopNumber = 1;
 let playbackLoopEvents = [];
 let playbackLoopCurrentStep = 0;
+let playbackLoopState = null;
+let playbackLoopStoppedAt = null;
 let beginnerCourseMessage = beginnerCourseLoad.ok
   ? getNextBeginnerStageId(beginnerCourseRepository.progress) === null
     ? "Beginnerコースをすべてクリアしました。"
@@ -166,12 +170,14 @@ const practiceView = createPracticeView({
   visualizer,
   performanceUi,
   getLatestPerformance: () => latestPerformance,
-  analyzeForChart: performanceView.analyzeForChart,
+  getAnalysis: performanceView.getAnalysis,
   getPlaybackSnapshot: () => ({
     events: playbackLoopEvents,
     startedAt: playbackLoopStartedAt,
     currentStep: playbackLoopCurrentStep,
     loopNumber: playbackLoopNumber,
+    loopState: playbackLoopState,
+    stoppedAt: playbackLoopStoppedAt,
   }),
   renderBuilderScore: () => builderView.renderBuilderScore(),
 });
@@ -389,9 +395,19 @@ function advancePlayback() {
   const chart = getPlaybackChart();
   if (!chart.steps.length) return;
 
+  const now = Date.now();
   const challengeLooping = isChallengeLooping();
+  if (
+    state.currentStep === 0 && playbackLoopState !== null &&
+    playbackLoopState.startTime < now
+  ) {
+    playbackLoopStartedAt = now;
+    playbackLoopNumber += 1;
+    playbackLoopEvents = [];
+    playbackLoopState = runtimeLoopState(now);
+  }
   if (challengeLooping && challengeRun.tickSeen && state.currentStep === 0) {
-    applyChallengeEvent(CHALLENGE_EVENTS.LOOP_END);
+    applyChallengeEvent(CHALLENGE_EVENTS.LOOP_END, now);
     if (!playbackController.isRunning) return;
   }
   if (challengeLooping) challengeRun.tickSeen = true;
@@ -409,16 +425,23 @@ function advancePlayback() {
     ? state.currentStep
     : cursor.currentStep;
   if (cursor.shouldStop) return stopPlayback();
-  if (cursor.currentStep === 0) {
-    playbackLoopStartedAt = Date.now();
-    playbackLoopNumber += 1;
-    playbackLoopEvents = [];
-    playbackLoopCurrentStep = 0;
-  }
   actions.setPlaybackState({ currentStep: cursor.currentStep });
 }
 
+function runtimeLoopState(now) {
+  const input = eventCompressor.getState();
+  return {
+    sessionId: challengeRun?.sessionId ?? "practice",
+    loopIndex: playbackLoopNumber,
+    phase: challengeSession.phase === CHALLENGE_PHASES.DEMO ? "demo" : "recording",
+    startTime: now,
+    startDirection: input.currentDirection,
+    startFaderState: input.faderState,
+  };
+}
+
 function stopPlayback() {
+  if (state.isPlaying) playbackLoopStoppedAt = Date.now();
   const wasBuilderPlayback = state.isBuilderPlayback;
   playbackController.stop();
   silenceActiveScratch();
@@ -438,6 +461,8 @@ function startPlayback(isBuilderPlayback = false) {
   playbackLoopNumber = 1;
   playbackLoopEvents = [];
   playbackLoopCurrentStep = 0;
+  playbackLoopState = runtimeLoopState(playbackLoopStartedAt);
+  playbackLoopStoppedAt = null;
   actions.setPlaybackState({ isBuilderPlayback });
   const chart = getPlaybackChart();
   if (!chart.steps.length) {
@@ -803,7 +828,7 @@ function saveMidiMapping() {
 
 // Every converted message is logged as a raw event; only direction/state
 // changes become performance events (logged, and recorded while recording).
-function recordInputActionEvent(event) {
+function recordInputActionEvent(event, runtimeEvent = event) {
   rawEventCount += 1;
   if (state.recordingMidi) recordedRawCount += 1;
   inputEventLog.appendRawEvent(event);
@@ -812,8 +837,11 @@ function recordInputActionEvent(event) {
     performanceEventCount += 1;
     inputEventLog.appendPerformanceEvent(performanceEvent);
     if (state.recordingMidi) actions.recordMidiAction(performanceEvent);
+    if (state.recordingMidi && challengeRun) {
+      challengeRun.recordedTimeline.push(runtimeEvent);
+    }
     if (playbackController.isRunning && !state.isBuilderPlayback) {
-      playbackLoopEvents = [...playbackLoopEvents, performanceEvent];
+      playbackLoopEvents = [...playbackLoopEvents, runtimeEvent];
       renderControllerOverlay(getSelectedChart());
     }
   }
@@ -826,7 +854,7 @@ function renderAudioMonitoring() {
   });
 }
 
-function handleInputAudioEvent(event) {
+function handleInputAudioEvent(event, runtimeEvent = event) {
   if (event.type === "fader") {
     audioMonitorSettings.faderOpen = currentView === "practice" &&
       event.state === "open";
@@ -856,10 +884,22 @@ function handleInputAudioEvent(event) {
     }, 180);
     renderAudioMonitoring();
   }
-  recordInputActionEvent(event);
+  recordInputActionEvent(event, runtimeEvent);
 }
 
-const stopDetector = createStopDetector({ onStop: handleInputAudioEvent });
+function handleStopObservation(observation) {
+  handleInputAudioEvent({
+    type: "scratch",
+    direction: "stop",
+    time: observation.time,
+  }, observation);
+  eventCompressor.observeStop(observation);
+}
+
+const stopDetector = createStopObserver({
+  source: "midi",
+  onStop: handleStopObservation,
+});
 
 const keyboardInput = bindKeyboardInput({
   enabled: () => practiceModeEnabled && currentView === "practice",
@@ -887,11 +927,12 @@ const keyboardInput = bindKeyboardInput({
 
 let lastMouseDirection = null;
 let lastMouseInputAt = 0;
-const mouseStopDetector = createStopDetector({
+const mouseStopDetector = createStopObserver({
+  source: "mouse",
   timeoutMs: MOUSE_STOP_TIMEOUT_MS,
   onStop: (event) => {
     lastMouseDirection = null;
-    handleInputAudioEvent(event);
+    handleStopObservation(event);
   },
 });
 
@@ -923,7 +964,10 @@ function setPracticeModeEnabled(enabled) {
   }
   practiceModeEnabled = enabled;
   document.body.classList.toggle("practice-mode-active", enabled);
-  if (enabled) keyboardInput.setFaderState("open");
+  if (enabled) {
+    keyboardInput.setFaderState("open");
+    handleInputAudioEvent({ type: "fader", state: "open", time: Date.now() });
+  }
   syncPracticeModeButton();
 }
 
@@ -1258,6 +1302,21 @@ function evaluateChallengeAttempt(performance, run) {
     return;
   }
   const analysis = analyzeForChart(performance, chart);
+  latestChallengeTimingAnalysis = performanceView.analyzeTimingForChart(
+    performance,
+    chart,
+  );
+  latestChallengeTimingChartKey = chartKey;
+  if (!analysis || !analysis.initialStateValid) {
+    const message = performance.truncated
+      ? "記録の上限を超えたため判定できません。クリア・進捗更新は行いません。"
+      : "初期フェーダーが未確認または閉じています。開いた状態で再挑戦してください。クリア・進捗更新は行いません。";
+    if (run.courseStageId) {
+      beginnerCourseMessage = message;
+      renderBeginnerCourse();
+    } else setChallengeStatus(message);
+    return;
+  }
   if (run.courseStageId) {
     const stage = getBeginnerCourseStage(run.courseStageId);
     if (!stage) {
@@ -1317,12 +1376,6 @@ function evaluateChallengeAttempt(performance, run) {
       bpm: run.bpm,
       accuracy: analysis.accuracy,
     };
-  latestChallengeTimingAnalysis = performanceView.analyzeTimingForChart(
-    performance,
-    chart,
-    run.bpm,
-  );
-  latestChallengeTimingChartKey = chartKey;
   performanceUi.renderPerformanceSummaryAvailability(
     latestChallengeSummary !== null,
   );
@@ -1369,6 +1422,9 @@ function applyChallengeEvent(event, now = Date.now()) {
   } else if (effect === "start-recording") {
     beginChallengeRecording(now);
   } else if (effect === "next-recording") {
+    closeRecordingLoop(challengeRun, now);
+    challengeRun.loopStart = recordingBoundary("start", now);
+    playbackLoopState = runtimeLoopState(now);
     challengeRun.loopEnds.push(now - challengeRun.startedAt);
   } else if (effect === "finish-recording") {
     const run = challengeRun;
@@ -1519,13 +1575,38 @@ function beginChallengeRecording(now) {
   actions.setMidiState({ recordingMidi: true });
   challengeRun.startedAt = now;
   challengeRun.loopEnds = [];
+  challengeRun.recordedTimeline = [];
+  challengeRun.loopStates = [];
+  challengeRun.loopStart = recordingBoundary("start", now);
+  playbackLoopState = runtimeLoopState(now);
   performanceUi.renderPerformanceRecording(true);
   performanceUi.renderPerformanceStatus(
     "記録中… お手本のあとの2ループを自動で記録します。",
   );
 }
 
+function recordingBoundary(edge, now, loopIndex = challengeSession.take) {
+  return createLoopBoundary({
+    edge,
+    time: now,
+    sessionId: challengeRun.sessionId,
+    loopIndex,
+    phase: "recording",
+    inputState: eventCompressor.getState(),
+  });
+}
+
+function closeRecordingLoop(run, now) {
+  run.loopStates.push(
+    createLoopState(
+      run.loopStart,
+      recordingBoundary("end", now, run.loopStart.loopIndex),
+    ),
+  );
+}
+
 function finishChallengeRecording(run, now) {
+  closeRecordingLoop(run, now);
   const performance = createPerformance(state.midiActionRecord, {
     startedAt: run.startedAt,
     endedAt: now,
@@ -1534,6 +1615,15 @@ function finishChallengeRecording(run, now) {
   actions.setMidiState({ recordingMidi: false });
   actions.clearMidiRecord();
   latestPerformance = performance;
+  performanceView.setRuntime(
+    performance,
+    getSelectedChart(),
+    run.recordedTimeline.toSorted((a, b) => a.time - b.time),
+    run.loopStates,
+    run.bpm,
+  );
+  playbackLoopStartedAt = null;
+  playbackLoopEvents = [];
   performanceUi.renderPerformanceRecording(false);
   performanceUi.renderPerformance(performance);
   renderPerformanceAnalysis();
