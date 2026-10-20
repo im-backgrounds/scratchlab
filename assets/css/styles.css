@@ -398,6 +398,46 @@ button {
   border-radius: 0;
 }
 
+.controller-overlay-event {
+  position: absolute;
+  z-index: 4;
+  top: 50%;
+  display: grid;
+  width: 16px;
+  height: 16px;
+  transform: translate(-50%, -50%);
+  place-items: center;
+  border: 1px solid currentColor;
+  color: #101923;
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 1;
+  pointer-events: auto;
+}
+
+.controller-overlay-event-sample {
+  border-radius: 2px;
+  background: #38bdf8;
+}
+
+.controller-overlay-event-you {
+  border-radius: 50%;
+  background: #4ade80;
+}
+
+.controller-overlay-event-error {
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  background: #ff8a5b;
+}
+
+.controller-overlay-sample {
+  --overlay-color: #38bdf8;
+}
+
+.controller-overlay-you {
+  --overlay-color: #4ade80;
+}
+
 .controller-overlay-grid-line {
   position: absolute;
   z-index: 2;

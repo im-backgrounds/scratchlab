@@ -8,6 +8,7 @@ export function createBpmChallengeView({
   describeSessionProgress,
   getChallengeSession,
   getBeginnerCourseStage,
+  getTimingAnalysis,
   transport,
 }) {
   return {
@@ -21,6 +22,7 @@ export function createBpmChallengeView({
         active,
       });
       challengeUi.renderChallenge(view, getSelectedChart().name);
+      challengeUi.renderTimingAnalysis(getTimingAnalysis(chartKey));
       challengeUi.renderChallengeProgress(
         describeSessionProgress(getChallengeSession()),
       );

@@ -1,5 +1,6 @@
 import {
   analyzePerformanceLoops,
+  analyzePerformanceTiming,
   createExpectedEvents,
 } from "../domain/performance-analysis.js";
 
@@ -16,8 +17,18 @@ export function createPerformanceView({
     );
   }
 
+  function analyzeTimingForChart(performance, chart, bpm) {
+    return analyzePerformanceTiming(
+      chart.scoreData,
+      performance.events,
+      performance.loopEnds,
+      bpm,
+    );
+  }
+
   return {
     analyzeForChart,
+    analyzeTimingForChart,
     renderPerformanceAnalysis() {
       const performance = getLatestPerformance();
       if (!performance) {

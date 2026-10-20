@@ -115,6 +115,8 @@ const eventCompressor = createEventCompressor();
 const performanceRepository = createPerformanceRepository();
 let latestPerformance = performanceRepository.load();
 let latestChallengeSummary = null;
+let latestChallengeTimingAnalysis = null;
+let latestChallengeTimingChartKey = null;
 const challengeRepository = createChallengeRepository();
 const achievementRepository = createAchievementRepository();
 let achievementMessage = "";
@@ -192,6 +194,10 @@ const bpmChallengeView = createBpmChallengeView({
   describeSessionProgress,
   getChallengeSession: () => challengeSession,
   getBeginnerCourseStage: (stageId) => beginnerCourseView.getStage(stageId),
+  getTimingAnalysis: (chartKey) =>
+    chartKey === latestChallengeTimingChartKey
+      ? latestChallengeTimingAnalysis
+      : null,
   transport,
 });
 
@@ -1315,6 +1321,12 @@ function evaluateChallengeAttempt(performance, run) {
       bpm: run.bpm,
       accuracy: analysis.accuracy,
     };
+  latestChallengeTimingAnalysis = performanceView.analyzeTimingForChart(
+    performance,
+    chart,
+    run.bpm,
+  );
+  latestChallengeTimingChartKey = chartKey;
   performanceUi.renderPerformanceSummaryAvailability(
     latestChallengeSummary !== null,
   );
@@ -1389,6 +1401,8 @@ function startChallenge() {
     renderMidiMappingPanel();
   }
   activeChallengeKey = getChallengeChartKey();
+  latestChallengeTimingAnalysis = null;
+  latestChallengeTimingChartKey = null;
   challengeRun = {
     sessionId: createChallengeSessionId(),
     courseStageId: null,
@@ -1453,6 +1467,10 @@ function resetChallengeProgress() {
   const chartKey = getChallengeChartKey();
   if (!chartKey || !challengeUi.confirmReset(getSelectedChart().name)) return;
   const result = challengeRepository.remove(chartKey);
+  if (result.ok) {
+    latestChallengeTimingAnalysis = null;
+    latestChallengeTimingChartKey = null;
+  }
   renderChallengePanel();
   setChallengeStatus(
     result.ok ? "進捗をリセットしました。" : "進捗をリセットできませんでした。",
@@ -1649,6 +1667,7 @@ transport.bindTransport({
     }
     actions.setBpm(value);
     updateTransportValues();
+    renderChallengePanel();
     renderBeginnerCourse();
     if (playbackController.isRunning) startPlayback(state.isBuilderPlayback);
   },

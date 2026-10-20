@@ -94,6 +94,121 @@ function createEmptyTally() {
   return { matched: 0, missing: 0, extra: 0 };
 }
 
+function createExpectedEventTicks(scoreData) {
+  const ticks = [];
+  let faderOpen = true;
+  const addFader = (open, tick) => {
+    ticks.push(tick);
+    faderOpen = open;
+  };
+
+  for (const event of scoreData.events) {
+    if (event.keep) continue;
+    if (event.faderOpen !== faderOpen) {
+      addFader(event.faderOpen, event.startTick);
+    }
+    ticks.push(event.startTick);
+    for (let cut = 0; event.faderOpen && cut < event.cutCount; cut += 1) {
+      const tick = event.startTick +
+        event.durationTicks * (cut + 1) / (event.cutCount + 1);
+      addFader(false, tick);
+      addFader(true, tick);
+    }
+  }
+  if (ticks.length) ticks.push(scoreData.totalTicks);
+  return ticks;
+}
+
+/**
+ * Measures timing error only for the same events paired by the sequence
+ * analysis. Unmatched events are deliberately excluded from all timing metrics.
+ * @param {object} scoreData Compiled chart data.
+ * @param {object[]} actualEvents Timestamped performance events.
+ * @param {number[]} loopEnds Ascending offsets where recorded loops end.
+ * @param {number} bpm BPM used for the challenge.
+ */
+export function analyzePerformanceTiming(
+  scoreData,
+  actualEvents,
+  loopEnds = [],
+  bpm,
+) {
+  const expectedEvents = createExpectedEvents(scoreData);
+  const expectedTicks = createExpectedEventTicks(scoreData);
+  if (expectedEvents.length !== expectedTicks.length) {
+    throw new Error("Expected event timing does not match the score events.");
+  }
+  if (
+    !Number.isFinite(bpm) || bpm <= 0 ||
+    !Number.isFinite(scoreData.tickDurationSeconds) ||
+    scoreData.tickDurationSeconds <= 0
+  ) {
+    throw new Error("A positive BPM and score tick duration are required.");
+  }
+
+  const millisecondsPerTick = scoreData.tickDurationSeconds * 60000 / bpm;
+  const errors = [];
+  const bounds = [...loopEnds, Infinity];
+  let previous = -Infinity;
+  for (const end of bounds) {
+    const loopEvents = actualEvents.filter((event) =>
+      event.t > previous && event.t <= end
+    );
+    const loopStart = previous === -Infinity ? 0 : previous;
+
+    for (const lane of ["scratch", "fader"]) {
+      const isInLane = (event) => KIND_LANES[getEventKind(event)] === lane;
+      const expectedIndexes = expectedEvents.flatMap((event, index) =>
+        isInLane(event) ? [index] : []
+      );
+      const actualIndexes = loopEvents.flatMap((event, index) =>
+        isInLane(event) ? [index] : []
+      );
+      const expectedKinds = expectedIndexes.map((index) =>
+        getEventKind(expectedEvents[index])
+      );
+      const actualKinds = actualIndexes.map((index) =>
+        getEventKind(loopEvents[index])
+      );
+      const { matchedExpected, matchedActual } = alignSequences(
+        expectedKinds,
+        actualKinds,
+      );
+      const matchedExpectedIndexes = [...matchedExpected];
+      const matchedActualIndexes = [...matchedActual];
+      for (let index = 0; index < matchedExpectedIndexes.length; index += 1) {
+        const expectedEventIndex =
+          expectedIndexes[matchedExpectedIndexes[index]];
+        const actualEventIndex = actualIndexes[matchedActualIndexes[index]];
+        const expectedTime = expectedTicks[expectedEventIndex] *
+          millisecondsPerTick;
+        const actualTime = loopEvents[actualEventIndex].t - loopStart;
+        errors.push(Math.abs(actualTime - expectedTime));
+      }
+    }
+    previous = end;
+  }
+
+  if (errors.length === 0) {
+    return {
+      averageErrorMs: null,
+      maxErrorMs: null,
+      timingAccuracy: null,
+      matchedCount: 0,
+    };
+  }
+  const averageErrorMs = errors.reduce((sum, error) => sum + error, 0) /
+    errors.length;
+  return {
+    averageErrorMs,
+    maxErrorMs: Math.max(...errors),
+    timingAccuracy: Math.round(
+      Math.max(0, Math.min(100, 100 * (1 - averageErrorMs / 100))) * 10,
+    ) / 10,
+    matchedCount: errors.length,
+  };
+}
+
 /**
  * Compares a recorded performance with the expected events by sequence only.
  * The scratch lane (forward/backward/stop) and the fader lane are aligned

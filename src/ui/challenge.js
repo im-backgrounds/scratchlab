@@ -11,6 +11,30 @@ export function renderChallengeStatus(message) {
   setText("challenge-status", message);
 }
 
+export function renderTimingAnalysis(analysis) {
+  const section = document.getElementById("challenge-timing-analysis");
+  section.hidden = !analysis;
+  if (!analysis) return;
+  setText(
+    "challenge-average-error",
+    analysis.averageErrorMs === null
+      ? "N/A"
+      : `${analysis.averageErrorMs.toFixed(1)} ms`,
+  );
+  setText(
+    "challenge-max-error",
+    analysis.maxErrorMs === null
+      ? "N/A"
+      : `${analysis.maxErrorMs.toFixed(1)} ms`,
+  );
+  setText(
+    "challenge-timing-accuracy",
+    analysis.timingAccuracy === null
+      ? "N/A"
+      : `${analysis.timingAccuracy.toFixed(1)}%`,
+  );
+}
+
 /**
  * Renders the panel from a describeChallenge() result.
  * @param {object} view Result of describeChallenge.
@@ -36,6 +60,23 @@ export function renderChallenge(view, chartName) {
   );
   setText("challenge-attempts", String(view.attempts));
   setText("challenge-clears", String(view.clears));
+  const lastAttempt = document.getElementById("challenge-last-attempt");
+  lastAttempt.hidden = !view.lastAttempt;
+  if (view.lastAttempt) {
+    setText("challenge-last-attempt-bpm", String(view.lastAttempt.bpm));
+    setText(
+      "challenge-last-attempt-accuracy",
+      `${view.lastAttempt.accuracy.toFixed(1)}%`,
+    );
+    setText(
+      "challenge-last-attempt-result",
+      view.lastAttempt.cleared ? "成功" : "失敗",
+    );
+    setText(
+      "challenge-last-attempt-at",
+      new Date(view.lastAttempt.at).toLocaleString("ja-JP"),
+    );
+  }
   document.getElementById("challenge-start").disabled = !view.canStart;
   document.getElementById("challenge-reset").disabled = !view.canReset;
 }

@@ -277,9 +277,11 @@ function renderOverlayLane(
   events,
   scoreData,
   progress = null,
+  source,
 ) {
   const row = document.createElement("div");
-  row.className = "performance-lane controller-overlay-lane";
+  row.className =
+    `performance-lane controller-overlay-lane controller-overlay-lane-${source}`;
   const name = document.createElement("span");
   name.className = "performance-lane-label";
   name.textContent = label;
@@ -297,18 +299,25 @@ function renderOverlayLane(
       ? ["forward", "backward", "stop"].includes(event.kind)
       : ["open", "closed"].includes(event.kind)
   );
-  for (const [index, event] of laneEvents.entries()) {
-    const end = laneEvents[index + 1]?.position ?? 100;
-    const segment = document.createElement("span");
-    segment.className = `performance-segment performance-segment-${event.kind}`;
-    segment.style.left = `${Math.min(100, Math.max(0, event.position))}%`;
-    segment.style.width = `${
-      Math.max(0, Math.min(100, end) - Math.max(0, event.position))
-    }%`;
-    segment.title = `${label}: ${LANE_KIND_LABELS[event.kind]}`;
-    segment.setAttribute("role", "img");
-    segment.setAttribute("aria-label", segment.title);
-    track.append(segment);
+  const eventSymbols = {
+    forward: "F",
+    backward: "B",
+    stop: "S",
+    open: "O",
+    closed: "C",
+  };
+  for (const event of laneEvents) {
+    const marker = document.createElement("span");
+    marker.className =
+      `controller-overlay-event controller-overlay-event-${source}`;
+    marker.style.left = `${Math.min(100, Math.max(0, event.position))}%`;
+    marker.textContent = source === "error" ? "!" : eventSymbols[event.kind];
+    marker.title = event.error
+      ? `Error: ${event.error} ${LANE_KIND_LABELS[event.kind]}`
+      : `${label}: ${LANE_KIND_LABELS[event.kind]}`;
+    marker.setAttribute("role", "img");
+    marker.setAttribute("aria-label", marker.title);
+    track.append(marker);
   }
 
   const ticksPerBeat = scoreData.ticksPerBar / scoreData.beatsPerBar;
@@ -327,6 +336,97 @@ function renderOverlayLane(
 
   row.append(name, track);
   container.append(row);
+}
+
+function getOverlayErrors(expected, actual, totalTicks) {
+  const errors = [];
+  for (const lane of ["scratch", "fader"]) {
+    const isInLane = (event) =>
+      lane === "scratch"
+        ? ["forward", "backward", "stop"].includes(event.kind)
+        : ["open", "closed"].includes(event.kind);
+    const expectedLane = expected.filter(isInLane);
+    const actualLane = actual.filter(isInLane);
+    const table = Array.from(
+      { length: expectedLane.length + 1 },
+      () => new Array(actualLane.length + 1).fill(0),
+    );
+    for (let i = expectedLane.length - 1; i >= 0; i -= 1) {
+      for (let j = actualLane.length - 1; j >= 0; j -= 1) {
+        table[i][j] = expectedLane[i].kind === actualLane[j].kind
+          ? table[i + 1][j + 1] + 1
+          : Math.max(table[i + 1][j], table[i][j + 1]);
+      }
+    }
+    const matchedExpected = new Set();
+    const matchedActual = new Set();
+    let i = 0;
+    let j = 0;
+    while (i < expectedLane.length && j < actualLane.length) {
+      if (expectedLane[i].kind === actualLane[j].kind) {
+        matchedExpected.add(i++);
+        matchedActual.add(j++);
+      } else if (table[i + 1][j] >= table[i][j + 1]) {
+        i += 1;
+      } else {
+        j += 1;
+      }
+    }
+    expectedLane.forEach((event, index) => {
+      if (!matchedExpected.has(index)) {
+        errors.push({
+          kind: event.kind,
+          position: event.position ??
+            Math.min(100, Math.max(0, event.tick / totalTicks * 100)),
+          error: "SAMPLE missing",
+        });
+      }
+    });
+    actualLane.forEach((event, index) => {
+      if (!matchedActual.has(index)) {
+        errors.push({
+          kind: event.kind,
+          position: event.position,
+          error: "YOU extra",
+        });
+      }
+    });
+  }
+  return errors;
+}
+
+function renderOverlayRows(
+  container,
+  expected,
+  actual,
+  errors,
+  scoreData,
+  progress = null,
+) {
+  for (
+    const [source, events] of [
+      ["sample", expected],
+      ["you", actual],
+      ["error", errors],
+    ]
+  ) {
+    for (const lane of ["scratch", "fader"]) {
+      const label = source === "sample"
+        ? "SAMPLE"
+        : source === "you"
+        ? "YOU"
+        : "Error";
+      renderOverlayLane(
+        container,
+        `${label} · ${lane === "scratch" ? "スクラッチ" : "フェーダー"}`,
+        lane,
+        events,
+        scoreData,
+        source === "you" ? progress : null,
+        source,
+      );
+    }
+  }
 }
 
 export function renderControllerOverlay(
@@ -373,8 +473,15 @@ export function renderControllerOverlay(
           : { state: event.state }),
       }));
     const passedExpected = expected.filter((event) =>
-      event.tick < playback.currentStep
-    ).map((event) => ({
+      event.tick < playback.currentStep ||
+      (event.kind === "stop" && (
+        actualKinds.some((actual) =>
+          actual.type === "scratch" && actual.direction === "stop"
+        ) ||
+        (playback.currentStep === 0 && playback.loopNumber > 2)
+      ))
+    );
+    const expectedKinds = passedExpected.map((event) => ({
       type: event.kind === "open" || event.kind === "closed"
         ? "fader"
         : "scratch",
@@ -383,21 +490,22 @@ export function renderControllerOverlay(
         : { direction: event.kind }),
     }));
     const liveAnalysis = actualKinds.length
-      ? analyzePerformance(passedExpected, actualKinds)
+      ? analyzePerformance(expectedKinds, actualKinds)
       : null;
-    renderOverlayLane(
-      container,
-      "入力 · スクラッチ",
-      "scratch",
+    const sampleEvents = expected.map((event) => ({
+      ...event,
+      position: event.tick / scoreData.totalTicks * 100,
+    }));
+    const errorEvents = getOverlayErrors(
+      passedExpected,
       performedEvents,
-      scoreData,
-      playback.isPlaying ? progress : null,
+      scoreData.totalTicks,
     );
-    renderOverlayLane(
+    renderOverlayRows(
       container,
-      "入力 · フェーダー",
-      "fader",
+      sampleEvents,
       performedEvents,
+      errorEvents,
       scoreData,
       playback.isPlaying ? progress : null,
     );
@@ -419,12 +527,19 @@ export function renderControllerOverlay(
     ? [...performance.loopEnds, performance.durationMs]
     : [performance?.durationMs ?? 0];
   const performedEvents = [];
+  const sampleEvents = expected.map((event) => ({
+    ...event,
+    position: event.tick / scoreData.totalTicks * 100,
+  }));
+  let loopStart = 0;
   if (performance?.durationMs > 0) {
-    const loopIndex = loops.length - 1;
-    const loopStart = loopIndex === 0 ? 0 : loops[loopIndex - 1];
-    const loopDuration = Math.max(1, loops[loopIndex] - loopStart);
+    loopStart = loops.length > 1 ? loops[loops.length - 2] : 0;
+    const loopEnd = loops.at(-1);
+    const loopDuration = Math.max(1, loopEnd - loopStart);
     for (const event of performance.events) {
-      if (event.t < loopStart || event.t > loops[loopIndex]) continue;
+      if ((loopStart > 0 && event.t <= loopStart) || event.t > loopEnd) {
+        continue;
+      }
       performedEvents.push({
         kind: event.type === "scratch" ? event.direction : event.state,
         position: Math.min(
@@ -434,19 +549,16 @@ export function renderControllerOverlay(
       });
     }
   }
-
-  renderOverlayLane(
-    container,
-    "入力 · スクラッチ",
-    "scratch",
-    performedEvents,
-    scoreData,
+  const errorEvents = getOverlayErrors(
+    expected,
+    analysis ? performedEvents : [],
+    scoreData.totalTicks,
   );
-  renderOverlayLane(
+  renderOverlayRows(
     container,
-    "入力 · フェーダー",
-    "fader",
+    sampleEvents,
     performedEvents,
+    errorEvents,
     scoreData,
   );
 

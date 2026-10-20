@@ -4,6 +4,7 @@ import { compileScoreData } from "../../src/domain/score-compiler.js";
 import {
   analyzePerformance,
   analyzePerformanceLoops,
+  analyzePerformanceTiming,
   createExpectedEvents,
   getEventKind,
 } from "../../src/domain/performance-analysis.js";
@@ -216,4 +217,99 @@ Deno.test("an event at a loop end belongs to the loop that ends there", () => {
   assert.equal(analyzePerformanceLoops(expected, events, [100]).accuracy, 100);
   // Without boundaries the same events count as one long loop with extras.
   assert.ok(analyzePerformanceLoops(expected, events).accuracy < 100);
+});
+
+Deno.test("timing analysis measures absolute error for existing sequence matches", () => {
+  const score = compile([["F", "B"]]);
+  const result = analyzePerformanceTiming(
+    score,
+    [
+      { t: 10, ...scratch("forward") },
+      { t: 1020, ...scratch("backward") },
+      { t: 2040, ...scratch("stop") },
+      { t: 1500, ...scratch("forward") },
+    ],
+    [],
+    120,
+  );
+  assert.equal(result.matchedCount, 3);
+  assert.ok(Math.abs(result.averageErrorMs - (70 / 3)) < 0.0001);
+  assert.equal(result.maxErrorMs, 40);
+  assert.equal(result.timingAccuracy, 76.7);
+});
+
+Deno.test("timing analysis maps each recording loop independently", () => {
+  const score = compile([["F", "B"]]);
+  const result = analyzePerformanceTiming(
+    score,
+    [
+      { t: 10, ...scratch("forward") },
+      { t: 1020, ...scratch("backward") },
+      { t: 2000, ...scratch("stop") },
+      { t: 2010, ...scratch("forward") },
+      { t: 3020, ...scratch("backward") },
+      { t: 4040, ...scratch("stop") },
+    ],
+    [2000],
+    120,
+  );
+  assert.equal(result.matchedCount, 6);
+  assert.ok(Math.abs(result.averageErrorMs - (100 / 6)) < 0.0001);
+  assert.equal(result.maxErrorMs, 40);
+  assert.equal(result.timingAccuracy, 83.3);
+});
+
+Deno.test("timing analysis excludes unmatched events and reports unavailable without pairs", () => {
+  const score = compile([["F"]]);
+  const matched = analyzePerformanceTiming(
+    score,
+    [
+      { t: 10, ...scratch("forward") },
+      { t: 50, ...scratch("backward") },
+    ],
+    [],
+    120,
+  );
+  assert.equal(matched.matchedCount, 1);
+  assert.equal(matched.averageErrorMs, 10);
+  assert.equal(matched.maxErrorMs, 10);
+  assert.equal(matched.timingAccuracy, 90);
+
+  const unmatched = analyzePerformanceTiming(
+    score,
+    [
+      { t: 20, ...scratch("backward") },
+    ],
+    [],
+    120,
+  );
+  assert.deepEqual(unmatched, {
+    averageErrorMs: null,
+    maxErrorMs: null,
+    timingAccuracy: null,
+    matchedCount: 0,
+  });
+});
+
+Deno.test("timing accuracy bottoms at zero and exact timing is perfect", () => {
+  const score = compile([["F"]]);
+  const exact = analyzePerformanceTiming(
+    score,
+    [
+      { t: 0, ...scratch("forward") },
+    ],
+    [],
+    120,
+  );
+  assert.equal(exact.timingAccuracy, 100);
+
+  const late = analyzePerformanceTiming(
+    score,
+    [
+      { t: 200, ...scratch("forward") },
+    ],
+    [],
+    120,
+  );
+  assert.equal(late.timingAccuracy, 0);
 });

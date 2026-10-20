@@ -107,18 +107,17 @@
             <section class="controller-overlay"
               aria-labelledby="controller-overlay-title">
               <h4 id="controller-overlay-title">コントローラーオーバーレイ</h4>
-              <p>スクラッチとフェーダーの入力を、譜面と同じ長さの時間軸で表示します。</p>
+              <p>SAMPLEは譜面上の期待イベント、YOUは実際の入力、Errorは一致しなかったイベントです。記号はF=前進、B=後進、S=停止、O=フェーダー開、C=フェーダー閉を表します。</p>
               <div id="controller-overlay"
                 class="controller-overlay-tracks"
                 aria-label="譜面と演奏イベントの比較"></div>
               <ul class="controller-overlay-legend"
                 aria-label="タイムラインの凡例">
-                <li class="performance-segment-forward">Forward</li>
-                <li class="performance-segment-backward">Backward</li>
-                <li class="performance-segment-stop">Stop</li>
-                <li class="performance-segment-open">Fader Open</li>
-                <li class="performance-segment-closed">Fader Close</li>
-                <li class="controller-overlay-error">Error</li>
+                <li
+                  class="controller-overlay-sample">SAMPLE · 譜面上の期待イベント</li>
+                <li class="controller-overlay-you">YOU · 実際の入力</li>
+                <li
+                  class="controller-overlay-error">Error · ! 一致しないイベント</li>
               </ul>
             </section>
 
@@ -296,6 +295,49 @@
                 <dd id="challenge-clears">0</dd>
               </div>
             </dl>
+
+            <section id="challenge-last-attempt" class="challenge-last-attempt"
+              aria-labelledby="challenge-last-attempt-title" hidden>
+              <h4 id="challenge-last-attempt-title">前回結果</h4>
+              <dl class="performance-counts challenge-stats">
+                <div class="performance-count">
+                  <dt>BPM</dt>
+                  <dd id="challenge-last-attempt-bpm"></dd>
+                </div>
+                <div class="performance-count">
+                  <dt>Accuracy</dt>
+                  <dd id="challenge-last-attempt-accuracy"></dd>
+                </div>
+                <div class="performance-count">
+                  <dt>結果</dt>
+                  <dd id="challenge-last-attempt-result"></dd>
+                </div>
+                <div class="performance-count">
+                  <dt>実施日時</dt>
+                  <dd id="challenge-last-attempt-at"></dd>
+                </div>
+              </dl>
+            </section>
+
+            <section id="challenge-timing-analysis"
+              aria-labelledby="challenge-timing-analysis-title" hidden>
+              <h4 id="challenge-timing-analysis-title">Timing Analysis</h4>
+              <p>イベント順序の一致率とは別のタイミング指標です。Timing Accuracy = max(0, 100 × (1 − Average Error / 100 ms))。</p>
+              <dl class="performance-counts challenge-stats">
+                <div class="performance-count">
+                  <dt>Average Error</dt>
+                  <dd id="challenge-average-error">N/A</dd>
+                </div>
+                <div class="performance-count">
+                  <dt>Max Error</dt>
+                  <dd id="challenge-max-error">N/A</dd>
+                </div>
+                <div class="performance-count">
+                  <dt>Timing Accuracy</dt>
+                  <dd id="challenge-timing-accuracy">N/A</dd>
+                </div>
+              </dl>
+            </section>
           </section>
 
           <section id="performance-panel" class="card secondary-card"
