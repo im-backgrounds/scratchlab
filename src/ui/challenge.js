@@ -130,7 +130,7 @@ export function confirmReset(chartName) {
 }
 
 /**
- * Renders the Demo / Recording / Analyzing / Result progress indicator.
+ * Renders the Warm-up / Recording / Analyzing / Result progress indicator.
  * @param {{id: string, label: string, state: string}[]} steps Output of
  *   describeSessionProgress.
  */

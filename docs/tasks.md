@@ -87,7 +87,8 @@ Charts、Achievement、Beginner Course、初回ガイドの提供は継続する
 - [x] 入力デバイス一覧・接続状態・入力デバイス選択を専用画面に集約
 - [x] 選択デバイスを保存し、再読込後に復元
 - [x] Crossfader／Scratch入力確認と最新20件のMIDI診断ログ
-- [x] Challengeの自動記録フローと既存マッピング保存を維持
+- [x] Lap 1をウォームアップ、Lap 2〜3を自動記録・採点し、Lap 3終了時に停止
+- [x] Challengeの再挑戦と既存マッピング保存を維持
 
 ## Remaining
 

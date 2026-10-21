@@ -33,8 +33,8 @@ toward a measurable BPM goal.
 
 ## Attempt flow
 
-- Starting runs one unscored demo loop, followed by two recorded loops, then
-  analysis and a result.
+- Starting runs a playback-only warmup on lap 1, followed by recording on laps 2
+  and 3, then analysis and a result. Only events from laps 2 and 3 are analyzed.
 - Recording starts and stops automatically at loop boundaries.
 - The BPM control is fixed during a challenge.
 - Stopping playback, changing the chart, or leaving the practice context cancels
@@ -73,8 +73,8 @@ toward a measurable BPM goal.
 
 - Show current challenge BPM, highest cleared BPM, attempts, clears, best
   accuracy, and the latest result.
-- Show progress through Demo, Recording 1/2, Recording 2/2, Analyzing, and
-  Result.
+- Show progress through Warm-up (Lap 1), Recording Lap 2/3, Recording Lap 3/3,
+  Analyzing, and Result.
 - Disable challenge start during active work and after completion; expose
   progress reset when progress exists and no attempt is active.
 - Show MIDI connection/mapping and practice-mode readiness before a challenge
@@ -82,7 +82,7 @@ toward a measurable BPM goal.
 - Confirm before leaving the practice context during an active challenge;
   confirming aborts the attempt and discards its incomplete recording.
 - Explain input prerequisites and show status/result messages.
-- Indicate whether the current attempt is a demo, recording, analysis, or
+- Indicate whether the current attempt is in warmup, recording, analysis, or
   result.
 - Provide a route from MIDI setup back to Practice without changing the selected
   chart or saved challenge progress.
@@ -113,18 +113,16 @@ The versioned challenge store is logically:
 ```
 
 `highestClearedBpm` is null before a clear; `bestAccuracy` and `lastAttempt` may
-also be null. The chart key uses a stable built-in chart ID. The active state
-machine is transient and follows
-`ready → demo → recording 1/2 →
-recording 2/2 → analyzing → result`; abort
-returns it to ready.
+also be null. The chart key uses a stable built-in chart ID. The active state machine is transient and follows
+`idle → warmup (lap 1) → recording (laps 2–3) → analyzing → completed`; abort
+returns it to idle.
 
 # Acceptance Criteria
 
 - The first attempt starts at 80 BPM and later BPM is derived in +5 steps up
   to 180.
-- The demo loop is not scored; exactly two subsequent loops are recorded and
-  analyzed separately.
+- Lap 1 is not recorded; exactly laps 2 and 3 are recorded and analyzed
+  separately, with playback stopping at the end of lap 3.
 - A valid accuracy of 90% or more advances progress; a lower score retries the
   same BPM.
 - Overlong attempts are invalid and cannot set a best accuracy or clear.

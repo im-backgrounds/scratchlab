@@ -5,6 +5,7 @@ import {
   createChallengeSession,
   describeSessionProgress,
   describeSessionStatus,
+  isSessionRecording,
   isSessionRunning,
   transitionSession,
 } from "../../src/domain/challenge-session.js";
@@ -40,27 +41,31 @@ function run(events, session = createChallengeSession()) {
 const states = (session) =>
   describeSessionProgress(session).map((step) => step.state);
 
-Deno.test("a full attempt runs demo, two recordings, analysis, result", () => {
-  const { session, effects } = run([
-    START,
-    LOOP_END,
-    LOOP_END,
-    LOOP_END,
-    ANALYZED,
-  ]);
-  assert.equal(session.phase, CHALLENGE_PHASES.RESULT);
-  assert.deepEqual(effects, [
-    "start-playback",
-    "start-recording",
-    "next-recording",
-    "finish-recording",
-    null,
-  ]);
-});
+Deno.test(
+  "a full attempt warms up, records two laps, analyzes, and completes",
+  () => {
+    const { session, effects } = run([
+      START,
+      LOOP_END,
+      LOOP_END,
+      LOOP_END,
+      ANALYZED,
+    ]);
+    assert.equal(session.phase, CHALLENGE_PHASES.COMPLETED);
+    assert.deepEqual(effects, [
+      "start-playback",
+      "start-recording",
+      "next-recording",
+      "finish-recording",
+      null,
+    ]);
+  },
+);
 
-Deno.test("the demo loop is not recorded", () => {
+Deno.test("lap 1 is a playback-only warmup", () => {
   const { session } = run([START]);
-  assert.equal(session.phase, CHALLENGE_PHASES.DEMO);
+  assert.equal(session.phase, CHALLENGE_PHASES.WARMUP);
+  assert.equal(session.lap, 1);
   assert.deepEqual(states(session), [
     "current",
     "pending",
@@ -72,6 +77,8 @@ Deno.test("the demo loop is not recorded", () => {
 
 Deno.test("recording progress follows the loop boundaries", () => {
   const first = run([START, LOOP_END]).session;
+  assert.equal(first.phase, CHALLENGE_PHASES.RECORDING);
+  assert.equal(first.lap, 2);
   assert.equal(first.take, 1);
   assert.deepEqual(states(first), [
     "done",
@@ -81,6 +88,8 @@ Deno.test("recording progress follows the loop boundaries", () => {
     "pending",
   ]);
   const second = run([LOOP_END], first).session;
+  assert.equal(second.phase, CHALLENGE_PHASES.RECORDING);
+  assert.equal(second.lap, 3);
   assert.equal(second.take, 2);
   assert.deepEqual(states(second), [
     "done",
@@ -105,15 +114,15 @@ Deno.test("progress labels match the specification", () => {
     s.label
   );
   assert.deepEqual(labels, [
-    "Demo",
-    "Recording 1/2",
-    "Recording 2/2",
+    "Warm-up (Lap 1)",
+    "Recording Lap 2/3",
+    "Recording Lap 3/3",
     "Analyzing",
     "Result",
   ]);
 });
 
-Deno.test("abort returns to ready from any phase", () => {
+Deno.test("abort returns to idle from any phase", () => {
   for (
     const events of [[START], [START, LOOP_END], [
       START,
@@ -128,24 +137,26 @@ Deno.test("abort returns to ready from any phase", () => {
 });
 
 Deno.test("events that do not apply are ignored", () => {
-  const ready = createChallengeSession();
-  assert.deepEqual(run([LOOP_END, ANALYZED], ready).effects, [null, null]);
-  const demo = run([START]).session;
-  assert.deepEqual(run([START, ANALYZED], demo), {
-    session: demo,
+  const idle = createChallengeSession();
+  assert.deepEqual(run([LOOP_END, ANALYZED], idle).effects, [null, null]);
+  const warmup = run([START]).session;
+  assert.deepEqual(run([START, ANALYZED], warmup), {
+    session: warmup,
     effects: [null, null],
   });
   // A late analysis result cannot revive an aborted attempt.
   assert.equal(
-    run([ABORT, ANALYZED], demo).session.phase,
-    CHALLENGE_PHASES.READY,
+    run([ABORT, ANALYZED], warmup).session.phase,
+    CHALLENGE_PHASES.IDLE,
   );
 });
 
 Deno.test("a result can be started again", () => {
   const done = run([START, LOOP_END, LOOP_END, LOOP_END, ANALYZED]).session;
   const again = transitionSession(done, START);
-  assert.equal(again.session.phase, CHALLENGE_PHASES.DEMO);
+  assert.equal(again.session.phase, CHALLENGE_PHASES.WARMUP);
+  assert.equal(again.session.lap, 1);
+  assert.equal(again.session.take, 0);
   assert.equal(again.effect, "start-playback");
 });
 
@@ -156,10 +167,37 @@ Deno.test("status messages exist only while a phase is running", () => {
   );
   assert.match(
     describeSessionStatus(run([START, LOOP_END, LOOP_END]).session, 80),
-    /記録 2\/2/,
+    /記録 Lap 3\/3/,
   );
   assert.equal(describeSessionStatus(createChallengeSession(), 80), null);
 });
+
+Deno.test(
+  "only laps 2 and 3 are recorded and lap 3 ends the attempt",
+  () => {
+    let session = createChallengeSession();
+    const recordedLaps = [];
+    session = transitionSession(session, START).session;
+    for (let lap = 1; lap <= 3; lap += 1) {
+      assert.equal(session.lap, lap);
+      if (session.phase === CHALLENGE_PHASES.RECORDING) {
+        recordedLaps.push(session.lap);
+      }
+      const boundary = transitionSession(session, LOOP_END);
+      session = boundary.session;
+      if (lap === 1) assert.equal(boundary.effect, "start-recording");
+      if (lap === 2) assert.equal(boundary.effect, "next-recording");
+      if (lap === 3) assert.equal(boundary.effect, "finish-recording");
+    }
+    assert.deepEqual(recordedLaps, [2, 3]);
+    assert.equal(session.phase, CHALLENGE_PHASES.ANALYZING);
+    assert.equal(isSessionRecording(session), false);
+    assert.equal(
+      transitionSession(session, ANALYZED).session.phase,
+      CHALLENGE_PHASES.COMPLETED,
+    );
+  },
+);
 
 Deno.test("v1 regression: an inactivity stop does not advance the recording loop", () => {
   const session = run([START, LOOP_END]).session;
@@ -179,7 +217,11 @@ Deno.test("v1 regression: an inactivity stop does not advance the recording loop
   assert.deepEqual(recorded, [
     { type: "scratch", direction: "stop", time: 250 },
   ]);
-  assert.deepEqual(session, { phase: CHALLENGE_PHASES.RECORDING, take: 1 });
+  assert.deepEqual(session, {
+    phase: CHALLENGE_PHASES.RECORDING,
+    lap: 2,
+    take: 1,
+  });
   detector.flush(1000);
   assert.equal(recorded.length, 1);
 });
