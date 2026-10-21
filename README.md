@@ -240,6 +240,8 @@ v2受入・回帰・旧v1特性テストの分類は[Tasks](docs/tasks.md#テス
 
 GitHub Actionsでは、pushとpull
 requestのたびにフォーマット確認、型チェック、テストを実行します。
+Issue、ScratchLab Development Project、Pull Requestの運用手順は
+[GitHub Workflow](docs/github-workflow.md)を参照してください。
 
 ### デプロイ
 

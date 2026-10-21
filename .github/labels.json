@@ -1,0 +1,129 @@
+{
+  "labels": [
+    {
+      "name": "type:feature",
+      "color": "1D76DB",
+      "description": "新機能・ユーザー体験の改善"
+    },
+    {
+      "name": "type:bug",
+      "color": "D73A4A",
+      "description": "再現可能な不具合の修正"
+    },
+    {
+      "name": "type:tech-debt",
+      "color": "FBCA04",
+      "description": "保守性・信頼性・構造の改善"
+    },
+    {
+      "name": "type:task",
+      "color": "7057FF",
+      "description": "調査・検証・開発環境などの作業"
+    },
+    {
+      "name": "priority:p0",
+      "color": "B60205",
+      "description": "緊急。主要機能の停止やデータ損失など即時対応が必要"
+    },
+    {
+      "name": "priority:p1",
+      "color": "D93F0B",
+      "description": "高。主要機能や採点の信頼性に大きく影響"
+    },
+    {
+      "name": "priority:p2",
+      "color": "FBCA04",
+      "description": "通常。計画的に対応する改善・不具合"
+    },
+    {
+      "name": "priority:p3",
+      "color": "0E8A16",
+      "description": "低。影響が限定的で優先度を下げられる改善"
+    },
+    {
+      "name": "area:bpm-challenge",
+      "color": "0052CC",
+      "description": "BPM Challengeの進行、合否、結果、進捗"
+    },
+    {
+      "name": "area:event-model-v2",
+      "color": "5319E7",
+      "description": "Event Model v2、Meaning Event、共通イベント処理"
+    },
+    {
+      "name": "area:ghost",
+      "color": "C2E0C6",
+      "description": "Ghostの保存、表示、比較"
+    },
+    {
+      "name": "area:replay",
+      "color": "0E8A16",
+      "description": "Replayの保存、再生、Viewer"
+    },
+    {
+      "name": "area:midi",
+      "color": "1D76DB",
+      "description": "MIDI接続、割当、入力処理、MIDI E2E"
+    },
+    {
+      "name": "area:ui",
+      "color": "F9D0C4",
+      "description": "画面、操作性、表示、アクセシビリティ"
+    },
+    {
+      "name": "area:scoring",
+      "color": "B60205",
+      "description": "Accuracy、Matching、Missing／Extra、採点結果"
+    },
+    {
+      "name": "docs:readme",
+      "color": "0075CA",
+      "description": "READMEのユーザー向け説明、設定、制約の更新"
+    },
+    {
+      "name": "docs:roadmap",
+      "color": "0052CC",
+      "description": "roadmapの優先度、マイルストーン、状況の更新"
+    },
+    {
+      "name": "docs:tasks",
+      "color": "1D76DB",
+      "description": "tasksの作業項目や検証状態の更新"
+    },
+    {
+      "name": "docs:specification",
+      "color": "5319E7",
+      "description": "機能仕様、Event Model、アーキテクチャ文書の更新"
+    },
+    {
+      "name": "test:unit",
+      "color": "BFD4F2",
+      "description": "ドメインやモジュールのユニットテスト"
+    },
+    {
+      "name": "test:regression",
+      "color": "D4C5F9",
+      "description": "既存動作や修正対象の再発防止テスト"
+    },
+    {
+      "name": "test:e2e",
+      "color": "C5DEF5",
+      "description": "ブラウザーを通したエンドツーエンドテスト"
+    },
+    {
+      "name": "test:midi-e2e",
+      "color": "1D76DB",
+      "description": "仮想MIDIを使ったMIDI E2Eテスト"
+    },
+    {
+      "name": "test:manual",
+      "color": "FEF2C0",
+      "description": "実機MIDIや主要ブラウザーなど人手での確認"
+    }
+  ],
+  "legacyLabelMigration": {
+    "enhancement": "type:feature",
+    "bug": "type:bug",
+    "refactor": "type:tech-debt"
+  }
+}
