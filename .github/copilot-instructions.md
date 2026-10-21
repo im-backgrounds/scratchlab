@@ -32,9 +32,19 @@ branches, push, or create a branch unless requested or the task's workflow
 explicitly requires it. Keep a change focused on one issue.
 
 Follow the [GitHub workflow](../docs/github-workflow.md) for Project status,
-priority, Issue triage, PR review, and completion procedures.
-Use the [README policy](../docs/readme-policy.md) to assess README changes and
-the [label guide](../docs/labels.md) for current Issue labels.
+priority, Issue triage, PR review, and completion procedures. Use the
+[README policy](../docs/readme-policy.md) to assess README changes and the
+[label guide](../docs/labels.md) for current Issue labels.
+
+Always create GitHub Issues through a script using GitHub CLI or the GitHub API,
+not an interactive Issue-creation tool or form. Check for duplicates before
+creation and re-fetch the created Issue to verify its body and labels. Add every
+leaf Issue (an Issue with no sub-Issues, including a standalone or parent Issue
+without children) to **ScratchLab Development**. For nested hierarchies, track
+the leaf sub-Issues; a parent alone is not sufficient. Check existing membership
+to avoid duplicates, preserve existing Project items, and verify membership,
+Status, and Priority after registration. If Project permissions are missing,
+report the blocker rather than claiming completion.
 
 ## Documentation Updates
 
