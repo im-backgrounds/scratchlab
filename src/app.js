@@ -87,7 +87,9 @@ import { createBeginnerCourseView } from "./features/beginner-course-view.js";
 import { renderAchievementView } from "./features/achievement-view.js";
 import { createPerformanceView } from "./features/performance-view.js";
 import { createInputEventLog } from "./features/input-event-log.js";
+import { createMidiDiagnosticLog } from "./features/midi-diagnostic-log.js";
 import { createReplayView } from "./features/replay-view.js";
+import { createMidiInputManager } from "./services/midi/input-manager.js";
 import * as replayUi from "./ui/replay.js";
 import {
   createReplaySelection,
@@ -124,9 +126,24 @@ const midiMappingRepository = createMidiMappingRepository();
 const MIDI_EVENT_LOG_LIMIT = 50;
 let midiMapping = midiMappingRepository.load();
 let midiLearnAction = null;
+const midiDiagnosticLog = createMidiDiagnosticLog({
+  onChange: midiMappingUi.renderMidiDiagnosticLog,
+});
+const midiMonitorState = {
+  crossfader: null,
+  forward: null,
+  backward: null,
+  stop: null,
+};
 const inputEventLog = createInputEventLog({
   limit: MIDI_EVENT_LOG_LIMIT,
   renderMidiEventLog: midiMappingUi.renderMidiEventLog,
+});
+const midiInputManager = createMidiInputManager({
+  requestAccess: () => navigator.requestMIDIAccess(),
+  storage: getBrowserStorage(),
+  onMidiMessage: (data) => handleMidiMessage(data),
+  onChange: renderMidiInputSnapshot,
 });
 let rawEventCount = 0;
 let performanceEventCount = 0;
@@ -850,6 +867,31 @@ function renderMidiMappingPanel() {
   renderChallengeInputReadiness();
 }
 
+function renderMidiInputSnapshot(snapshot) {
+  actions.setMidiState({
+    midiAccess: midiInputManager.access,
+    midiConnected: snapshot.connected,
+  });
+  midiMappingUi.renderMidiInputs(snapshot);
+  controls.renderMidiConnectionStatus(snapshot.connected
+    ? "MIDI接続済み"
+    : midiInputManager.access
+    ? "MIDI入力デバイス未接続"
+    : "MIDI未接続");
+  renderChallengeInputReadiness();
+}
+
+function updateMidiInputMonitor(event) {
+  if (event.type === "fader") {
+    midiMonitorState.crossfader = event.state === "open" ? "Open" : "Closed";
+  } else if (event.type === "scratch") {
+    if (["forward", "backward", "stop"].includes(event.direction)) {
+      midiMonitorState[event.direction] = "入力あり";
+    }
+  }
+  midiMappingUi.renderMidiInputMonitor(midiMonitorState);
+}
+
 function saveMidiMapping() {
   const result = midiMappingRepository.save(midiMapping);
   if (result.ok) return "";
@@ -920,6 +962,12 @@ function handleInputAudioEvent(event, runtimeEvent = event) {
 }
 
 function handleStopObservation(observation) {
+  if (observation.source === "midi") {
+    updateMidiInputMonitor({
+      type: "scratch",
+      direction: "stop",
+    });
+  }
   handleInputAudioEvent({
     type: "scratch",
     direction: "stop",
@@ -1118,6 +1166,7 @@ function clearMidiMapping(action) {
 function handleMidiMessage(data) {
   const [status, note, velocity] = data;
   const time = Date.now();
+  midiDiagnosticLog.append(data, time);
   const routed = routeMidiMessage(data, {
     mapping: midiMapping,
     learnAction: midiLearnAction,
@@ -1157,6 +1206,7 @@ function handleMidiMessage(data) {
   if (midiLearnAction) return;
 
   if (routed.kind === "event") {
+    updateMidiInputMonitor(routed.event);
     if (routed.event.type === "fader") {
       keyboardInput.setFaderState(
         currentView === "practice" ? routed.event.state : "closed",
@@ -1184,14 +1234,7 @@ async function connectMIDI() {
   }
 
   try {
-    const access = await navigator.requestMIDIAccess();
-    actions.setMidiState({ midiAccess: access, midiConnected: true });
-    controls.renderMidiConnectionStatus("MIDI接続済み");
-    renderChallengeInputReadiness();
-
-    access.inputs.forEach((input) => {
-      input.onmidimessage = (event) => handleMidiMessage(event.data);
-    });
+    await midiInputManager.connect();
   } catch (error) {
     const denied = error.name === "SecurityError" ||
       error.name === "NotAllowedError" || /permission/i.test(error.message);
@@ -1199,6 +1242,26 @@ async function connectMIDI() {
       ? `${error.message}\nVS Code内蔵ブラウザではWeb MIDIの権限が許可されません。Chrome/Edgeで http://localhost などから開いて、MIDIの許可を「許可」にしてください。`
       : error.message;
     controls.renderMidiStatus("MIDI接続に失敗しました", log);
+  }
+}
+
+function selectMidiInput(inputId) {
+  try {
+    const selection = midiInputManager.selectInput(inputId);
+    const selected = inputId === "all"
+      ? "すべての入力デバイス"
+      : midiInputManager.snapshot().inputs.find((input) =>
+        input.id === inputId
+      )?.name ?? "MIDI入力デバイス";
+    controls.renderMidiLog(
+      `${selected}を選択しました。${
+        selection.preferenceSaved
+          ? ""
+          : "このブラウザーでは選択を保存できませんでした。"
+      }`,
+    );
+  } catch (error) {
+    controls.renderMidiLog(error.message);
   }
 }
 
@@ -1865,6 +1928,7 @@ controls.bindControls({
     });
   },
   onConnectMidi: connectMIDI,
+  onSelectMidiInput: selectMidiInput,
 });
 
 achievementUi.bindAchievements({
@@ -1981,6 +2045,8 @@ beginnerCourseUi.bindBeginnerCourse({
 });
 savedCharts.bindSavedCharts({ onSave: saveCurrentChart });
 controls.renderInitialControls(state, getBuilderBarCount());
+midiMappingUi.renderMidiInputs(midiInputManager.snapshot());
+midiMappingUi.renderMidiInputMonitor(midiMonitorState);
 syncPracticeModeButton();
 renderAudioMonitoring();
 render();

@@ -180,6 +180,80 @@ export function renderMidiMappingStatus(message) {
   document.getElementById("midi-mapping-status").textContent = message;
 }
 
+export function renderMidiInputs({ inputs, selectedInputId, connected }) {
+  const list = document.getElementById("midi-device-list");
+  list.replaceChildren();
+  for (const input of inputs) {
+    const row = document.createElement("li");
+    const name = document.createElement("span");
+    name.textContent = input.manufacturer
+      ? `${input.name} (${input.manufacturer})`
+      : input.name;
+    const status = document.createElement("span");
+    status.textContent = input.state === "connected"
+      ? "Connected"
+      : "Disconnected";
+    row.append(name, status);
+    list.append(row);
+  }
+  if (!inputs.length) {
+    const empty = document.createElement("li");
+    empty.textContent = "利用可能なMIDI入力デバイスはありません。";
+    list.append(empty);
+  }
+
+  const select = document.getElementById("midi-input-select");
+  select.replaceChildren();
+  const allInputs = document.createElement("option");
+  allInputs.value = "all";
+  allInputs.textContent = "すべての入力デバイス";
+  select.append(allInputs);
+  for (const input of inputs) {
+    const option = document.createElement("option");
+    option.value = input.id;
+    option.textContent = input.name;
+    option.disabled = input.state !== "connected";
+    select.append(option);
+  }
+  if (
+    selectedInputId !== "all" &&
+    !inputs.some((input) => input.id === selectedInputId)
+  ) {
+    const missing = document.createElement("option");
+    missing.value = selectedInputId;
+    missing.textContent = "保存済みのデバイスは未接続";
+    missing.disabled = true;
+    select.append(missing);
+  }
+  select.value = selectedInputId;
+  select.disabled = !inputs.some((input) => input.state === "connected");
+  document.getElementById("midi-connection-status").textContent = connected
+    ? "Connected"
+    : "Disconnected";
+}
+
+export function renderMidiInputMonitor({
+  crossfader,
+  forward,
+  backward,
+  stop,
+}) {
+  document.getElementById("midi-monitor-crossfader").textContent =
+    crossfader ?? "未入力";
+  document.getElementById("midi-monitor-forward").textContent =
+    forward ?? "未入力";
+  document.getElementById("midi-monitor-backward").textContent =
+    backward ?? "未入力";
+  document.getElementById("midi-monitor-stop").textContent =
+    stop ?? "未入力";
+}
+
+export function renderMidiDiagnosticLog(entries) {
+  document.getElementById("midi-diagnostic-log").textContent = entries.length
+    ? entries.join("\n")
+    : "MIDIメッセージはまだありません。";
+}
+
 const EMPTY_LOG_MESSAGES = {
   "midi-event-log": "変換されたイベントはまだありません。",
   "midi-performance-log": "パフォーマンスイベントはまだありません。",

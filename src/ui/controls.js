@@ -8,6 +8,7 @@ export function bindControls({
   onShowPractice,
   onShowAchievements,
   onConnectMidi,
+  onSelectMidiInput,
 }) {
   const sidebar = document.getElementById("sidebar");
   const mobileMenuToggle = document.getElementById("mobile-menu-toggle");
@@ -23,6 +24,7 @@ export function bindControls({
   const chartHelpToggle = document.getElementById("chart-help-toggle");
   const chartHelpPanel = document.getElementById("chart-help-panel");
   const midiConnectButton = document.getElementById("midi-connect");
+  const midiInputSelect = document.getElementById("midi-input-select");
   const midiSetupTab = document.getElementById("midi-setup-tab");
   const midiSetupReturn = document.getElementById("midi-setup-return");
   const achievementsTab = document.getElementById("achievements-tab");
@@ -81,6 +83,9 @@ export function bindControls({
   });
 
   midiConnectButton.addEventListener("click", onConnectMidi);
+  midiInputSelect.addEventListener("change", (event) =>
+    onSelectMidiInput(event.target.value)
+  );
 }
 
 export function renderResetControls(state) {

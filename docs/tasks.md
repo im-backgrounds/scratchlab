@@ -82,6 +82,13 @@ EpicとData Reset Validationは対象外とし、残タスクへ持ち越さな�
 既存のBPM Challenge、Practice Mode、Previous Result、Practice History、 Growth
 Charts、Achievement、Beginner Course、初回ガイドの提供は継続する。
 
+### MIDI Setup
+
+- [x] 入力デバイス一覧・接続状態・入力デバイス選択を専用画面に集約
+- [x] 選択デバイスを保存し、再読込後に復元
+- [x] Crossfader／Scratch入力確認と最新20件のMIDI診断ログ
+- [x] Challengeの自動記録フローと既存マッピング保存を維持
+
 ## Remaining
 
 ### 実機MIDI検証

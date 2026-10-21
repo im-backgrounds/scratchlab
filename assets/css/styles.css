@@ -1084,6 +1084,23 @@ button {
   list-style: none;
 }
 
+.midi-device-list {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.midi-device-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
 .midi-mapping-row {
   display: flex;
   flex-wrap: wrap;

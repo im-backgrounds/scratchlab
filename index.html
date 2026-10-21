@@ -489,6 +489,32 @@
 
             <div id="midi-status" class="status-box">MIDI未接続</div>
             <div id="midi-log" class="log-box">MIDI入力はまだありません。</div>
+            <p id="midi-connection-status" class="status-box"
+              aria-live="polite">Disconnected</p>
+            <h4>利用可能なMIDIデバイス</h4>
+            <ul id="midi-device-list" class="midi-device-list">
+              <li>接続後にデバイスを表示します。</li>
+            </ul>
+            <label for="midi-input-select">入力デバイス</label>
+            <select id="midi-input-select" disabled>
+              <option value="all">すべての入力デバイス</option>
+            </select>
+            <h4>現在の入力確認</h4>
+            <dl class="performance-counts">
+              <div>
+                <dt>Crossfader</dt>
+                <dd id="midi-monitor-crossfader">未入力</dd>
+              </div>
+              <div><dt>Scratch Forward</dt>
+                <dd id="midi-monitor-forward">未入力</dd></div>
+              <div><dt>Scratch Backward</dt>
+                <dd id="midi-monitor-backward">未入力</dd></div>
+              <div><dt>Scratch Stop</dt>
+                <dd id="midi-monitor-stop">未入力</dd></div>
+            </dl>
+            <h4>MIDI診断ログ（最新20件）</h4>
+            <div id="midi-diagnostic-log" class="log-box" role="log"
+              aria-live="polite">MIDIメッセージはまだありません。</div>
           </section>
 
           <section class="card secondary-card">

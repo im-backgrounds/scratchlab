@@ -42,6 +42,7 @@ ScratchLabを「スクラッチ練習を可視化できるブラウザーDJト�
 BPM Challenge、Practice Mode、Mouse／Keyboard／MIDI入力、Beginner Course、
 初回ガイド、Previous Result、Practice History、Growth Charts、Achievement、
 譜面作成・保存を引き続き提供する。
+MIDIセットアップでは入力デバイスを選択でき、接続状態と入力イベントを確認できる。
 
 ### データ方針
 
