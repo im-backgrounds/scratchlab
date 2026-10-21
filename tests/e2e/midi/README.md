@@ -106,8 +106,8 @@ Pagesにはこのアダプターを適用しない。
 
 1. MIDI Access: 仮想デバイス接続、Learnによる3操作の割当。
 2. MIDI Input: 本番ハンドラーの受信ログと圧縮イベントへの到達。
-3. Recording: Demo→Recording 1/2→2/2→Analyzing→Result、
-   実際の保存済みPerformance Timelineの方向・時刻・件数と画面表示。
+3. Recording: Warm-up (Lap 1)→Recording Lap 2/3→Lap 3/3→Analyzing→Result、
+   lap 1除外、Lap 2/3の方向・時刻・件数、Challenge Startでの再挑戦。
 4. Matching: Accuracy 100%、Matched 16、Missing 0、Extra 0。
 5. Timing: Measured Count 16（>0）、Average／Max Error 0ms、 Timing Accuracy
    100%。

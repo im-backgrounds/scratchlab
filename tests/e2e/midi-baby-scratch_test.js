@@ -58,14 +58,14 @@ Deno.test("Baby Scratch: virtual MIDI through the real Challenge result", async 
     );
 
     await step(
-      "Recording: demo is unscored, then two live MIDI takes",
+      "Recording: lap 1 is unscored, then laps 2 and 3 record MIDI",
       async () => {
         assert.equal(await text("#challenge-current-bpm"), "80");
         await page.locator("#challenge-start").click();
-        assert.equal(await progress("demo"), "current");
+        assert.equal(await progress("warmup"), "current");
         await sendMidi(page, [0x90, 61, 127]);
         await page.clock.runFor(loopMs);
-        assert.equal(await progress("recording-1"), "current");
+        assert.equal(await progress("recording-2"), "current");
         assert.equal(
           await page.locator("#performance-panel").getAttribute("class")
             .then((value) => value.includes("is-recording")),
@@ -81,12 +81,12 @@ Deno.test("Baby Scratch: virtual MIDI through the real Challenge result", async 
           }, { beatMs, strokes });
           await page.clock.runFor(loopMs);
           assert.equal(
-            await progress(take === 1 ? "recording-2" : "analyzing"),
+            await progress(take === 1 ? "recording-3" : "analyzing"),
             "current",
           );
         }
         await page.clock.runFor(400);
-        assert.equal(await progress("result"), "done");
+        assert.equal(await progress("completed"), "done");
         const recording = await page.evaluate(() =>
           JSON.parse(localStorage.getItem("scratchlab.performance")).performance
         );
@@ -118,6 +118,20 @@ Deno.test("Baby Scratch: virtual MIDI through the real Challenge result", async 
           ).count(),
           8,
         );
+      },
+    );
+
+    await step(
+      "Challenge Start restarts and clears the previous analysis",
+      async () => {
+        await page.locator("#challenge-start").click();
+        assert.equal(await progress("warmup"), "current");
+        assert.equal(
+          await page.locator("#challenge-timing-analysis").isVisible(),
+          false,
+        );
+        await page.clock.runFor(loopMs);
+        assert.equal(await progress("recording-2"), "current");
       },
     );
 

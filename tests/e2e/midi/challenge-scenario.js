@@ -95,14 +95,15 @@ export async function runMidiChallengeScenario(t, scenario) {
     );
 
     await step(
-      "Recording: two MIDI takes preserve all four meaning-event kinds",
+      "Recording: warmup excluded; laps 2 and 3 record meaning events",
       async () => {
+        assert.equal(await page.locator("#challenge-retry").count(), 0);
         assert.equal(await text("#challenge-current-bpm"), "80");
         await page.locator("#challenge-start").click();
-        assert.equal(await progress("demo"), "current");
+        assert.equal(await progress("warmup"), "current");
         await sendMidi(page, [0x90, 61, 127]);
         await page.clock.runFor(loopMs);
-        assert.equal(await progress("recording-1"), "current");
+        assert.equal(await progress("recording-2"), "current");
         for (let take = 1; take <= 2; take++) {
           await page.evaluate((messages) => {
             const start = performance.now();
@@ -113,12 +114,13 @@ export async function runMidiChallengeScenario(t, scenario) {
           }, messages);
           await page.clock.runFor(loopMs);
           assert.equal(
-            await progress(take === 1 ? "recording-2" : "analyzing"),
+            await progress(take === 1 ? "recording-3" : "analyzing"),
             "current",
           );
         }
+        assert.equal(await text("#play-toggle"), "再生");
         await page.clock.runFor(400);
-        assert.equal(await progress("result"), "done");
+        assert.equal(await progress("completed"), "done");
         const recording = await page.evaluate(() =>
           JSON.parse(localStorage.getItem("scratchlab.performance")).performance
         );
@@ -145,6 +147,24 @@ export async function runMidiChallengeScenario(t, scenario) {
           await text("#performance-status"),
           new RegExp(`受信${messages.length * 2}件`),
         );
+      },
+    );
+
+    await step(
+      "Challenge Start restarts after results without showing stale analysis",
+      async () => {
+        await page.locator("#challenge-start").click();
+        assert.equal(await progress("warmup"), "current");
+        assert.equal(
+          await page.locator("#challenge-timing-analysis").isVisible(),
+          false,
+        );
+        assert.equal(
+          await page.locator("#performance-summary-export").isDisabled(),
+          true,
+        );
+        await page.clock.runFor(loopMs);
+        assert.equal(await progress("recording-2"), "current");
       },
     );
 

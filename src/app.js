@@ -481,7 +481,9 @@ function runtimeLoopState(now) {
   return {
     sessionId: challengeRun?.sessionId ?? "practice",
     loopIndex: playbackLoopNumber,
-    phase: challengeSession.phase === CHALLENGE_PHASES.DEMO ? "demo" : "recording",
+    phase: challengeSession.phase === CHALLENGE_PHASES.WARMUP
+      ? "demo"
+      : "recording",
     startTime: now,
     startDirection: input.currentDirection,
     startFaderState: input.faderState,
@@ -1420,7 +1422,7 @@ function recordPracticeAchievement(run, accuracy, cleared) {
 
 function isChallengeLooping() {
   return challengeRun !== null && !state.isBuilderPlayback &&
-    (challengeSession.phase === CHALLENGE_PHASES.DEMO ||
+    (challengeSession.phase === CHALLENGE_PHASES.WARMUP ||
       challengeSession.phase === CHALLENGE_PHASES.RECORDING);
 }
 
@@ -1626,8 +1628,13 @@ function startChallenge() {
   }
   activeChallengeKey = getChallengeChartKey();
   latestChallengeAnalysisChartKey = null;
+  latestChallengeSummary = null;
+  performanceUi.renderPerformanceSummaryAvailability(false);
   latestChallengeTimingAnalysis = null;
   latestChallengeTimingChartKey = null;
+  recordedRawCount = 0;
+  actions.setMidiState({ recordingMidi: false });
+  actions.clearMidiRecord();
   challengeRun = {
     sessionId: createChallengeSessionId(),
     courseStageId: null,
@@ -1755,7 +1762,7 @@ function beginChallengeRecording(now) {
   playbackLoopState = runtimeLoopState(now);
   performanceUi.renderPerformanceRecording(true);
   performanceUi.renderPerformanceStatus(
-    "記録中… お手本のあとの2ループを自動で記録します。",
+    "記録中… Lap 2とLap 3を自動で記録します。",
   );
 }
 
