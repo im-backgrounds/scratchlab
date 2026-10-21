@@ -44,14 +44,21 @@ through an input device.
 
 ## Current foundation
 
-Score display, audio playback, MIDI input, BPM Challenge, input recording, and
-performance comparison are implemented. Their current behavior is documented in
-the [BPM Challenge specification](feature-specs/bpm-challenge.md) and the
-existing [score format reference](score-format.md).
+Score display, audio playback, Mouse/Keyboard/MIDI input, BPM Challenge,
+Beginner Course, input monitoring, shared Event Model v2 analysis/overlay,
+achievements, and local history/growth have implemented foundations. Ghost and
+Replay have partial foundations, not complete comparison/replay features. Their
+behavior and limitations are documented in the
+[BPM Challenge specification](feature-specs/bpm-challenge.md) and the existing
+[score format reference](score-format.md).
 
 ## Near-term direction
 
-Improve the beginner learning path first, then enable keyboard practice, input
-audio monitoring, and a score-aligned input overlay. Follow with achievements,
-practice history, and growth analysis. See the [roadmap](roadmap.md), its
-[task backlog](tasks.md), and [milestones](milestones.md).
+Current work, dependencies, and verification are tracked in
+[GitHub Issues](https://github.com/im-backgrounds/scratchlab/issues). Use
+[ScratchLab Development](https://github.com/users/im-backgrounds/projects/3) for
+status/priority and explicitly uncommitted candidates, and
+[GitHub Milestones](https://github.com/im-backgrounds/scratchlab/milestones) for
+agreed outcomes. Do not infer a future implementation sequence from the already
+implemented foundations above. Scoring correctness, data integrity, and
+understandable learner feedback take priority over adding features.

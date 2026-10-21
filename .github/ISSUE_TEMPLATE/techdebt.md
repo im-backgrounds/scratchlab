@@ -81,10 +81,8 @@ Timing Analysisの変更だけでAccuracyや合否条件を変更しないでく
 
 - [ ] README.mdを更新する（ユーザー向け挙動・設定・制約が変わる）
 - [ ] README.mdは更新不要（理由: 内部実装のみ等）
-- [ ] docs/roadmap.mdを更新する（優先度・マイルストーン・状況が変わる）
-- [ ] docs/roadmap.mdは更新不要（理由: ）
-- [ ] docs/tasks.mdを更新する（追跡中の技術負債・検証項目が変わる）
-- [ ] docs/tasks.mdは更新不要（理由: ）
+- [ ] Issue・Project・Milestoneを更新する（追跡作業・優先度・合意範囲が変わる）
+- [ ] GitHubの計画更新は不要（理由: ）
 - [ ] 関連する機能仕様・アーキテクチャ文書を更新する（対象: ）
 - [ ] 関連する機能仕様・アーキテクチャ文書は更新不要（理由: ）
 
@@ -93,6 +91,6 @@ Timing Analysisの変更だけでAccuracyや合否条件を変更しないでく
 - [BPM Challenge仕様](../../docs/feature-specs/bpm-challenge.md)
 - [Event Model v2](../../docs/event-model-v2.md)
 - [Architecture Decisions](../../docs/architecture-decisions.md)
-- [Roadmap](../../docs/roadmap.md)
-- [Tasks](../../docs/tasks.md)
+- [ScratchLab Development](https://github.com/users/im-backgrounds/projects/3)
+- [GitHub Milestones](https://github.com/im-backgrounds/scratchlab/milestones)
 - 関連Issue・Pull Request:

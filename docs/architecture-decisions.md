@@ -87,7 +87,7 @@ tolerance, and missing/extra event handling in
 ## Related documents
 
 - [Product vision](vision.md)
-- [Roadmap](roadmap.md)
-- [Task backlog](tasks.md)
-- [Milestones](milestones.md)
+- [Work and acceptance criteria](https://github.com/im-backgrounds/scratchlab/issues)
+- [Status and priority](https://github.com/users/im-backgrounds/projects/3)
+- [Agreed goals](https://github.com/im-backgrounds/scratchlab/milestones)
 - [Copilot instructions](../.github/copilot-instructions.md)

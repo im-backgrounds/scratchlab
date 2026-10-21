@@ -7,7 +7,8 @@ scoring correctness, data integrity, learner understanding, and maintainable
 code.
 
 Use **Prototype Mode** by default. Stabilization or release work requires an
-explicit request to change modes. See [milestones](../docs/milestones.md).
+explicit request to change modes. Agreed goals are tracked in
+[GitHub Milestones](https://github.com/im-backgrounds/scratchlab/milestones).
 
 ## Issue-Driven Workflow
 
@@ -46,6 +47,16 @@ to avoid duplicates, preserve existing Project items, and verify membership,
 Status, and Priority after registration. If Project permissions are missing,
 report the blocker rather than claiming completion.
 
+When creating an Issue, assign an appropriate Open milestone using a script.
+Reuse one whose purpose and completion criteria match; create a milestone with a
+description only when none fits and the work grouping is clear. If selection is
+ambiguous, ask rather than inventing a milestone. Do not create one per Issue,
+automatically reuse or reopen Closed milestones, or infer a release commitment
+or due date. Set a due date only when explicitly specified. Re-check before
+creation and re-fetch the assignment afterward to prevent duplicates and verify
+success. Milestones do not replace Project registration; follow the detailed
+[milestone policy](../docs/github-workflow.md#milestone-assignment).
+
 ## Documentation Updates
 
 At the end of each issue, assess documentation against the actual change:
@@ -53,18 +64,17 @@ At the end of each issue, assess documentation against the actual change:
 - Update [README.md](../README.md) when user-visible behavior, setup, supported
   inputs, or user-facing limitations change. Do not edit it for internal-only
   refactors.
-- Update [roadmap.md](../docs/roadmap.md) when priorities, milestone scope, or
-  project status changes. Mark work complete only after its acceptance criteria
-  have been implemented and verified.
-- Update [tasks.md](../docs/tasks.md) when tracked implementation or validation
-  tasks change state. Keep it consistent with the roadmap and issue outcome.
+- Update the GitHub Issue, Project Status/Priority, and Milestone when tracked
+  work, priorities, or agreed scope changes. Mark work complete only after its
+  acceptance criteria have been implemented and verified. Do not duplicate
+  progress in the legacy roadmap, tasks, or milestones Markdown pages.
 - Update feature specifications or architecture decisions when their contracts
   change; do not copy their detailed design into the README.
 
-Review README, roadmap, and task updates in the same change as the
-implementation when applicable. These are agent workflow requirements, not a
-promise that GitHub Actions will generate or commit documentation automatically.
-State explicitly when no documentation update is needed.
+Review README and specification updates with the implementation, and report the
+actual GitHub planning updates when applicable. These are workflow requirements,
+not a promise that GitHub Actions will generate or commit documentation
+automatically. State explicitly when no documentation update is needed.
 
 ## Pull Requests and Commits
 
@@ -76,7 +86,7 @@ preparing a PR, include:
   `Refs #<issue>`
 - Acceptance criteria addressed and any remaining limitations
 - Tests and checks run, with results
-- README, roadmap, and task-documentation impact
+- README/specification impact and Issue/Project/Milestone updates
 - Screenshots or browser verification for user-facing UI changes, when useful
 
 Keep one issue per PR and do not claim checks passed unless they were actually
@@ -129,7 +139,7 @@ the final integration gate; report failing or unavailable checks rather than
 working around them. The [GitHub Pages workflow](workflows/github-pages.yml)
 deploys on pushes to `main`; do not push directly to `main` to trigger a deploy.
 Actions validate and deploy the repository; they do not automatically update
-README or roadmap content.
+README, specifications, or GitHub planning records.
 
 ## Architecture and Data
 
@@ -147,8 +157,10 @@ README or roadmap content.
 
 ## Scoring and Event Model
 
-Event Model v2 is complete and is the current scoring model; verify current
-priorities in the roadmap rather than treating the migration as ongoing.
+Event Model v2 is the current scoring model and its foundation is complete.
+Check GitHub Issues and Project priorities for outstanding contract defects; do
+not treat the model migration as ongoing or the foundation as proof that every
+chart and environment is correct.
 
 - Read [event-model-v2.md](../docs/event-model-v2.md) and the applicable feature
   specification before changing scoring, timing, overlays, or challenge flow.
@@ -176,10 +188,10 @@ or chart data, and follow the applicable instructions under
 
 ## Product and Feature Constraints
 
-- Ghost and Replay foundations are partially implemented. Use the roadmap and
-  their feature documents to determine current scope and prerequisites; do not
-  assume a foundation means the user-facing feature is complete.
-- Do not imply that roadmap candidates or monetization concepts are committed
+- Ghost and Replay foundations are partially implemented. Use GitHub Issues,
+  Milestones, and their feature documents to determine scope and prerequisites;
+  do not assume a foundation means the user-facing feature is complete.
+- Do not imply that Project candidates or monetization concepts are committed
   work or available product features.
 - When priorities conflict, prefer scoring correctness, data integrity, and
   clear learner feedback over visual polish or adding features.

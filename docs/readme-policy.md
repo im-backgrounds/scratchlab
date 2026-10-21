@@ -13,6 +13,8 @@ READMEは、利用者がアプリを理解し、セットアップして使う�
 実装詳細や未提供のロードマップ候補は記載しないでください。
 内部実装のみの変更などREADME更新が不要な場合も、IssueまたはPRで理由を明記します。
 
-PRではREADME更新要否を必ず確認してください。関連する優先度・マイルストーン・
-プロジェクト状況は`docs/roadmap.md`、追跡中の実装・検証作業は`docs/tasks.md`も
-別途確認します。
+PRではREADME更新要否を必ず確認してください。追跡作業は
+[GitHub Issues](https://github.com/im-backgrounds/scratchlab/issues)、
+状態・優先度は[Project](https://github.com/users/im-backgrounds/projects/3)、
+合意範囲は[Milestones](https://github.com/im-backgrounds/scratchlab/milestones)で確認・更新します。
+旧roadmap/tasks/milestonesの案内ページへ進捗を複製しません。

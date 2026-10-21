@@ -5,7 +5,7 @@ performance. Keep the score/demo source (SAMPLE) separate from the
 user-triggered source (YOU).
 
 See [architecture decisions](../architecture-decisions.md) and the
-[roadmap](../roadmap.md).
+[GitHub work backlog](https://github.com/im-backgrounds/scratchlab/issues).
 
 # User Story
 

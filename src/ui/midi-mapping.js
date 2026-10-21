@@ -238,14 +238,13 @@ export function renderMidiInputMonitor({
   backward,
   stop,
 }) {
-  document.getElementById("midi-monitor-crossfader").textContent =
-    crossfader ?? "未入力";
-  document.getElementById("midi-monitor-forward").textContent =
-    forward ?? "未入力";
-  document.getElementById("midi-monitor-backward").textContent =
-    backward ?? "未入力";
-  document.getElementById("midi-monitor-stop").textContent =
-    stop ?? "未入力";
+  document.getElementById("midi-monitor-crossfader").textContent = crossfader ??
+    "未入力";
+  document.getElementById("midi-monitor-forward").textContent = forward ??
+    "未入力";
+  document.getElementById("midi-monitor-backward").textContent = backward ??
+    "未入力";
+  document.getElementById("midi-monitor-stop").textContent = stop ?? "未入力";
 }
 
 export function renderMidiDiagnosticLog(entries) {

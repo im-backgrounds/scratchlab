@@ -83,8 +83,9 @@ export function bindControls({
   });
 
   midiConnectButton.addEventListener("click", onConnectMidi);
-  midiInputSelect.addEventListener("change", (event) =>
-    onSelectMidiInput(event.target.value)
+  midiInputSelect.addEventListener(
+    "change",
+    (event) => onSelectMidiInput(event.target.value),
   );
 }
 

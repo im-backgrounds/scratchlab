@@ -73,4 +73,4 @@ body:
     id: documentation
     attributes:
       label: ドキュメント更新判断
-      description: README、roadmap、tasks、関連仕様の更新要否と理由を記載してください。
+      description: README・関連仕様の更新要否と理由、Issue・Project・Milestoneの更新要否を記載してください。

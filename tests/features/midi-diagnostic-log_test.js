@@ -18,12 +18,15 @@ Deno.test("diagnostics format CC and note messages with local time", () => {
 
 Deno.test("diagnostic history retains only the latest 20 entries", () => {
   const rendered = [];
-  const log = createMidiDiagnosticLog({ onChange: (entries) => rendered.push(entries) });
+  const log = createMidiDiagnosticLog({
+    onChange: (entries) => rendered.push(entries),
+  });
+  const timestamp = new Date(2024, 0, 2, 12, 34, 56).getTime();
   for (let value = 0; value < MIDI_DIAGNOSTIC_LOG_LIMIT + 2; value += 1) {
-    log.append([0xb0, 21, value], 0);
+    log.append([0xb0, 21, value], timestamp);
   }
   assert.equal(log.getEntries().length, MIDI_DIAGNOSTIC_LOG_LIMIT);
-  assert.equal(log.getEntries()[0], "00:00:00 CC21 2");
-  assert.equal(log.getEntries().at(-1), "00:00:00 CC21 21");
+  assert.equal(log.getEntries()[0], "12:34:56 CC21 2");
+  assert.equal(log.getEntries().at(-1), "12:34:56 CC21 21");
   assert.equal(rendered.length, MIDI_DIAGNOSTIC_LOG_LIMIT + 2);
 });

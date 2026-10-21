@@ -11,19 +11,22 @@ see [GitHub Project](github-project.md).
 
 ## Sources of Truth
 
-| Information                              | Source of truth                           | Guidance                                                                                                                  |
-| ---------------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| Scope, requirements, acceptance criteria | GitHub Issue                              | Keep implementation focused on the Issue. Clarify ambiguous or conflicting requirements before consequential changes.     |
-| Execution status                         | ScratchLab Development Project `Status`   | Keep the Project item current as work progresses.                                                                         |
-| Priority                                 | ScratchLab Development Project `Priority` | Use the matching `priority:p0` through `priority:p3` label for Issue search and filtering. Keep both values synchronized. |
-| Work classification and affected areas   | GitHub Issue labels                       | Apply one `type:*` label and any relevant `area:*`, `docs:*`, and `test:*` labels.                                        |
-| Product direction and verified backlog   | `docs/roadmap.md` and `docs/tasks.md`     | Update only when the Issue changes project direction or tracked product/validation work.                                  |
-| Implementation and review record         | Pull Request                              | Link the Issue, document acceptance criteria, report actual checks, and explain documentation impact.                     |
+| Information                              | Source of truth                                     | Guidance                                                                                                                  |
+| ---------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Scope, requirements, acceptance criteria | GitHub Issue                                        | Keep implementation focused on the Issue. Clarify ambiguous or conflicting requirements before consequential changes.     |
+| Execution status                         | ScratchLab Development Project `Status`             | Keep the Project item current as work progresses.                                                                         |
+| Priority                                 | ScratchLab Development Project `Priority`           | Use the matching `priority:p0` through `priority:p3` label for Issue search and filtering. Keep both values synchronized. |
+| Work classification and affected areas   | GitHub Issue labels                                 | Apply one `type:*` label and any relevant `area:*`, `docs:*`, and `test:*` labels.                                        |
+| Product principles and boundaries        | `docs/vision.md`                                    | Keep stable product principles and non-goals in version control.                                                          |
+| Agreed outcomes and scope                | GitHub Milestones                                   | Describe completion criteria; do not imply a due date or release promise.                                                 |
+| Work backlog and planning candidates     | GitHub Issues and Project overview                  | Use Issues for actionable work; keep uncommitted candidates explicit in the Project overview.                             |
+| Specifications and technical constraints | Repository feature specs and architecture decisions | Review behavior contracts with code; do not move them into a progress checklist.                                          |
+| Implementation and review record         | Pull Request                                        | Link the Issue, document acceptance criteria, report actual checks, and explain documentation impact.                     |
 
-Do not use the Project as a second copy of the Issue description or as a
-replacement for the roadmap/task backlog. Project Priority and priority labels
-intentionally duplicate a small amount of information; update both when
-reprioritizing an Issue.
+Do not use the Project as a second copy of the Issue description. GitHub is the
+planning source of truth; the legacy roadmap/tasks/milestones pages are link
+guides only. Project Priority and priority labels intentionally duplicate a
+small amount of information; update both when reprioritizing an Issue.
 
 ## Project Fields
 
@@ -88,13 +91,44 @@ infer priority from Issue type.
    membership and field values to verify registration. If Project permissions
    are unavailable, report the unregistered Issues and the required permission
    instead of treating Issue creation as fully complete.
-5. During triage, confirm the scope, acceptance criteria, test expectations,
+5. Assign an appropriate Open milestone using the policy below. Milestone
+   assignment does not replace Project registration.
+6. During triage, confirm the scope, acceptance criteria, test expectations,
    documentation impact, and dependencies. Move an actionable Issue to `Ready`.
    Split work into linked Issues when it is independently reviewable or has
    distinct acceptance criteria.
 
 Do not mark an Issue `Ready` if a product or architecture decision necessary to
 define its acceptance criteria is unresolved.
+
+### Milestone assignment
+
+- Use a script with GitHub CLI or the GitHub API to select, create, and assign
+  milestones when creating Issues.
+- Inspect existing Open and Closed milestones. Reuse an Open milestone only when
+  its purpose and completion criteria fit the work; a matching title alone is
+  not sufficient. Do not automatically reuse or reopen a Closed milestone.
+- If no appropriate Open milestone exists and the work grouping is clear, create
+  one with a description of its purpose and completion criteria. Do not create a
+  separate milestone for every Issue. If the grouping or selection is ambiguous,
+  ask before creating or assigning one.
+- An Issue can have only one milestone. Do not infer it solely from the parent
+  Issue: use the agreed work grouping, and ask if a parent theme and a release
+  milestone conflict. Do not replace an existing assignment without checking its
+  intent.
+- A milestone is not a new product or release commitment. Keep its scope
+  consistent with the product vision and agreed GitHub plan, and set a due date
+  only when explicitly specified.
+- Re-check existing milestones immediately before creation. If another process
+  may have created one, re-read and reconcile the result rather than blindly
+  retrying creation. Stop and report ambiguous duplicates; do not silently pick,
+  delete, or close one.
+- Re-fetch the milestone and the Issue after assignment to verify the
+  milestone's identity, Open state, description, and the Issue's assignment.
+  Report missing permissions or a failed assignment as incomplete work.
+- This policy applies to future Issue creation. Bulk reassignment of existing
+  Issues requires an explicit request. Continue registering leaf Issues in
+  **ScratchLab Development** and verifying its fields independently.
 
 ### Batch creation for the Test Quality Improvement project
 
@@ -141,10 +175,8 @@ its scope. The script does not close or delete duplicate Issues.
 5. Assess documentation in the same change:
    - Update `README.md` for user-visible behavior, setup, supported inputs, or
      limitations.
-   - Update `docs/roadmap.md` for project priorities, milestone scope, or
-     status.
-   - Update `docs/tasks.md` when tracked implementation or validation tasks
-     change.
+   - Update the Issue, Project Status/Priority, and Milestone for tracked work,
+     priorities, and agreed scope. Do not duplicate these in Markdown backlogs.
    - Update feature specifications or architecture decisions when their
      contracts change.
    - If an update is not applicable, explain why in the PR.
@@ -183,8 +215,8 @@ commits on an existing work branch, use `git push` directly.
    acceptance criteria. Use `Refs #<number>` for partial work or when more
    follow-up is required.
 3. Include a concise summary, acceptance criteria addressed, actual test/check
-   results, documentation impact, remaining limitations, and relevant UI
-   screenshots or browser verification.
+   results, documentation and GitHub planning impact, remaining limitations, and
+   relevant UI screenshots or browser verification.
 4. Move the Project item to `Review` when the PR is ready for review. Keep it
    there while CI checks or requested review changes are pending.
 5. Reviewers check correctness against the Issue, regression risk, tests,
@@ -221,8 +253,14 @@ actual command or GitHub Actions result.
   discussion or duplicate subtask when it does not need independent tracking.
 - Keep status and priority current; Project fields do not replace Issue labels,
   acceptance criteria, PR checks, or documentation.
-- Keep `docs/roadmap.md` focused on product direction and `docs/tasks.md` on
-  product implementation and validation. This workflow document is the source
-  for GitHub Project and PR operating procedures.
+- Keep actionable work in Issues, execution state/priority in the Project, and
+  agreed goals in Milestones. The Project overview holds explicitly uncommitted
+  candidates, not a second task checklist. The old roadmap/tasks/milestones
+  pages only redirect readers to these sources.
+- Keep product principles, specifications, technical references, and historical
+  evidence in repository documents. See the
+  [migration record](planning-migration.md) and
+  [testing/legacy API reference](testing-and-legacy-apis.md). This workflow
+  remains the source for GitHub Project and PR operating procedures.
 - Review this document when Project fields, templates, labels, CI checks, or
   repository review policy change.

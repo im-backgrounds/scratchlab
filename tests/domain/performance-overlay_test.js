@@ -313,12 +313,16 @@ Deno.test("v2 overlay preserves ambiguous Matching choices and Missing/Extra ind
   );
   assert.deepEqual(
     overlay.errors.filter((error) => error.classification === "missing")
-      .map(({ classification, ...error }) => error),
+      .map(({ classification: _classification, ...error }) => error),
     matching.missingEvents,
   );
   assert.deepEqual(
     overlay.errors.filter((error) => error.classification === "extra")
-      .map(({ classification, timeMs, ...error }) => error),
+      .map(({
+        classification: _classification,
+        timeMs: _timeMs,
+        ...error
+      }) => error),
     matching.extraEvents,
   );
   assert.equal(overlay.sample[2].actualIndex, 1);

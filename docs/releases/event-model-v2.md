@@ -109,7 +109,7 @@ Result更新も確認済み。
 
 旧採点APIに`@deprecated`を付け、コードとテストは削除しない。
 旧APIの呼び出し元と、v2受入・共通回帰・v1特性テストの分類は
-[Tasks](../tasks.md#deprecated-api利用箇所)を参照。
+[Testing and Legacy APIs](../testing-and-legacy-apis.md#deprecated-api利用箇所)を参照。
 停止検出器のタイマー本体はv2でも共有するため、旧APIと一括削除しない。
 
 ## 残作業

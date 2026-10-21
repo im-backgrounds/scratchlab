@@ -121,20 +121,6 @@ Deno.test("Baby Scratch: virtual MIDI through the real Challenge result", async 
       },
     );
 
-    await step(
-      "Challenge Start restarts and clears the previous analysis",
-      async () => {
-        await page.locator("#challenge-start").click();
-        assert.equal(await progress("warmup"), "current");
-        assert.equal(
-          await page.locator("#challenge-timing-analysis").isVisible(),
-          false,
-        );
-        await page.clock.runFor(loopMs);
-        assert.equal(await progress("recording-2"), "current");
-      },
-    );
-
     await step("Matching: Accuracy 100%, Missing 0, Extra 0", async () => {
       assert.equal(await text("#performance-accuracy"), "100.0%");
       assert.equal(await text(".performance-analysis-matched dd"), "16");
@@ -230,6 +216,24 @@ Deno.test("Baby Scratch: virtual MIDI through the real Challenge result", async 
           ),
           true,
         );
+      },
+    );
+
+    await step(
+      "Challenge Start restarts and clears the previous analysis",
+      async () => {
+        await page.locator("#challenge-start").click();
+        assert.equal(await progress("warmup"), "current");
+        assert.equal(
+          await page.locator("#challenge-timing-analysis").isVisible(),
+          false,
+        );
+        assert.equal(
+          await page.locator("#performance-summary-export").isDisabled(),
+          true,
+        );
+        await page.clock.runFor(loopMs);
+        assert.equal(await progress("recording-2"), "current");
       },
     );
 
