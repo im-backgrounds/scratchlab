@@ -18,8 +18,8 @@
 # Documentation
 
 - [ ] README更新済み
-- [ ] roadmap.md確認済み
-- [ ] tasks.md確認済み
+- [ ] 関連仕様・設計文書の更新要否を確認した
+- [ ] Issue・Project・Milestoneの更新要否と実施結果を記載した
 - [ ] 更新不要の場合は理由を記載した
 
 # Related Issue

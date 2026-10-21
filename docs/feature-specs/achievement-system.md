@@ -4,8 +4,9 @@ Recognize meaningful practice milestones using local progress data. Initial
 achievement groups cover BPM clears, number of practice sessions, and
 consecutive practice days.
 
-See [practice history](practice-history.md), [roadmap](../roadmap.md), and
-[milestones](../milestones.md).
+See [practice history](practice-history.md),
+[GitHub work backlog](https://github.com/im-backgrounds/scratchlab/issues), and
+[Milestones](https://github.com/im-backgrounds/scratchlab/milestones).
 
 # User Story
 

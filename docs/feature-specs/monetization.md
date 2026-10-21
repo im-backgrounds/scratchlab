@@ -4,8 +4,10 @@ Explore future revenue and support options while keeping ScratchLab's core
 learning path accessible. This document records concepts, not a decision to
 build a payment system.
 
-See the [product vision](../vision.md), [roadmap](../roadmap.md), and
-[v1.0 milestone](../milestones.md).
+See the [product vision](../vision.md) and the explicitly uncommitted candidates
+in [ScratchLab Development](https://github.com/users/im-backgrounds/projects/3).
+The former v1.0 theme was an exploration proposal, not an active release
+commitment.
 
 # User Story
 

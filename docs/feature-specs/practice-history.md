@@ -3,7 +3,8 @@
 Keep a local record of completed practice sessions so learners can review
 previous work and future features can analyze progress.
 
-See [achievement system](achievement-system.md), [roadmap](../roadmap.md), and
+See [achievement system](achievement-system.md),
+[GitHub work backlog](https://github.com/im-backgrounds/scratchlab/issues), and
 [architecture decisions](../architecture-decisions.md).
 
 # User Story

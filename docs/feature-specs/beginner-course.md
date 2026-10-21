@@ -5,8 +5,10 @@ course consists of five ordered stages: Baby Scratch, Forward Scratch, Baby
 Scratch BPM90, Baby Scratch BPM100, and Chirp. Each stage unlocks only after the
 previous stage is completed.
 
-This is planned work. See the [roadmap](../roadmap.md) and
-[v0.2 tasks](../tasks.md#v02-learning-experience).
+The course is implemented; this document describes its contract, not a new
+implementation request. Current defects and follow-up work are tracked in
+[GitHub Issues](https://github.com/im-backgrounds/scratchlab/issues) and
+[ScratchLab Development](https://github.com/users/im-backgrounds/projects/3).
 
 # User Story
 

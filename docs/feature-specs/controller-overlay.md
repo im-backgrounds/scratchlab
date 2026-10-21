@@ -6,7 +6,7 @@ the user actually played.
 
 See [architecture decisions](../architecture-decisions.md), the
 [BPM Challenge specification](bpm-challenge.md), and the
-[roadmap](../roadmap.md).
+[GitHub work backlog](https://github.com/im-backgrounds/scratchlab/issues).
 
 # User Story
 

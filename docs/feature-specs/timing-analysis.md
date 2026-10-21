@@ -1,11 +1,20 @@
 # Overview
 
-Specify future timing feedback that measures how far performed events are from
-their expected positions in the score. The existing BPM Challenge compares event
-sequence only and does not calculate timing error.
+Specify timing feedback that measures how far performed events are from their
+expected positions in the score. Event Model v2 implements timing metrics using
+the shared matching results. BPM Challenge pass/fail still uses event-sequence
+accuracy and the existing validity conditions, not timing accuracy.
 
 See [BPM Challenge](bpm-challenge.md),
-[controller overlay](controller-overlay.md), and the [roadmap](../roadmap.md).
+[controller overlay](controller-overlay.md),
+[Event Model v2](../event-model-v2.md), and the
+[GitHub work backlog](https://github.com/im-backgrounds/scratchlab/issues).
+
+The remaining sections retain the original design proposal, including draft
+field names and future UI ideas. They are not a new work commitment or a
+replacement for the implemented v2 matching, timing formula, and output contract
+in [Event Model v2](../event-model-v2.md). Resolve any difference against that
+contract before implementation.
 
 # User Story
 

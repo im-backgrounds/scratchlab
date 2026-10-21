@@ -188,8 +188,8 @@ DJコントローラーを接続すると、BPMチャレンジで演奏を記録
   Analysisで確認できます。記録は2ループ分で、ループごとに照合して合算します。記録中に譜面を切り替えると記録は破棄されます。最大5000イベントまで記録し、上限超過時は判定・進捗更新を行いません。復元した記録のv2分析には再挑戦が必要です。
 - **BPMチャレンジ:**
   練習画面の「BPMチャレンジ」で、選択中の組み込み譜面にBPMを上げながら挑戦します。「チャレンジ開始」を押すと、80
-  BPM（クリア済みなら最高クリアBPM+5）に固定され、次の流れが自動で進みます。進行状況は「Warm-up (Lap 1)
-  / Recording Lap 2/3 / Recording Lap 3/3 / Analyzing /
+  BPM（クリア済みなら最高クリアBPM+5）に固定され、次の流れが自動で進みます。進行状況は「Warm-up
+  (Lap 1) / Recording Lap 2/3 / Recording Lap 3/3 / Analyzing /
   Result」で表示されます。手動で記録を開始・停止する必要はありません。
   1. Warm-up (Lap 1): 再生のみで、記録・採点されません
   2. Recording Lap 2/3・3/3: 続く2ループだけを自動で記録・採点
@@ -235,7 +235,7 @@ Baby ScratchのMIDI入力→記録→採点→Timing→Overlay→結果画面は
 [MIDI E2E](tests/e2e/midi/README.md)で実機なしに自動確認できます。
 Ghost／ReplayはE2E専用アダプターで無効化し、本番コードは差し替えません。
 実機固有の接続・遅延や未対応譜面はブラウザーで別途確認してください。
-v2受入・回帰・旧v1特性テストの分類は[Tasks](docs/tasks.md#テスト分類)を参照してください。
+v2受入・回帰・旧v1特性テストの分類は[技術参照](docs/testing-and-legacy-apis.md#テスト分類)を参照してください。
 旧v1テストは過去の不整合を固定する資料であり、正式採点の受入基準ではありません。
 
 GitHub Actionsでは、pushとpull
@@ -301,15 +301,17 @@ MIDIの変換済みイベント、キーボードのフェーダー操作、マ�
 
 ## ロードマップ
 
-Event Model v2の実装はCompletedです。残作業と将来機能を分離しています。
+計画管理はGitHubに集約しています。要件・完了条件・検証結果は
+[Issues](https://github.com/im-backgrounds/scratchlab/issues)、
+状態・優先度と未確約候補は
+[ScratchLab Development](https://github.com/users/im-backgrounds/projects/3)、
+合意した達成目標は[Milestones](https://github.com/im-backgrounds/scratchlab/milestones)を参照してください。
+製品原則は[Product Vision](docs/vision.md)に保持します。
 
-- 実機MIDI検証
-- 全譜面・主要ブラウザーのE2E確認
-- Ghost Foundation
-- Replay Viewer
-
-詳細は[Roadmap](docs/roadmap.md)と[Tasks](docs/tasks.md)を参照してください。
-将来機能の実装時期や提供を確約するものではありません。
+Event Model
+v2の基盤実装と、残る契約不整合・追加検証・Ghost/Replayの完成は別です。
+過去の完了記録は[履歴](docs/releases/planning-baseline-2026-10.md)を参照してください。
+将来候補は実装時期や提供を確約するものではありません。
 
 ## ライセンス
 

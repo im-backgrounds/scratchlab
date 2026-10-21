@@ -48,7 +48,10 @@ Project項目とラベルは自動同期されないため、必ず両方を更�
 
 - `area:*`: BPM Challenge、Event Model
   v2、Ghost、Replay、MIDI、UI、scoring、CI、testing、coverage
-- `docs:*`: README、roadmap、tasks、specification
+- `docs:*`:
+  README、specification。既存の`docs:roadmap`/`docs:tasks`は過去の分類を
+  保持するため残す。計画の更新先はGitHub Issue/Project/Milestoneであり、
+  旧Markdownバックログを更新する指示ではない。
 - `test:*`: unit、regression、e2e、midi-e2e、manual
 
 実際のラベル名と説明は`.github/labels.json`を確認してください。

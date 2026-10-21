@@ -29,7 +29,9 @@ Status: Completed — Official Implementation
 
 Expected・Boundary・Stop・Matching・Timing・Overlay・App Integrationは完了。
 実機MIDI検証・全譜面E2E・Ghost Foundation・Replay Viewerは別の残作業とする。
-詳細は[Tasks](tasks.md)と[リリースノート](releases/event-model-v2.md)を参照。
+現在の残作業は[GitHub Issues](https://github.com/im-backgrounds/scratchlab/issues)、
+当時の完了根拠は[リリースノート](releases/event-model-v2.md)、
+テスト分類は[技術参照](testing-and-legacy-apis.md)を参照。
 
 ## Background
 

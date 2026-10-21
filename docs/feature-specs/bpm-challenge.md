@@ -4,7 +4,8 @@ Document the implemented BPM Challenge behavior. This feature spec describes the
 existing application and is not a request to change its implementation. The
 source of truth for current behavior is the challenge domain/session code and
 the practice UI; if this document drifts, inspect the implementation before
-changing either. See [roadmap](../roadmap.md).
+changing either. Track remaining work in
+[GitHub Issues](https://github.com/im-backgrounds/scratchlab/issues).
 
 # User Story
 
@@ -113,7 +114,8 @@ The versioned challenge store is logically:
 ```
 
 `highestClearedBpm` is null before a clear; `bestAccuracy` and `lastAttempt` may
-also be null. The chart key uses a stable built-in chart ID. The active state machine is transient and follows
+also be null. The chart key uses a stable built-in chart ID. The active state
+machine is transient and follows
 `idle → warmup (lap 1) → recording (laps 2–3) → analyzing → completed`; abort
 returns it to idle.
 

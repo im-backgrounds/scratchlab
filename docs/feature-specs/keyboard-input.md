@@ -5,7 +5,7 @@ be translated into the same semantic input events used by MIDI so recording,
 comparison, overlays, and BPM Challenge can share behavior.
 
 See [architecture decisions](../architecture-decisions.md) and the
-[roadmap](../roadmap.md).
+[GitHub work backlog](https://github.com/im-backgrounds/scratchlab/issues).
 
 # User Story
 
