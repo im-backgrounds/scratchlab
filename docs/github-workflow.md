@@ -142,6 +142,26 @@ allow them.
 
 ## Pull Request and Review
 
+### Pushing commits made locally on main
+
+Direct pushes to `main` are protected. If commits were made locally on `main`,
+commit all intended changes first, then create and push a new work branch:
+
+```sh
+bash scripts/push-work-branch.sh chore/test-quality-automation
+```
+
+Use a fresh branch name for each change (prefer `issue/<number>-<short-slug>`
+for Issue work). The script requires a clean worktree on `main`, fetches
+`origin`, verifies that local `main` contains `origin/main` plus local commits,
+and rejects existing local or remote branch names. It creates a branch and
+pushes it with an upstream, without force pushing, committing files, resetting
+local `main`, or creating a PR. If pushing fails, it retains the new local
+branch so the error can be resolved and `git push` retried. For subsequent
+commits on an existing work branch, use `git push` directly.
+
+### Review checklist
+
 1. Open a PR for the Issue and use `.github/PULL_REQUEST_TEMPLATE.md`.
 2. Link the Issue with `Closes #<number>` only if the PR fully satisfies its
    acceptance criteria. Use `Refs #<number>` for partial work or when more
