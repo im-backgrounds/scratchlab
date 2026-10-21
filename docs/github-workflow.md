@@ -6,8 +6,8 @@ and integrate changes.
 
 This document describes the current manual workflow. Project fields are not
 automatically synchronized with Issue labels or repository documentation unless
-an explicit GitHub automation is configured.
-For the Project's status lifecycle, see [GitHub Project](github-project.md).
+an explicit GitHub automation is configured. For the Project's status lifecycle,
+see [GitHub Project](github-project.md).
 
 ## Sources of Truth
 
@@ -64,8 +64,8 @@ infer priority from Issue type.
 ## Creating and Triageing Issues
 
 1. Create an Issue from the appropriate template in `.github/ISSUE_TEMPLATE/`:
-   Feature, Bug, Task, or Tech Debt. Use a blank Issue only when none of these fits,
-   and assign the matching `type:task` label.
+   Feature, Bug, Task, or Tech Debt. Use a blank Issue only when none of these
+   fits, and assign the matching `type:task` label.
 2. Complete the relevant sections: purpose or reproduction, scope, acceptance
    criteria, test conditions, and documentation update decisions. For scoring
    work, identify the affected BPM Challenge or Beginner Course behavior and
@@ -83,6 +83,32 @@ infer priority from Issue type.
 
 Do not mark an Issue `Ready` if a product or architecture decision necessary to
 define its acceptance criteria is unresolved.
+
+### Batch creation for the Test Quality Improvement project
+
+Use `scripts/create-test-quality-issues.js` to create or reconcile the
+predefined Epic and child-Issue set with GitHub CLI. Install `gh` and
+authenticate it for `github.com` first. The script reads label definitions from
+`.github/labels.json`, creates the `Test Quality Improvement` milestone if it
+does not exist, reuses unique exact-title matches, preserves existing labels,
+and adds missing GitHub Sub-Issue links.
+
+Run a read-only plan first:
+
+```sh
+deno run --allow-read=.github/labels.json --allow-run=gh scripts/create-test-quality-issues.js
+```
+
+Apply the plan only after reviewing it:
+
+```sh
+deno run --allow-read=.github/labels.json --allow-run=gh scripts/create-test-quality-issues.js --apply
+```
+
+The script stops before making changes if an exact planned title is ambiguous.
+Resolve duplicates explicitly with `--select <issue-key>=<number>`, for example
+`--select midi-settings=28`; do not choose an existing Epic without reviewing
+its scope. The script does not close or delete duplicate Issues.
 
 ## Implementing an Issue with Copilot
 
@@ -115,6 +141,26 @@ automatically. Perform those actions only when the active task and permissions
 allow them.
 
 ## Pull Request and Review
+
+### Pushing commits made locally on main
+
+Direct pushes to `main` are protected. If commits were made locally on `main`,
+commit all intended changes first, then create and push a new work branch:
+
+```sh
+bash scripts/push-work-branch.sh chore/test-quality-automation
+```
+
+Use a fresh branch name for each change (prefer `issue/<number>-<short-slug>`
+for Issue work). The script requires a clean worktree on `main`, fetches
+`origin`, verifies that local `main` contains `origin/main` plus local commits,
+and rejects existing local or remote branch names. It creates a branch and
+pushes it with an upstream, without force pushing, committing files, resetting
+local `main`, or creating a PR. If pushing fails, it retains the new local
+branch so the error can be resolved and `git push` retried. For subsequent
+commits on an existing work branch, use `git push` directly.
+
+### Review checklist
 
 1. Open a PR for the Issue and use `.github/PULL_REQUEST_TEMPLATE.md`.
 2. Link the Issue with `Closes #<number>` only if the PR fully satisfies its

@@ -21,6 +21,21 @@
       "description": "調査・検証・開発環境などの作業"
     },
     {
+      "name": "type:test",
+      "color": "1D76DB",
+      "description": "テスト・品質保証に関する作業"
+    },
+    {
+      "name": "type:docs",
+      "color": "0075CA",
+      "description": "ドキュメント更新に関する作業"
+    },
+    {
+      "name": "epic",
+      "color": "6F42C1",
+      "description": "複数の子IssueをまとめるEpic"
+    },
+    {
       "name": "priority:p0",
       "color": "B60205",
       "description": "緊急。主要機能の停止やデータ損失など即時対応が必要"
@@ -79,6 +94,16 @@
       "name": "area:ci",
       "color": "1D76DB",
       "description": "CI workflow、automated checks、build validation"
+    },
+    {
+      "name": "area:testing",
+      "color": "5319E7",
+      "description": "テスト基盤、回帰テスト、品質保証"
+    },
+    {
+      "name": "area:coverage",
+      "color": "FBCA04",
+      "description": "テストカバレッジとその運用"
     },
     {
       "name": "docs:readme",
