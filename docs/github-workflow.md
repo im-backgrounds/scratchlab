@@ -63,9 +63,13 @@ infer priority from Issue type.
 
 ## Creating and Triageing Issues
 
-1. Create an Issue from the appropriate template in `.github/ISSUE_TEMPLATE/`:
-   Feature, Bug, Task, or Tech Debt. Use a blank Issue only when none of these
-   fits, and assign the matching `type:task` label.
+1. Always create Issues through a script using GitHub CLI or the GitHub API, not
+   an interactive Issue-creation tool or form. Use the appropriate template in
+   `.github/ISSUE_TEMPLATE/` as the body structure: Feature, Bug, Task, or Tech
+   Debt, unless the request explicitly specifies another structure. Use a blank
+   Issue only when none of these fits, and assign the matching `type:task`
+   label. Check Open and Closed Issues for duplicates before creation; re-fetch
+   each created Issue to verify its body and labels.
 2. Complete the relevant sections: purpose or reproduction, scope, acceptance
    criteria, test conditions, and documentation update decisions. For scoring
    work, identify the affected BPM Challenge or Beginner Course behavior and
@@ -74,8 +78,16 @@ infer priority from Issue type.
 3. Templates assign the corresponding type label: `type:feature`, `type:bug`, or
    `type:tech-debt`. Add relevant `area:*`, `docs:*`, and `test:*` labels from
    `.github/labels.json`.
-4. Add the Issue to **ScratchLab Development**. Set `Status` to `Todo`, choose
-   the `Priority`, and apply the matching `priority:p*` label.
+4. Add every leaf Issue to **ScratchLab Development**: all sub-Issues with no
+   children, and any standalone or parent Issue with no sub-Issues. For nested
+   hierarchies, registering only a parent is not sufficient. Check existing
+   membership to avoid duplicates and preserve existing Project items, even when
+   a parent later gains children. For newly added items, set `Status` to `Todo`,
+   choose the `Priority`, and apply the matching `priority:p*` label. Preserve
+   existing Status values unless a workflow transition is intended. Re-fetch
+   membership and field values to verify registration. If Project permissions
+   are unavailable, report the unregistered Issues and the required permission
+   instead of treating Issue creation as fully complete.
 5. During triage, confirm the scope, acceptance criteria, test expectations,
    documentation impact, and dependencies. Move an actionable Issue to `Ready`.
    Split work into linked Issues when it is independently reviewable or has
@@ -92,6 +104,10 @@ authenticate it for `github.com` first. The script reads label definitions from
 `.github/labels.json`, creates the `Test Quality Improvement` milestone if it
 does not exist, reuses unique exact-title matches, preserves existing labels,
 and adds missing GitHub Sub-Issue links.
+
+This script is specific to that predefined Issue set; do not run it to create
+unrelated Issues. The Project registration and verification requirements above
+also apply to scripted batch creation; do not assume this script performs them.
 
 Run a read-only plan first:
 
