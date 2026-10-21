@@ -7,6 +7,7 @@ and integrate changes.
 This document describes the current manual workflow. Project fields are not
 automatically synchronized with Issue labels or repository documentation unless
 an explicit GitHub automation is configured.
+For the Project's status lifecycle, see [GitHub Project](github-project.md).
 
 ## Sources of Truth
 
@@ -63,7 +64,7 @@ infer priority from Issue type.
 ## Creating and Triageing Issues
 
 1. Create an Issue from the appropriate template in `.github/ISSUE_TEMPLATE/`:
-   Feature, Bug, or Tech Debt. Use a blank Issue only when none of these fits,
+   Feature, Bug, Task, or Tech Debt. Use a blank Issue only when none of these fits,
    and assign the matching `type:task` label.
 2. Complete the relevant sections: purpose or reproduction, scope, acceptance
    criteria, test conditions, and documentation update decisions. For scoring

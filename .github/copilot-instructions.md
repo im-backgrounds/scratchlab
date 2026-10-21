@@ -33,6 +33,8 @@ explicitly requires it. Keep a change focused on one issue.
 
 Follow the [GitHub workflow](../docs/github-workflow.md) for Project status,
 priority, Issue triage, PR review, and completion procedures.
+Use the [README policy](../docs/readme-policy.md) to assess README changes and
+the [label guide](../docs/labels.md) for current Issue labels.
 
 ## Documentation Updates
 
