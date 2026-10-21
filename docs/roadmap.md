@@ -70,7 +70,21 @@ Event Model v2の実装完了と、以下の追加検証・将来機能は分離
 - [ ] Missing・Extra・初期状態エラー・中断・再挑戦を網羅
 - [ ] Previous Result・Timing・Overlayの画面整合を確認
 
-3対象譜面のブラウザー確認は完了済み。自動E2Eスイートと全譜面の網羅は未完了。
+3対象譜面のブラウザー確認とBaby Scratch MIDI E2Eの自動化は完了済み。
+全譜面・主要ブラウザーの網羅は未完了。
+
+#### MIDI E2E Test Foundation — Phase 1
+
+- Baby Scratchの仮想Web MIDIによるブラウザーE2Eを追加。
+- MIDI接続・Learn割当からRecording・Matching・Timing・Overlay・Challenge結果まで
+  本番経路を検証する。Accuracy 100%、Missing 0、Extra 0、Timing有効件数、 80
+  BPMクリアと次BPMへの進行を確認する。
+- Ghost／Replayの取得・保存だけをE2E専用Nullアダプターで無効化する。
+  ReplayRecord・Ghostを入力に利用せず、本番コード・設定は変更しない。
+- Deno CIの独立Chromiumジョブで実行する。全譜面・主要ブラウザーと実機固有の
+  接続・遅延確認は引き続き別対象。
+
+実行方法・検証範囲: [MIDI E2E](../tests/e2e/midi/README.md)。
 
 ### Ghost Foundation — High
 

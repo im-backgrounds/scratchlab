@@ -205,6 +205,7 @@ DJコントローラーを接続すると、BPMチャレンジで演奏を記録
 
 - Python 3（ローカルHTTPサーバーの起動に使用）
 - Deno 2（テストとフォーマット確認に使用）
+- Node.js 22／npm（MIDI E2E用Chromiumの導入時のみ使用）
 
 アプリ本体はHTML、CSS、ネイティブJavaScript ES
 Modulesで構成され、ビルド手順やnpm依存パッケージはありません。
@@ -221,7 +222,7 @@ python3 -m http.server 8000
 ### テスト・チェック
 
 ```sh
-deno test --allow-read=tests/ui/snapshots
+deno test --allow-read=tests/ui/snapshots --ignore=tests/e2e
 deno check src/app.js tests/domain/*.js tests/features/*.js tests/state/*.js tests/ui/*.js
 deno fmt --check --unstable-component --ignore='tests/ui/snapshots/*.svg' .
 deno lint src tests
@@ -230,7 +231,10 @@ git diff --check
 
 Storage共通処理・Repositoryの失敗分岐は `tests/domain/`、
 入力ログの保持・同期描画は `tests/ui/input-event-log_test.js` で確認します。
-DOM表示や実機入力はブラウザーで別途確認してください。
+Baby ScratchのMIDI入力→記録→採点→Timing→Overlay→結果画面は、
+[MIDI E2E](tests/e2e/midi/README.md)で実機なしに自動確認できます。
+Ghost／ReplayはE2E専用アダプターで無効化し、本番コードは差し替えません。
+実機固有の接続・遅延や未対応譜面はブラウザーで別途確認してください。
 v2受入・回帰・旧v1特性テストの分類は[Tasks](docs/tasks.md#テスト分類)を参照してください。
 旧v1テストは過去の不整合を固定する資料であり、正式採点の受入基準ではありません。
 

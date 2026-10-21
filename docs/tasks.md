@@ -95,7 +95,19 @@ Charts、Achievement、Beginner Course、初回ガイドの提供は継続する
 - [~] 3対象譜面のブラウザー確認済み、全譜面・主要ブラウザーは未完了
 - [ ] Forward Scratch・Backward Scratch・Transformerを含む網羅確認
 - [ ] 中断・リトライ・初期状態エラー・記録上限の画面確認
-- [ ] 自動E2Eスイート整備
+- [~] 自動E2Eスイート整備（Baby Scratch MIDI Phase 1追加、全譜面は未完了）
+
+### MIDI E2E Test Foundation — Phase 1
+
+- [x] 仮想Web MIDIデバイスとtimestamp付きsend／sendMany API
+- [x] UIからMIDI接続・Learn割当、本番入力→Recording→Matching→Timing→Overlay→結果
+- [x] Baby Scratch 100%、Missing 0、Extra
+      0、Timing有効件数、Challengeクリアの検証
+- [x] Ghost／Replay取得・保存をE2E専用アダプターで無効化（本番コード変更なし）
+- [x] 独立Chromium CIジョブ・Simulator単体テスト・実行手順
+- [ ] Missing／Extra・初期状態エラー・中断／再挑戦・他譜面へ拡張
+
+詳細: [MIDI E2E](../tests/e2e/midi/README.md)。
 
 ### Ghost Foundation
 

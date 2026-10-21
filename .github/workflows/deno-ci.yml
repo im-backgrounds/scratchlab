@@ -27,4 +27,34 @@ jobs:
         run: deno check src/app.js tests/domain/*.js tests/state/*.js tests/ui/scratch-visualizer_test.js
 
       - name: Run tests
-        run: deno test --allow-read=tests/ui/snapshots
+        run: deno test --allow-read=tests/ui/snapshots --ignore=tests/e2e
+
+  midi-e2e:
+    name: MIDI E2E suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: tests/e2e
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Set up Node for the browser installer
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install headless Chromium
+        run: npx --yes playwright@1.56.1 install --with-deps chromium
+
+      - name: Check E2E foundation
+        run: deno task check
+
+      - name: Run MIDI simulator and browser E2E tests
+        run: deno task test
