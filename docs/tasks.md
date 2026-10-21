@@ -20,6 +20,12 @@ EpicとData Reset Validationは対象外とし、残タスクへ持ち越さな�
 
 ## Completed
 
+### GitHub運用基盤
+
+- [x] Feature・Bug・TaskのIssue Formと既存Tech Debtテンプレートを整備
+- [x] Project運用、ラベル体系、README更新ポリシーを文書化
+- [x] Copilot・PRテンプレートでIssue参照とドキュメント確認を案内
+
 ### Epic 1 — Design Freeze
 
 - [x] [Event Model v2仕様](event-model-v2.md)を正式版として確定

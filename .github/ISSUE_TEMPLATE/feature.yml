@@ -1,0 +1,59 @@
+name: Feature
+description: ScratchLabの新機能・ユーザー体験の改善を提案する
+title: "[Feature] "
+labels:
+  - type:feature
+body:
+  - type: textarea
+    id: overview
+    attributes:
+      label: 概要
+      description: 誰のどのような課題を、どう解決する機能ですか。
+    validations:
+      required: true
+  - type: textarea
+    id: background
+    attributes:
+      label: 背景
+      description: 現状の困りごと、利用場面、関連Issueや仕様を記載してください。
+    validations:
+      required: true
+  - type: textarea
+    id: requirements
+    attributes:
+      label: 要件
+      description: 対象範囲、必要な動作、制約を記載してください。
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: 完了条件
+      description: ユーザーやシステムから確認可能な受け入れ条件を記載してください。
+      placeholder: |
+        - [ ] ...
+    validations:
+      required: true
+  - type: checkboxes
+    id: challenge-scope
+    attributes:
+      label: BPM Challengeとの関係
+      options:
+        - label: BPM Challengeに関係する
+        - label: Beginner Courseに関係する
+        - label: どちらにも関係しない
+  - type: textarea
+    id: event-model-scope
+    attributes:
+      label: Event Model v2との関係
+      description: 採点、Timing Analysis、Overlay、入力イベントに関係する場合は変更対象を記載してください。
+  - type: textarea
+    id: testing
+    attributes:
+      label: テスト条件
+      description: 必要なユニット・回帰・境界条件テストや手動確認を記載してください。
+  - type: textarea
+    id: documentation
+    attributes:
+      label: ドキュメント更新判断
+      description: README、roadmap、tasks、関連仕様の更新要否と理由を記載してください。

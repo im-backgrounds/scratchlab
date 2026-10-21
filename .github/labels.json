@@ -76,6 +76,11 @@
       "description": "Accuracy、Matching、Missing／Extra、採点結果"
     },
     {
+      "name": "area:ci",
+      "color": "1D76DB",
+      "description": "CI workflow、automated checks、build validation"
+    },
+    {
       "name": "docs:readme",
       "color": "0075CA",
       "description": "READMEのユーザー向け説明、設定、制約の更新"

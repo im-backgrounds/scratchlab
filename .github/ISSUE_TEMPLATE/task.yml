@@ -1,0 +1,27 @@
+name: Task
+description: 調査・検証・開発環境などの作業を提案する
+title: "[Task] "
+labels:
+  - type:task
+body:
+  - type: textarea
+    id: work
+    attributes:
+      label: 実施内容
+      description: 実施する作業と対象範囲を記載してください。
+    validations:
+      required: true
+  - type: textarea
+    id: completion-criteria
+    attributes:
+      label: 完了条件
+      description: 作業の完了を確認できる条件を記載してください。
+      placeholder: |
+        - [ ] ...
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: 備考
+      description: 関連Issue、依存関係、制約などがあれば記載してください。

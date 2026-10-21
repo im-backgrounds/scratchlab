@@ -1,0 +1,76 @@
+name: Bug
+description: ScratchLabの不具合を報告する
+title: "[Bug] "
+labels:
+  - type:bug
+body:
+  - type: textarea
+    id: occurrence
+    attributes:
+      label: 発生事象
+      description: 何が起きましたか。エラーメッセージには個人情報を含めないでください。
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 再現手順
+      description: 不具合を再現する手順を記載してください。
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期待動作
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 実際の動作
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 環境
+      description: OS、ブラウザー、譜面・BPM、入力方法などを記載してください。
+    validations:
+      required: true
+  - type: checkboxes
+    id: impact
+    attributes:
+      label: 影響範囲
+      options:
+        - label: BPM ChallengeまたはBeginner Course
+        - label: Practice、譜面再生、記録、採点、結果
+        - label: Timing AnalysisまたはController Overlay
+        - label: MIDIまたはその他の入力経路
+        - label: その他
+  - type: textarea
+    id: scoring
+    attributes:
+      label: 採点・Event Model v2との関係
+      description: 関係する場合、期待値と実際の値をAccuracyとTimingに分けて記載してください。
+  - type: textarea
+    id: completion-criteria
+    attributes:
+      label: 完了条件
+      description: 修正後に確認する条件を記載してください。
+      placeholder: |
+        - [ ] 再現手順で不具合が解消される
+        - [ ] 関連する回帰条件で既存動作が保たれる
+  - type: textarea
+    id: testing
+    attributes:
+      label: テスト条件
+      description: 回帰テスト、境界条件、MIDI E2Eやブラウザー確認の要否を記載してください。
+  - type: textarea
+    id: documentation
+    attributes:
+      label: ドキュメント更新判断
+      description: README、roadmap、tasks、関連仕様の更新要否と理由を記載してください。
