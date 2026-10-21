@@ -17,7 +17,9 @@ deno task --config tests/e2e/deno.json test
 必要環境はDeno 2とPlaywright専用Chromium。実機MIDI・外部サーバーは不要。
 ブラウザー導入にはNode.js 22／npmも必要。テスト自体はDenoで実行する。
 初回はnpm依存とブラウザーのダウンロードが必要。 Linux
-CIではPlaywrightの`install --with-deps chromium`でOS依存も導入する。
+CIではPlaywrightの`install --with-deps chromium`でOS依存も導入する。 Playwright
+1.56.1の対応環境を維持するため、MIDI E2Eジョブは
+`ubuntu-24.04`に固定する。`ubuntu-latest`の更新で未対応OSへ切り替えない。
 [Deno CI](../../../../.github/workflows/deno-ci.yml)の独立ジョブで同じテストを実行する。
 既存の単体テストは`deno test --allow-read=tests/ui/snapshots --ignore=tests/e2e`で実行する。
 
@@ -106,8 +108,8 @@ Pagesにはこのアダプターを適用しない。
 
 1. MIDI Access: 仮想デバイス接続、Learnによる3操作の割当。
 2. MIDI Input: 本番ハンドラーの受信ログと圧縮イベントへの到達。
-3. Recording: Warm-up (Lap 1)→Recording Lap 2/3→Lap 3/3→Analyzing→Result、
-   lap 1除外、Lap 2/3の方向・時刻・件数、Challenge Startでの再挑戦。
+3. Recording: Warm-up (Lap 1)→Recording Lap 2/3→Lap 3/3→Analyzing→Result、 lap
+   1除外、Lap 2/3の方向・時刻・件数、Challenge Startでの再挑戦。
 4. Matching: Accuracy 100%、Matched 16、Missing 0、Extra 0。
 5. Timing: Measured Count 16（>0）、Average／Max Error 0ms、 Timing Accuracy
    100%。

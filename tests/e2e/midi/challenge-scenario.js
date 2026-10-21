@@ -151,24 +151,6 @@ export async function runMidiChallengeScenario(t, scenario) {
     );
 
     await step(
-      "Challenge Start restarts after results without showing stale analysis",
-      async () => {
-        await page.locator("#challenge-start").click();
-        assert.equal(await progress("warmup"), "current");
-        assert.equal(
-          await page.locator("#challenge-timing-analysis").isVisible(),
-          false,
-        );
-        assert.equal(
-          await page.locator("#performance-summary-export").isDisabled(),
-          true,
-        );
-        await page.clock.runFor(loopMs);
-        assert.equal(await progress("recording-2"), "current");
-      },
-    );
-
-    await step(
       "Matching / Timing: 100%, Missing 0, Extra 0, measured pairs",
       async () => {
         assert.equal(await text("#performance-accuracy"), "100.0%");
@@ -273,6 +255,24 @@ export async function runMidiChallengeScenario(t, scenario) {
           await page.locator("#challenge-last-attempt").isVisible(),
           true,
         );
+      },
+    );
+
+    await step(
+      "Challenge Start restarts after results without showing stale analysis",
+      async () => {
+        await page.locator("#challenge-start").click();
+        assert.equal(await progress("warmup"), "current");
+        assert.equal(
+          await page.locator("#challenge-timing-analysis").isVisible(),
+          false,
+        );
+        assert.equal(
+          await page.locator("#performance-summary-export").isDisabled(),
+          true,
+        );
+        await page.clock.runFor(loopMs);
+        assert.equal(await progress("recording-2"), "current");
       },
     );
 

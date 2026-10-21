@@ -43,7 +43,7 @@ Deno.test("the manager discovers devices and routes all inputs by default", asyn
   const messages = [];
   const changes = [];
   const manager = createMidiInputManager({
-    requestAccess: async () => access,
+    requestAccess: () => Promise.resolve(access),
     onMidiMessage: (data, input) => messages.push([data, input.id]),
     onChange: (state) => changes.push(state),
   });
@@ -72,9 +72,9 @@ Deno.test("selecting an input persists and restricts routed messages", async () 
   const access = createAccess([first, second]);
   const messages = [];
   const manager = createMidiInputManager({
-    requestAccess: async () => access,
+    requestAccess: () => Promise.resolve(access),
     storage,
-    onMidiMessage: (data, input) => messages.push(input.id),
+    onMidiMessage: (_data, input) => messages.push(input.id),
   });
 
   await manager.connect();
@@ -90,21 +90,24 @@ Deno.test("the saved input selection is restored after manager recreation", asyn
   const storage = createStorage({ [MIDI_INPUT_PREFERENCE_KEY]: "two" });
   const access = createAccess([createInput("one"), createInput("two")]);
   const manager = createMidiInputManager({
-    requestAccess: async () => access,
+    requestAccess: () => Promise.resolve(access),
     storage,
   });
 
   assert.equal(manager.snapshot().selectedInputId, "two");
   assert.equal((await manager.connect()).connected, true);
   assert.equal(access.inputs.values().next().value.onmidimessage, null);
-  assert.equal(access.inputs.get("two").onmidimessage instanceof Function, true);
+  assert.equal(
+    access.inputs.get("two").onmidimessage instanceof Function,
+    true,
+  );
 });
 
 Deno.test("disconnected selections retain their preference and report disconnected", async () => {
   const storage = createStorage();
   const access = createAccess([createInput("one", "Device", "disconnected")]);
   const manager = createMidiInputManager({
-    requestAccess: async () => access,
+    requestAccess: () => Promise.resolve(access),
     storage,
   });
 
@@ -120,7 +123,7 @@ Deno.test("device state changes refresh connection status and rebind selection",
   const access = createAccess([input]);
   const states = [];
   const manager = createMidiInputManager({
-    requestAccess: async () => access,
+    requestAccess: () => Promise.resolve(access),
     onChange: (state) => states.push(state),
   });
 

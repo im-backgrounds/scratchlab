@@ -875,11 +875,13 @@ function renderMidiInputSnapshot(snapshot) {
     midiConnected: snapshot.connected,
   });
   midiMappingUi.renderMidiInputs(snapshot);
-  controls.renderMidiConnectionStatus(snapshot.connected
-    ? "MIDI接続済み"
-    : midiInputManager.access
-    ? "MIDI入力デバイス未接続"
-    : "MIDI未接続");
+  controls.renderMidiConnectionStatus(
+    snapshot.connected
+      ? "MIDI接続済み"
+      : midiInputManager.access
+      ? "MIDI入力デバイス未接続"
+      : "MIDI未接続",
+  );
   renderChallengeInputReadiness();
 }
 
@@ -1252,9 +1254,8 @@ function selectMidiInput(inputId) {
     const selection = midiInputManager.selectInput(inputId);
     const selected = inputId === "all"
       ? "すべての入力デバイス"
-      : midiInputManager.snapshot().inputs.find((input) =>
-        input.id === inputId
-      )?.name ?? "MIDI入力デバイス";
+      : midiInputManager.snapshot().inputs.find((input) => input.id === inputId)
+        ?.name ?? "MIDI入力デバイス";
     controls.renderMidiLog(
       `${selected}を選択しました。${
         selection.preferenceSaved
@@ -1505,13 +1506,11 @@ function evaluateChallengeAttempt(performance, run) {
     renderBeginnerCourse();
     return;
   }
-  latestChallengeSummary = analysis.accuracy === null
-    ? null
-    : {
-      pattern: chart.name,
-      bpm: run.bpm,
-      accuracy: analysis.accuracy,
-    };
+  latestChallengeSummary = analysis.accuracy === null ? null : {
+    pattern: chart.name,
+    bpm: run.bpm,
+    accuracy: analysis.accuracy,
+  };
   performanceUi.renderPerformanceSummaryAvailability(
     latestChallengeSummary !== null,
   );
@@ -1574,7 +1573,9 @@ function evaluateChallengeAttempt(performance, run) {
       recordedAt: Date.now(),
     });
     if (!replayResult.ok) {
-      console.warn(`Challenge Replay could not be saved: ${replayResult.reason}`);
+      console.warn(
+        `Challenge Replay could not be saved: ${replayResult.reason}`,
+      );
     } else {
       replaySelection.selectChart(chart.id);
       replayView.setReplay(replaySelection.selectedReplay);
