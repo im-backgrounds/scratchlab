@@ -36,6 +36,12 @@ export function renderPerformanceStatus(message) {
   document.getElementById("performance-status").textContent = message;
 }
 
+export function focusPerformanceDetails() {
+  const heading = document.getElementById("performance-title");
+  heading.scrollIntoView({ behavior: "smooth", block: "start" });
+  heading.focus({ preventScroll: true });
+}
+
 function renderCounts(counts) {
   const list = document.getElementById("performance-counts");
   list.replaceChildren();

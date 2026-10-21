@@ -79,6 +79,10 @@ import {
 import { createPracticeView } from "./features/practice-view.js";
 import { createBuilderView } from "./features/builder-view.js";
 import { createBpmChallengeView } from "./features/bpm-challenge-view.js";
+import {
+  describeChallengeInputReadiness,
+} from "./features/challenge-input-readiness.js";
+import { createChallengeNavigation } from "./features/challenge-navigation.js";
 import { createBeginnerCourseView } from "./features/beginner-course-view.js";
 import { renderAchievementView } from "./features/achievement-view.js";
 import { createPerformanceView } from "./features/performance-view.js";
@@ -133,6 +137,7 @@ let latestPerformance = performanceRepository.load();
 let latestChallengeSummary = null;
 let latestChallengeTimingAnalysis = null;
 let latestChallengeTimingChartKey = null;
+let latestChallengeAnalysisChartKey = null;
 const challengeRepository = createChallengeRepository();
 const achievementRepository = createAchievementRepository();
 let achievementMessage = "";
@@ -219,6 +224,8 @@ const bpmChallengeView = createBpmChallengeView({
     chartKey === latestChallengeTimingChartKey
       ? latestChallengeTimingAnalysis
       : null,
+  hasPerformanceAnalysis: (chartKey) =>
+    chartKey !== null && chartKey === latestChallengeAnalysisChartKey,
   transport,
 });
 
@@ -341,6 +348,7 @@ function createBuilderScoreDocument() {
 
 function selectChart(chartId) {
   actions.selectChart(chartId);
+  latestChallengeAnalysisChartKey = null;
   ghostSelection.selectChart(chartId);
   replaySelection.selectChart(chartId);
   replayView.setReplay(replaySelection.selectedReplay);
@@ -348,14 +356,16 @@ function selectChart(chartId) {
 
 function render() {
   visualizer.renderChartList(chartCatalog, state.selectedChartId, (chartId) => {
-    selectedCourseStageId = null;
-    beginnerCourseMessage = "";
-    selectChart(chartId);
-    showPracticeView();
-    resetPageState();
-    currentView = "practice";
-    syncPracticeModeButton();
-    persistSession();
+    challengeNavigation.navigate(() => {
+      selectedCourseStageId = null;
+      beginnerCourseMessage = "";
+      selectChart(chartId);
+      showPracticeView();
+      resetPageState();
+      currentView = "practice";
+      syncPracticeModeButton();
+      persistSession();
+    }, { prepare: false });
   });
   renderSelectedChart();
   renderBuilder();
@@ -837,6 +847,7 @@ function renderMidiMappingPanel() {
     onRangeChange: setFaderRange,
     onSwapFader: swapFader,
   });
+  renderChallengeInputReadiness();
 }
 
 function saveMidiMapping() {
@@ -990,6 +1001,7 @@ function setPracticeModeEnabled(enabled) {
     handleInputAudioEvent({ type: "fader", state: "open", time: Date.now() });
   }
   syncPracticeModeButton();
+  renderChallengeInputReadiness();
 }
 
 document.getElementById("practice-mode-toggle").addEventListener(
@@ -1175,6 +1187,7 @@ async function connectMIDI() {
     const access = await navigator.requestMIDIAccess();
     actions.setMidiState({ midiAccess: access, midiConnected: true });
     controls.renderMidiConnectionStatus("MIDI接続済み");
+    renderChallengeInputReadiness();
 
     access.inputs.forEach((input) => {
       input.onmidimessage = (event) => handleMidiMessage(event.data);
@@ -1221,7 +1234,41 @@ function renderAchievementsPage() {
 }
 
 function renderChallengePanel() {
-  return bpmChallengeView.renderChallengePanel();
+  const view = bpmChallengeView.renderChallengePanel();
+  renderChallengeInputReadiness();
+  return view;
+}
+
+function renderChallengeInputReadiness() {
+  challengeUi.renderInputReadiness(describeChallengeInputReadiness({
+    midiConnected: state.midiConnected,
+    midiMapping,
+    practiceModeEnabled,
+  }));
+}
+
+let challengeInterruptionNotice = "";
+
+function returnToPractice() {
+  controls.renderPracticeView();
+  currentView = "practice";
+  syncPracticeModeButton();
+  renderChallengePanel();
+  if (challengeInterruptionNotice) {
+    setChallengeStatus(challengeInterruptionNotice);
+    challengeInterruptionNotice = "";
+  }
+  persistSession();
+}
+
+function showMidiSetup(fromChallenge = false) {
+  document.getElementById("midi-setup-return").textContent = fromChallenge
+    ? "Challengeの準備に戻る"
+    : "Practiceへ戻る";
+  controls.renderMidiSetupView();
+  currentView = "midi";
+  syncPracticeModeButton();
+  persistSession();
 }
 
 function selectBeginnerCourseStage(stageId) {
@@ -1323,6 +1370,9 @@ function evaluateChallengeAttempt(performance, run) {
     return;
   }
   const analysis = analyzeForChart(performance, chart);
+  latestChallengeAnalysisChartKey = !run.courseStageId && analysis
+    ? chartKey
+    : null;
   latestChallengeTimingAnalysis = performanceView.analyzeTimingForChart(
     performance,
     chart,
@@ -1512,6 +1562,7 @@ function startChallenge() {
     renderMidiMappingPanel();
   }
   activeChallengeKey = getChallengeChartKey();
+  latestChallengeAnalysisChartKey = null;
   latestChallengeTimingAnalysis = null;
   latestChallengeTimingChartKey = null;
   challengeRun = {
@@ -1733,22 +1784,50 @@ async function exportPerformanceSummary() {
   }
 }
 
+const challengeAbortDialog = document.getElementById(
+  "challenge-abort-dialog",
+);
+const challengeNavigation = createChallengeNavigation({
+  dialog: challengeAbortDialog,
+  isChallengeRunning: () => isSessionRunning(challengeSession),
+  beforeSwitch: prepareViewSwitch,
+  onConfirmedInterruption: () => {
+    const message =
+      "Challengeを中断しました。未完了の記録は保存されていません。";
+    if (currentView === "practice") setChallengeStatus(message);
+    else challengeInterruptionNotice = message;
+  },
+});
+document.getElementById("challenge-abort-confirm").addEventListener(
+  "click",
+  () => challengeNavigation.confirm(),
+);
+document.getElementById("challenge-abort-stay").addEventListener(
+  "click",
+  () => challengeNavigation.dismiss(),
+);
+challengeAbortDialog.addEventListener("cancel", () => {
+  challengeNavigation.dismiss();
+});
+
 controls.bindControls({
   onShowGuide: () => {
-    prepareViewSwitch();
-    controls.renderGuideView();
-    currentView = "guide";
-    syncPracticeModeButton();
-    persistSession();
+    challengeNavigation.navigate(() => {
+      controls.renderGuideView();
+      currentView = "guide";
+      syncPracticeModeButton();
+      persistSession();
+    });
   },
   onStartFirstVisitGuide: () => {
-    const message = saveFirstVisitGuidance("started");
-    controls.renderFirstVisitGuidance(false, message);
-    prepareViewSwitch();
-    controls.renderGuideView();
-    currentView = "guide";
-    syncPracticeModeButton();
-    persistSession();
+    challengeNavigation.navigate(() => {
+      const message = saveFirstVisitGuidance("started");
+      controls.renderFirstVisitGuidance(false, message);
+      controls.renderGuideView();
+      currentView = "guide";
+      syncPracticeModeButton();
+      persistSession();
+    });
   },
   onSkipFirstVisitGuide: () => {
     const message = saveFirstVisitGuidance("skipped");
@@ -1765,26 +1844,25 @@ controls.bindControls({
     });
   },
   onShowBuilder: () => {
-    prepareViewSwitch();
-    showBuilderPage();
-    currentView = "builder";
-    syncPracticeModeButton();
-    persistSession();
+    challengeNavigation.navigate(() => {
+      showBuilderPage();
+      currentView = "builder";
+      syncPracticeModeButton();
+      persistSession();
+    });
   },
   onShowMidiSetup: () => {
-    prepareViewSwitch();
-    controls.renderMidiSetupView();
-    currentView = "midi";
-    syncPracticeModeButton();
-    persistSession();
+    challengeNavigation.navigate(() => showMidiSetup(false));
   },
+  onShowPractice: returnToPractice,
   onShowAchievements: () => {
-    prepareViewSwitch();
-    controls.renderAchievementsView();
-    renderAchievementsPage();
-    currentView = "achievements";
-    syncPracticeModeButton();
-    persistSession();
+    challengeNavigation.navigate(() => {
+      controls.renderAchievementsView();
+      renderAchievementsPage();
+      currentView = "achievements";
+      syncPracticeModeButton();
+      persistSession();
+    });
   },
   onConnectMidi: connectMIDI,
 });
@@ -1893,6 +1971,9 @@ const editorUi = editor.bindEditor({
 challengeUi.bindChallenge({
   onStart: startChallenge,
   onReset: resetChallengeProgress,
+  onShowMidiSetup: () =>
+    challengeNavigation.navigate(() => showMidiSetup(true)),
+  onShowPerformanceDetails: performanceUi.focusPerformanceDetails,
 });
 beginnerCourseUi.bindBeginnerCourse({
   onSelectStage: selectBeginnerCourseStage,

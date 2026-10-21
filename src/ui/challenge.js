@@ -2,13 +2,52 @@ function setText(id, text) {
   document.getElementById(id).textContent = text;
 }
 
-export function bindChallenge({ onStart, onReset }) {
+export function bindChallenge({
+  onStart,
+  onReset,
+  onShowMidiSetup,
+  onShowPerformanceDetails,
+}) {
   document.getElementById("challenge-start").addEventListener("click", onStart);
   document.getElementById("challenge-reset").addEventListener("click", onReset);
+  document.getElementById("challenge-midi-setup").addEventListener(
+    "click",
+    onShowMidiSetup,
+  );
+  document.getElementById("challenge-performance-details").addEventListener(
+    "click",
+    onShowPerformanceDetails,
+  );
 }
 
 export function renderChallengeStatus(message) {
   setText("challenge-status", message);
+}
+
+export function renderInputReadiness(readiness) {
+  const list = document.getElementById("challenge-input-readiness");
+  const rows = [
+    `MIDI: ${readiness.midiConnected ? "接続済み" : "未接続"}`,
+    `Forward: ${readiness.midiForwardMapped ? "割り当て済み" : "未割り当て"}`,
+    `Backward: ${readiness.midiBackwardMapped ? "割り当て済み" : "未割り当て"}`,
+    `Fader: ${readiness.midiFaderMapped ? "割り当て済み" : "未割り当て"}`,
+    `練習モード: ${
+      readiness.practiceModeEnabled ? "有効" : "無効"
+    }（Mouse／Keyboard）`,
+  ];
+  list.replaceChildren(...rows.map((text) => {
+    const item = document.createElement("li");
+    item.textContent = text;
+    return item;
+  }));
+
+  const status = document.getElementById("challenge-input-status");
+  status.textContent = readiness.canStart
+    ? "必要な入力が準備できています。"
+    : `Challengeを始めるには、${
+      readiness.missing.join("と")
+    }を準備してください。`;
+  status.dataset.ready = String(readiness.canStart);
 }
 
 export function renderTimingAnalysis(analysis) {
@@ -41,7 +80,7 @@ export function renderTimingAnalysis(analysis) {
  * @param {object} view Result of describeChallenge.
  * @param {string} chartName Name of the chart being challenged.
  */
-export function renderChallenge(view, chartName) {
+export function renderChallenge(view, chartName, hasPerformanceAnalysis) {
   document.getElementById("challenge-panel").classList.toggle(
     "is-active",
     view.active,
@@ -63,6 +102,8 @@ export function renderChallenge(view, chartName) {
   setText("challenge-clears", String(view.clears));
   const lastAttempt = document.getElementById("challenge-last-attempt");
   lastAttempt.hidden = !view.lastAttempt;
+  document.getElementById("challenge-performance-details").hidden =
+    !view.lastAttempt || !hasPerformanceAnalysis;
   if (view.lastAttempt) {
     setText("challenge-last-attempt-bpm", String(view.lastAttempt.bpm));
     setText(

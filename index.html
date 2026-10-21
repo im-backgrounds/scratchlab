@@ -260,6 +260,17 @@
               「チャレンジ開始」を押すと、お手本ループ → 記録ループ2回 → 判定まで自動で進みます。お手本ループは採点されません。マウスで前進・後進、W/Pでフェーダーを開き、S/Lで閉じます。MIDIも同時に使用できます。
             </p>
 
+            <section class="challenge-input-card"
+              aria-labelledby="challenge-input-title">
+              <h4 id="challenge-input-title">入力の準備</h4>
+              <ul id="challenge-input-readiness"></ul>
+              <p id="challenge-input-status" class="status-box" role="status"
+                aria-live="polite"></p>
+              <p>Mouse／Keyboardを使う場合は、練習モードを有効にしてください。</p>
+              <button id="challenge-midi-setup" class="secondary-button"
+                type="button">MIDIセットアップを開く</button>
+            </section>
+
             <div class="button-row">
               <button id="challenge-start" class="secondary-button"
                 type="button">チャレンジ開始</button>
@@ -317,6 +328,10 @@
                   <dd id="challenge-last-attempt-at"></dd>
                 </div>
               </dl>
+              <button id="challenge-performance-details"
+                class="secondary-button" type="button" hidden>
+                Performance詳細を見る
+              </button>
             </section>
 
             <section id="challenge-timing-analysis"
@@ -383,7 +398,7 @@
             aria-labelledby="performance-title">
             <div class="section-header">
               <div>
-                <h3 id="performance-title">パフォーマンス</h3>
+                <h3 id="performance-title" tabindex="-1">パフォーマンス</h3>
                 <p>BPMチャレンジで記録したスクラッチとフェーダーの操作を確認できます</p>
               </div>
             </div>
@@ -455,6 +470,8 @@
             <p class="eyebrow">MIDI SETUP</p>
             <h2 id="midi-setup-title">MIDIセットアップ</h2>
             <p>DJコントローラを接続し、操作をスクラッチとフェーダーに割り当てます。設定はこのブラウザーに保存され、BPMチャレンジの自動記録で使われます。</p>
+            <button id="midi-setup-return" class="secondary-button"
+              type="button">Practiceへ戻る</button>
           </header>
 
           <section class="card secondary-card">
@@ -501,6 +518,21 @@
             </div>
           </section>
         </section>
+
+        <dialog id="challenge-abort-dialog"
+          aria-labelledby="challenge-abort-title"
+          aria-describedby="challenge-abort-description">
+          <h2 id="challenge-abort-title">Challengeを中断しますか？</h2>
+          <p id="challenge-abort-description">
+            進行中のChallengeと未完了の記録は破棄されます。
+          </p>
+          <div class="button-row">
+            <button id="challenge-abort-stay" class="secondary-button"
+              type="button">Challengeを続ける</button>
+            <button id="challenge-abort-confirm" class="primary-button"
+              type="button">中断して移動</button>
+          </div>
+        </dialog>
 
         <section id="notation-guide-page" class="guide-page" hidden
           aria-labelledby="notation-guide-title">

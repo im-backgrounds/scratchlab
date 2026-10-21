@@ -5,6 +5,7 @@ export function bindControls({
   onTryBabyScratch,
   onShowBuilder,
   onShowMidiSetup,
+  onShowPractice,
   onShowAchievements,
   onConnectMidi,
 }) {
@@ -23,6 +24,7 @@ export function bindControls({
   const chartHelpPanel = document.getElementById("chart-help-panel");
   const midiConnectButton = document.getElementById("midi-connect");
   const midiSetupTab = document.getElementById("midi-setup-tab");
+  const midiSetupReturn = document.getElementById("midi-setup-return");
   const achievementsTab = document.getElementById("achievements-tab");
 
   const setMobileMenuOpen = (isOpen, restoreFocus = false) => {
@@ -64,6 +66,7 @@ export function bindControls({
   );
   builderTab.addEventListener("click", onShowBuilder);
   midiSetupTab.addEventListener("click", onShowMidiSetup);
+  midiSetupReturn.addEventListener("click", onShowPractice);
   achievementsTab.addEventListener("click", onShowAchievements);
 
   chartHelpToggle.addEventListener("click", () => {

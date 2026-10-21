@@ -205,6 +205,17 @@ Deno.test("Baby Scratch: virtual MIDI through the real Challenge result", async 
           await page.locator("#challenge-last-attempt").isVisible(),
           true,
         );
+        const performanceDetails = page.locator(
+          "#challenge-performance-details",
+        );
+        assert.equal(await performanceDetails.isVisible(), true);
+        await performanceDetails.click();
+        assert.equal(
+          await page.evaluate(() =>
+            document.activeElement?.id === "performance-title"
+          ),
+          true,
+        );
       },
     );
 

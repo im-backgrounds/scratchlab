@@ -2399,6 +2399,53 @@ button {
   line-height: 1.65;
 }
 
+.challenge-input-card {
+  margin: 14px 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.challenge-input-card h4 {
+  margin: 0 0 8px;
+}
+
+.challenge-input-card ul {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--muted);
+}
+
+.challenge-input-card p {
+  line-height: 1.55;
+}
+
+#challenge-input-status[data-ready="true"] {
+  border-color: rgba(126, 240, 187, 0.45);
+}
+
+#challenge-input-status[data-ready="false"] {
+  border-color: rgba(255, 193, 107, 0.5);
+}
+
+#challenge-abort-dialog {
+  width: min(560px, calc(100vw - 32px));
+  max-width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel-strong);
+  color: var(--text);
+}
+
+#challenge-abort-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.68);
+}
+
+#challenge-abort-dialog .button-row {
+  justify-content: flex-end;
+}
+
 .beginner-course-stages {
   display: grid;
   gap: 8px;

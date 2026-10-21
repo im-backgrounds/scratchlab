@@ -18,8 +18,10 @@ toward a measurable BPM goal.
 
 - The practice challenge applies to the selected built-in chart. Unsaved builder
   drafts are not eligible.
-- MIDI must be connected and Forward and Backward actions must be mapped before
-  a challenge can start.
+- A challenge requires both scratch and fader input. These can be provided by
+  connected MIDI with Forward, Backward, and Fader mapped, or by enabling
+  practice mode for Mouse scratch and Keyboard fader input. MIDI and practice
+  mode may also be combined.
 - The initial challenge BPM is 80.
 - After clearing a BPM, the next challenge BPM is 5 BPM above the highest
   cleared BPM, capped at 180.
@@ -75,9 +77,15 @@ toward a measurable BPM goal.
   Result.
 - Disable challenge start during active work and after completion; expose
   progress reset when progress exists and no attempt is active.
-- Explain MIDI connection/mapping prerequisites and show status/result messages.
+- Show MIDI connection/mapping and practice-mode readiness before a challenge
+  starts, with a link to MIDI setup.
+- Confirm before leaving the practice context during an active challenge;
+  confirming aborts the attempt and discards its incomplete recording.
+- Explain input prerequisites and show status/result messages.
 - Indicate whether the current attempt is a demo, recording, analysis, or
   result.
+- Provide a route from MIDI setup back to Practice without changing the selected
+  chart or saved challenge progress.
 
 # Data Model
 
@@ -127,8 +135,6 @@ returns it to ready.
 
 # Future Extensions
 
-- Support keyboard input using the common event model; see
-  [keyboard input](keyboard-input.md).
 - Show performed events on the score; see
   [controller overlay](controller-overlay.md).
 - Add timing metrics without changing the existing sequence-score definition;
