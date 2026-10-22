@@ -4,7 +4,7 @@
   },
   "tasks": {
     "install-browser": "npx --yes playwright@1.56.1 install chromium",
-    "check": "deno check midi-simulator.js midi-simulator_test.js midi/*.js midi-baby-scratch_test.js",
-    "test": "deno test --allow-read --allow-write --allow-net=127.0.0.1 --allow-env --allow-run --allow-sys midi-simulator_test.js midi-baby-scratch_test.js midi/"
+    "check": "deno check midi-simulator.js midi-simulator_test.js midi/*.js midi-baby-scratch_test.js bpm-challenge_test.js",
+    "test": "deno test --allow-read --allow-write --allow-net=127.0.0.1 --allow-env --allow-run --allow-sys midi-simulator_test.js midi-baby-scratch_test.js bpm-challenge_test.js midi/"
   }
 }

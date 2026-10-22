@@ -20,8 +20,15 @@ deno task --config tests/e2e/deno.json test
 CIではPlaywrightの`install --with-deps chromium`でOS依存も導入する。 Playwright
 1.56.1の対応環境を維持するため、MIDI E2Eジョブは
 `ubuntu-24.04`に固定する。`ubuntu-latest`の更新で未対応OSへ切り替えない。
-[Deno CI](../../../../.github/workflows/deno-ci.yml)の独立ジョブで同じテストを実行する。
+[Deno CI](../../../.github/workflows/deno-ci.yml)の独立ジョブで同じテストを実行する。
 既存の単体テストは`deno test --allow-read=tests/ui/snapshots --ignore=tests/e2e`で実行する。
+
+Issue #20のBPM Challenge回帰だけを実行する場合:
+
+```sh
+cd tests/e2e
+deno test --allow-read --allow-write --allow-net=127.0.0.1 --allow-env --allow-run --allow-sys bpm-challenge_test.js
+```
 
 ブラウザー起動にはファイル読み書き・環境変数・サブプロセス・システム情報の権限が必要。
 テストサーバーは`127.0.0.1`の空きポートだけを使用し、終了／失敗時にブラウザーと共に閉じる。
@@ -96,6 +103,38 @@ ReplayRecord／GhostRecordは生成せず、両Storageキーにも書き込ま�
 Pagesにはこのアダプターを適用しない。
 
 ## テスト一覧
+
+### BPM Challengeの主要回帰フロー（Issue #20）
+
+[BPM Challenge E2E](../bpm-challenge_test.js)は、既存の仮想MIDI環境で Baby
+Scratchを80 BPM、続けて85 BPMで最後まで演奏する。
+試行AのMatching・Timing・Overlay・進捗・結果・次アクションをすべて確認してから、
+同じ開始ボタンで試行Bへ進む。内部状態の書換えや採点関数の直接呼出しは行わない。
+
+- Warm-up／Recording Lap 2／Recording Lap 3の各境界直前と直後の進行状態、
+  記録表示、開始／リセット／BPM操作のロック、再生の自動停止。
+- ウォームアップで逆方向・フェーダー閉を入力しても、保存・採点はLap 2/3の
+  16ストロークだけになる。記録時間、ループ境界、方向・時刻・件数を検証する。
+- Lap 3の終了後に入力しても保存結果は変わらず、399ms後は判定中、
+  400ms後に結果が確定する。記録イベントは半開区間`[0, durationMs)`に収まる。
+- 一致率100%、Matched 16、Missing／Extra 0、Timing測定16件、
+  SAMPLE／YOU各16件とERRORなし、成功表示、挑戦／成功回数、次BPMへの更新。
+- Performance詳細への遷移・フォーカス、スコアの可視性、成績画像出力の有効化、
+  次の挑戦が可能になること。
+- 次の試行で前回Timing／成績画像状態を消し、別の開始時刻・入力として保存する。
+  85 BPMでは入力を20ms遅らせ、前回の0ms Timingを流用していないことも確認する。
+
+80 BPMの時刻・時間は完全一致を要求する。85 BPMでは拍長が小数msになるため、
+保存時の整数ms化に限り1ms以内の誤差を許容する。Playwright Clockの`runFor`は
+切り上げられるため、周回ごとの丸め誤差を累積させず絶対時刻へ進める。
+実時間sleepや要素順への依存は追加せず、操作には既存ID、進行ステップには
+`data-id`、分析結果には既存の意味的なクラスを使用する。
+本番UIへの`data-testid`追加は不要。
+
+中断・再挑戦の詳細はIssue #21、低スコア等の不合格系はIssue #22の対象。
+このテストはGhost／Replayの保存や実機MIDI・聴感を検証しない。
+
+### MIDI入力の既存回帰
 
 [Simulator単体](../midi-simulator_test.js):
 

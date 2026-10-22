@@ -230,8 +230,9 @@ git diff --check
 ```
 
 Storage共通処理・Repositoryの失敗分岐は `tests/domain/`、
-入力ログの保持・同期描画は `tests/ui/input-event-log_test.js` で確認します。
-Baby ScratchのMIDI入力→記録→採点→Timing→Overlay→結果画面は、
+入力ログの保持・同期描画は `tests/ui/input-event-log_test.js` で確認します。 BPM
+Challengeの開始→ウォームアップ→2周記録→自動停止→採点→結果表示と、 80→85
+BPMの連続挑戦、および4譜面のMIDI入力→Timing→Overlayは、
 [MIDI E2E](tests/e2e/midi/README.md)で実機なしに自動確認できます。
 Ghost／ReplayはE2E専用アダプターで無効化し、本番コードは差し替えません。
 実機固有の接続・遅延や未対応譜面はブラウザーで別途確認してください。
@@ -239,8 +240,9 @@ v2受入・回帰・旧v1特性テストの分類は[技術参照](docs/testing-
 旧v1テストは過去の不整合を固定する資料であり、正式採点の受入基準ではありません。
 
 GitHub Actionsでは、pushとpull
-requestのたびにフォーマット確認、型チェック、テストを実行します。
-Issue、ScratchLab Development Project、Pull Requestの運用手順は
+requestのたびにフォーマット確認、型チェック、lint、単体テストと独立した BPM
+Challenge／MIDI E2Eジョブを実行します。 Issue、ScratchLab Development
+Project、Pull Requestの運用手順は
 [GitHub Workflow](docs/github-workflow.md)を参照してください。
 
 ### デプロイ

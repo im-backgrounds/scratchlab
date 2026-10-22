@@ -24,7 +24,10 @@ jobs:
         run: deno fmt --check --unstable-component --ignore='tests/ui/snapshots/*.svg' .
 
       - name: Type-check app and tests
-        run: deno check src/app.js tests/domain/*.js tests/state/*.js tests/ui/scratch-visualizer_test.js
+        run: deno check src/app.js tests/domain/*.js tests/features/*.js tests/state/*.js tests/ui/*.js
+
+      - name: Lint app and tests
+        run: deno lint src tests
 
       - name: Run tests
         run: deno test --allow-read=tests/ui/snapshots --ignore=tests/e2e
@@ -56,5 +59,5 @@ jobs:
       - name: Check E2E foundation
         run: deno task check
 
-      - name: Run MIDI simulator and browser E2E tests
+      - name: Run BPM Challenge regression and MIDI E2E tests
         run: deno task test
