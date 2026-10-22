@@ -221,56 +221,13 @@ python3 -m http.server 8000
 
 ### テスト・チェック
 
-```sh
-deno test --allow-read=tests/ui/snapshots --ignore=tests/e2e
-deno check src/app.js tests/domain/*.js tests/features/*.js tests/state/*.js tests/ui/*.js
-deno fmt --check --unstable-component --ignore='tests/ui/snapshots/*.svg' .
-deno lint src tests
-git diff --check
-```
-
-Storage共通処理・Repositoryの失敗分岐は `tests/domain/`、
-入力ログの保持・同期描画は `tests/ui/input-event-log_test.js` で確認します。 BPM
-Challengeの開始→ウォームアップ→2周記録→自動停止→採点→結果表示と、 80→85
-BPMの連続挑戦、および4譜面のMIDI入力→Timing→Overlayは、
-[MIDI E2E](tests/e2e/midi/README.md)で実機なしに自動確認できます。
-Ghost／ReplayはE2E専用アダプターで無効化し、本番コードは差し替えません。
-実機固有の接続・遅延や未対応譜面はブラウザーで別途確認してください。
-v2受入・回帰・旧v1特性テストの分類は[技術参照](docs/testing-and-legacy-apis.md#テスト分類)を参照してください。
-旧v1テストは過去の不整合を固定する資料であり、正式採点の受入基準ではありません。
-
-GitHub Actionsでは、pushとpull
-requestのたびにフォーマット確認、型チェック、lint、単体テストと独立した BPM
-Challenge／MIDI E2Eジョブを実行します。 Issue、ScratchLab Development
-Project、Pull Requestの運用手順は
-[GitHub Workflow](docs/github-workflow.md)を参照してください。
-
-### Coverage
-
-リポジトリルートで次を実行します（Deno 2とBashを使用、追加パッケージ不要）。
-
-```sh
-deno task coverage
-```
-
-[生成スクリプト](scripts/coverage.sh)が既存の非E2Eテストを実行し、
-テキスト集計を`coverage/summary.txt`、HTMLレポートを
-`coverage/html/index.html`へ生成します。HTMLはブラウザーで開けます。
-実行ごとに`--clean`で専用の`coverage/`内の前回プロファイルを消去するため、
-過去の実行結果は混在しません。このディレクトリはGit管理対象外です。
-テストまたはレポート生成の失敗時には非ゼロで終了します。
-
-対象は非E2Eテストが読み込んだ`src/`配下のモジュールだけです。
-テストコード・スクリプト・依存パッケージ・ブラウザーE2Eは集計対象外です。
-読み込まれなかったモジュールは0%として分母に追加されないため、
-表示される率をアプリ全体のカバー率やEvent Model v2の受入保証とは扱いません。
-旧v1特性テストも既存スイートの一部として実行されます。
-今回は計測・可視化の導入のみで、合格率の閾値は設定しません。
-
-GitHub Actionsの`Format, check, and test`ジョブで同じタスクを実行します。
-成功した実行のSummaryに集計を掲載し、Artifactsの`unit-test-coverage`に
-HTMLとテキストを14日間保存します。ダウンロード・展開して`index.html`を開いてください。
-外部サービスやGitHub Pagesには公開せず、E2Eは従来の独立ジョブで検証します。
+Deno 2を使った標準チェック、単体テスト、Coverage、ChromiumによるMIDI E2Eの
+セットアップと実行方法、およびCI結果の確認方法は
+[開発者向けテスト手順](docs/testing-workflow.md)を参照してください。 MIDI
+E2EのシナリオとSimulatorの詳細は
+[MIDI E2E Suite](tests/e2e/midi/README.md)にあります。
+v2受入・回帰・旧v1特性テストの分類は
+[技術参照](docs/testing-and-legacy-apis.md#テスト分類)を参照してください。
 
 ### デプロイ
 
