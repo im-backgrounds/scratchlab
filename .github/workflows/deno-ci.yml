@@ -29,8 +29,30 @@ jobs:
       - name: Lint app and tests
         run: deno lint src tests
 
-      - name: Run tests
-        run: deno test --allow-read=tests/ui/snapshots --ignore=tests/e2e
+      - name: Run tests with scoped coverage
+        run: deno task coverage
+
+      - name: Add coverage summary
+        run: |
+          {
+            echo '## Unit test coverage'
+            echo
+            echo 'Scope: src/ modules loaded by non-E2E tests. Unloaded modules and browser E2E are not measured.'
+            echo
+            echo '```text'
+            cat coverage/summary.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload HTML coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-coverage
+          path: |
+            coverage/html/
+            coverage/summary.txt
+          if-no-files-found: error
+          retention-days: 14
 
   midi-e2e:
     name: MIDI E2E suite

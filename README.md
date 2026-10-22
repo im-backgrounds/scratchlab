@@ -245,6 +245,33 @@ Challenge／MIDI E2Eジョブを実行します。 Issue、ScratchLab Developmen
 Project、Pull Requestの運用手順は
 [GitHub Workflow](docs/github-workflow.md)を参照してください。
 
+### Coverage
+
+リポジトリルートで次を実行します（Deno 2とBashを使用、追加パッケージ不要）。
+
+```sh
+deno task coverage
+```
+
+[生成スクリプト](scripts/coverage.sh)が既存の非E2Eテストを実行し、
+テキスト集計を`coverage/summary.txt`、HTMLレポートを
+`coverage/html/index.html`へ生成します。HTMLはブラウザーで開けます。
+実行ごとに`--clean`で専用の`coverage/`内の前回プロファイルを消去するため、
+過去の実行結果は混在しません。このディレクトリはGit管理対象外です。
+テストまたはレポート生成の失敗時には非ゼロで終了します。
+
+対象は非E2Eテストが読み込んだ`src/`配下のモジュールだけです。
+テストコード・スクリプト・依存パッケージ・ブラウザーE2Eは集計対象外です。
+読み込まれなかったモジュールは0%として分母に追加されないため、
+表示される率をアプリ全体のカバー率やEvent Model v2の受入保証とは扱いません。
+旧v1特性テストも既存スイートの一部として実行されます。
+今回は計測・可視化の導入のみで、合格率の閾値は設定しません。
+
+GitHub Actionsの`Format, check, and test`ジョブで同じタスクを実行します。
+成功した実行のSummaryに集計を掲載し、Artifactsの`unit-test-coverage`に
+HTMLとテキストを14日間保存します。ダウンロード・展開して`index.html`を開いてください。
+外部サービスやGitHub Pagesには公開せず、E2Eは従来の独立ジョブで検証します。
+
 ### デプロイ
 
 `main` ブランチへのpushのたびに、GitHub
