@@ -167,9 +167,11 @@ its scope. The script does not close or delete duplicate Issues.
 2. Confirm the Issue is `Ready`; move it to `In Progress` when implementation
    begins. If a requirement is ambiguous, ask for clarification rather than
    silently choosing a consequential behavior.
-3. Make a focused change for one Issue. Prefer a branch named
-   `issue/<number>-<short-slug>` when creating a branch is part of the requested
-   workflow. Do not switch branches, push, or create a PR without authorization.
+3. Make a focused change for one Issue. Before editing, create its
+   `issue/<number>-<short-slug>` branch from an up-to-date `main`, or resume the
+   existing branch for that Issue. Follow the branch lifecycle below. Creating
+   the work branch is part of implementation; commits, pushes, and PR creation
+   still require explicit authorization.
 4. Run relevant tests and checks. Report exact commands and results; identify
    any acceptance criteria or checks that remain outstanding.
 5. Assess documentation in the same change:
@@ -190,10 +192,53 @@ allow them.
 
 ## Pull Request and Review
 
-### Pushing commits made locally on main
+### Branch lifecycle (all workstations)
 
-Direct pushes to `main` are protected. If commits were made locally on `main`,
-commit all intended changes first, then create and push a new work branch:
+These rules are version-controlled in `.github/copilot-instructions.md` so
+Copilot can use the same workflow on each workstation. They guide agent
+behavior, not enforce local Git commands. GitHub CLI (`gh`) must be installed
+and authenticated on each workstation to create or edit PRs.
+
+- Never commit directly to `main`.
+- Create one branch per Issue from an up-to-date `main`, using
+  `issue/<number>-<short-slug>`.
+- Work without an Issue also starts on a dedicated branch from an up-to-date
+  `main`, for example `chore/shared-branch-workflow` or `docs/testing-guide`.
+- Keep related edits and commits on that branch through PR creation. Resume the
+  same branch for review fixes. Do not mix unrelated changes or Issues.
+- Branch creation is part of implementation. Commit, push, PR creation, and
+  merge still require explicit authorization; branch creation alone grants none
+  of those permissions.
+
+With a clean worktree, start new Issue work with:
+
+```sh
+git fetch origin
+git switch main
+git merge --ff-only origin/main
+git switch -c issue/<number>-<short-slug>
+```
+
+For work without an Issue, substitute the dedicated branch name in the last
+command. If `main` contains local-only commits, is diverged, or the worktree
+contains conflicting changes, stop and ask before changing it. Do not reset,
+rewrite, discard, or automatically replay those commits.
+
+Create and edit PRs with `gh pr create` and `gh pr edit`, using the checked-in
+template. Do not use interactive PR tools or MCP write operations. If GitHub CLI
+or its authentication is unavailable, report the blocker.
+
+After PR creation, return to `main` with a clean worktree. After merge, fetch
+and fast-forward `main` before starting another branch. A squash merge creates
+new commit IDs; do not treat the old work-branch commits as missing changes or
+replay them onto `main`. If synchronization is not a fast-forward, stop and ask.
+
+### Recovering accidental commits on main
+
+This is a recovery path, not the normal workflow. If commits were accidentally
+made on local `main`, stop and obtain authorization to preserve and publish them
+on a work branch. Do not add more commits to `main`. With a clean worktree and
+authorization, the existing helper can create and push that branch:
 
 ```sh
 bash scripts/push-work-branch.sh chore/test-quality-automation

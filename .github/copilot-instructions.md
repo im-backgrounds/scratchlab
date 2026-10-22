@@ -28,9 +28,20 @@ Treat the GitHub Issue as the source of scope and acceptance criteria.
    finishing, report what changed, which checks ran, their results, and any
    checks or acceptance criteria still outstanding.
 
-For issue branches, prefer `issue/<number>-<short-slug>`. Do not switch
-branches, push, or create a branch unless requested or the task's workflow
-explicitly requires it. Keep a change focused on one issue.
+Before editing, start each Issue on its own branch from an up-to-date `main`,
+named `issue/<number>-<short-slug>`. For work without an Issue, also create a
+dedicated branch from an up-to-date `main` before editing. Creating that work
+branch is part of the implementation workflow. Never commit directly to `main`.
+Continue related edits and commits on the same branch through PR creation;
+resume its existing branch for follow-up work rather than creating another. Do
+not mix different Issues or unrelated changes on one branch.
+
+Fetch `origin` before starting new work and update a clean `main` only by
+fast-forward. If it has local-only commits, has diverged, or the worktree has
+conflicting changes, stop and ask; do not reset, rewrite, or discard them. After
+PR creation, return to `main` with a clean worktree. After merge (especially
+squash merge), fetch and fast-forward `main` before the next task. If
+fast-forward fails, ask rather than replaying already integrated commits.
 
 Follow the [GitHub workflow](../docs/github-workflow.md) for Project status,
 priority, Issue triage, PR review, and completion procedures. Use the
@@ -77,6 +88,10 @@ not a promise that GitHub Actions will generate or commit documentation
 automatically. State explicitly when no documentation update is needed.
 
 ## Pull Requests and Commits
+
+Use GitHub CLI (`gh pr create` and `gh pr edit`) for PR creation and editing,
+not interactive PR tools or MCP write operations. If `gh` or authentication is
+unavailable, report the blocker rather than changing tools silently.
 
 Follow the checked-in [pull request template](PULL_REQUEST_TEMPLATE.md). When
 preparing a PR, include:
