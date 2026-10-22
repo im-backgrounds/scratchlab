@@ -223,8 +223,8 @@ python3 -m http.server 8000
 
 Deno 2を使った標準チェック、単体テスト、Coverage、ChromiumによるMIDI E2Eの
 セットアップと実行方法、およびCI結果の確認方法は
-[開発者向けテスト手順](docs/testing-workflow.md)を参照してください。
-MIDI E2EのシナリオとSimulatorの詳細は
+[開発者向けテスト手順](docs/testing-workflow.md)を参照してください。 MIDI
+E2EのシナリオとSimulatorの詳細は
 [MIDI E2E Suite](tests/e2e/midi/README.md)にあります。
 v2受入・回帰・旧v1特性テストの分類は
 [技術参照](docs/testing-and-legacy-apis.md#テスト分類)を参照してください。
