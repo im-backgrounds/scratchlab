@@ -89,9 +89,12 @@ automatically. State explicitly when no documentation update is needed.
 
 ## Pull Requests and Commits
 
-Use GitHub CLI (`gh pr create` and `gh pr edit`) for PR creation and editing,
-not interactive PR tools or MCP write operations. If `gh` or authentication is
-unavailable, report the blocker rather than changing tools silently.
+When working in a local environment, use GitHub CLI (`gh pr create` and
+`gh pr edit`) for PR creation and editing, not interactive PR tools or MCP write
+operations. If `gh` or authentication is unavailable locally, report the blocker
+rather than changing tools silently. This CLI requirement does not apply to
+Copilot running on GitHub; it may use its available standard tools. Do not
+include a `gh` requirement when delegating work to Copilot on GitHub.
 
 Follow the checked-in [pull request template](PULL_REQUEST_TEMPLATE.md). When
 preparing a PR, include:

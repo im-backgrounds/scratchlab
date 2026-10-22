@@ -197,7 +197,8 @@ allow them.
 These rules are version-controlled in `.github/copilot-instructions.md` so
 Copilot can use the same workflow on each workstation. They guide agent
 behavior, not enforce local Git commands. GitHub CLI (`gh`) must be installed
-and authenticated on each workstation to create or edit PRs.
+and authenticated on each local workstation to create or edit PRs. Copilot
+running on GitHub is not subject to this CLI requirement.
 
 - Never commit directly to `main`.
 - Create one branch per Issue from an up-to-date `main`, using
@@ -224,9 +225,12 @@ command. If `main` contains local-only commits, is diverged, or the worktree
 contains conflicting changes, stop and ask before changing it. Do not reset,
 rewrite, discard, or automatically replay those commits.
 
-Create and edit PRs with `gh pr create` and `gh pr edit`, using the checked-in
-template. Do not use interactive PR tools or MCP write operations. If GitHub CLI
-or its authentication is unavailable, report the blocker.
+In local environments, create and edit PRs with `gh pr create` and `gh pr edit`,
+using the checked-in template. Do not use interactive PR tools or MCP write
+operations locally. If GitHub CLI or its authentication is unavailable locally,
+report the blocker. Copilot running on GitHub may use its available standard
+tools; do not require `gh` in requests delegated to it. The PR template and
+validation requirements still apply in both environments.
 
 After PR creation, return to `main` with a clean worktree. After merge, fetch
 and fast-forward `main` before starting another branch. A squash merge creates
