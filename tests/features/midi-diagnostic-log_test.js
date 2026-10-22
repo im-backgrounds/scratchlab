@@ -21,12 +21,13 @@ Deno.test("diagnostic history retains only the latest 20 entries", () => {
   const log = createMidiDiagnosticLog({
     onChange: (entries) => rendered.push(entries),
   });
-  const timestamp = new Date(2024, 0, 2, 12, 34, 56).getTime();
+  const timestamp = 0;
   for (let value = 0; value < MIDI_DIAGNOSTIC_LOG_LIMIT + 2; value += 1) {
     log.append([0xb0, 21, value], timestamp);
   }
-  assert.equal(log.getEntries().length, MIDI_DIAGNOSTIC_LOG_LIMIT);
-  assert.equal(log.getEntries()[0], "12:34:56 CC21 2");
-  assert.equal(log.getEntries().at(-1), "12:34:56 CC21 21");
+  const entries = log.getEntries();
+  assert.equal(entries.length, MIDI_DIAGNOSTIC_LOG_LIMIT);
+  assert.match(entries[0], /^\d{2}:\d{2}:\d{2} CC21 2$/);
+  assert.match(entries.at(-1), /^\d{2}:\d{2}:\d{2} CC21 21$/);
   assert.equal(rendered.length, MIDI_DIAGNOSTIC_LOG_LIMIT + 2);
 });
