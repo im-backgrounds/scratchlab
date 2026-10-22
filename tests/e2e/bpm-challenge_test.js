@@ -337,3 +337,346 @@ Deno.test("BPM Challenge: complete two independent attempts from start to next a
     await environment.close();
   }
 });
+
+const challengeLoopMs = 6000;
+
+async function prepareBabyScratchChallenge(page) {
+  await connectAndMapMidi(page);
+  await page.locator("#chart-list button").filter({
+    hasText: "Baby Scratch",
+  }).click();
+  assert.equal(
+    await page.locator("#chart-title").textContent(),
+    "Baby Scratch",
+  );
+}
+
+async function runChallengeAttempt(page, recordLoop = () => undefined) {
+  await page.locator("#challenge-start").click();
+  await page.clock.runFor(challengeLoopMs);
+  assert.equal(
+    await page.locator('#challenge-progress [data-id="recording-2"]')
+      .getAttribute("data-state"),
+    "current",
+  );
+  for (let lap = 0; lap < 2; lap++) {
+    await recordLoop(lap);
+    await page.clock.runFor(challengeLoopMs);
+  }
+  assert.equal(
+    await page.locator('#challenge-progress [data-id="analyzing"]')
+      .getAttribute("data-state"),
+    "current",
+  );
+  await page.clock.runFor(400);
+  assert.equal(
+    await page.locator('#challenge-progress [data-id="completed"]')
+      .getAttribute("data-state"),
+    "done",
+  );
+}
+
+async function sendBabyScratchLap(
+  page,
+  intervalMs = 750,
+  { faderMistake = false } = {},
+) {
+  await page.evaluate(({ intervalMs, faderMistake }) => {
+    const start = performance.now();
+    const messages = Array.from({ length: 8 }, (_, index) => ({
+      timestamp: start + index * intervalMs,
+      data: [0x90, index % 2 ? 61 : 60, 127],
+    }));
+    if (faderMistake) {
+      messages.push(
+        { timestamp: start + 150, data: [0xb0, 7, 127] },
+        { timestamp: start + 300, data: [0xb0, 7, 0] },
+      );
+    }
+    globalThis.__midi.sendMany(
+      messages.toSorted((a, b) => a.timestamp - b.timestamp),
+    );
+  }, { intervalMs, faderMistake });
+}
+
+Deno.test("BPM Challenge: unknown and closed initial faders do not count", async () => {
+  const environment = await createE2ETestEnvironment();
+  const { page, errors, warnings } = environment;
+  const stored = (key) =>
+    page.evaluate((key) => localStorage.getItem(key), key);
+  try {
+    await prepareBabyScratchChallenge(page);
+    assert.equal(await stored("scratchlab.challenge"), null);
+    assert.equal(await stored("scratchlab.achievements"), null);
+    assert.equal(await stored("scratchlab.beginner-course"), null);
+
+    await runChallengeAttempt(page);
+    assert.equal(
+      await page.locator("#performance-accuracy").textContent(),
+      "0.0%",
+    );
+    assert.match(
+      await page.locator(".controller-overlay-status").textContent(),
+      /Missing 16件 \/ Extra 0件 \/ Initial State Error 2件/,
+    );
+    assert.equal(
+      await page.locator(".performance-analysis-missing dd").textContent(),
+      "16",
+    );
+    assert.match(
+      await page.locator("#challenge-status").textContent(),
+      /初期フェーダーが未確認または閉じています/,
+    );
+    assert.equal(await page.locator("#challenge-attempts").textContent(), "0");
+    assert.equal(
+      await page.locator("#challenge-last-attempt").isVisible(),
+      false,
+    );
+    assert.equal(await stored("scratchlab.challenge"), null);
+    assert.equal(await stored("scratchlab.achievements"), null);
+    assert.equal(await stored("scratchlab.beginner-course"), null);
+
+    await sendMidi(page, [0xb0, 7, 127]);
+    await runChallengeAttempt(page);
+    assert.match(
+      await page.locator("#challenge-status").textContent(),
+      /初期フェーダーが未確認または閉じています/,
+    );
+    assert.match(
+      await page.locator(".controller-overlay-status").textContent(),
+      /Missing 16件 \/ Extra 0件 \/ Initial State Error 2件/,
+    );
+    assert.equal(await page.locator("#challenge-attempts").textContent(), "0");
+    assert.equal(await stored("scratchlab.challenge"), null);
+    assert.equal(await stored("scratchlab.achievements"), null);
+    assert.equal(await stored("scratchlab.beginner-course"), null);
+    assert.deepEqual(errors, []);
+    assert.deepEqual(warnings, []);
+  } finally {
+    await environment.close();
+  }
+});
+
+Deno.test("BPM Challenge: low score fails cleanly and a retry can clear", async () => {
+  const environment = await createE2ETestEnvironment();
+  const { page, errors, warnings } = environment;
+  const stored = (key) =>
+    page.evaluate((key) => JSON.parse(localStorage.getItem(key)), key);
+  try {
+    await prepareBabyScratchChallenge(page);
+    await sendMidi(page, [0xb0, 7, 0]);
+
+    await runChallengeAttempt(page);
+    const failedRecording = await stored("scratchlab.performance");
+    assert.equal(failedRecording.performance.counts.forward, 0);
+    assert.equal(failedRecording.performance.counts.backward, 0);
+    assert.equal(
+      await page.locator("#performance-accuracy").textContent(),
+      "0.0%",
+    );
+    assert.equal(
+      await page.locator(".performance-analysis-matched dd").textContent(),
+      "0",
+    );
+    assert.equal(
+      await page.locator(".performance-analysis-missing dd").textContent(),
+      "16",
+    );
+    assert.equal(
+      await page.locator(".performance-analysis-extra dd").textContent(),
+      "0",
+    );
+    assert.equal(
+      await page.locator("#challenge-last-attempt-accuracy").textContent(),
+      "0.0%",
+    );
+    assert.equal(
+      await page.locator("#challenge-last-attempt-result").textContent(),
+      "失敗",
+    );
+    assert.match(
+      await page.locator("#challenge-status").textContent(),
+      /一致率 0\.0%。90%以上でクリアです。もう一度挑戦できます。/,
+    );
+    assert.equal(await page.locator("#challenge-attempts").textContent(), "1");
+    assert.equal(await page.locator("#challenge-clears").textContent(), "0");
+    assert.equal(
+      await page.locator("#challenge-current-bpm").textContent(),
+      "80",
+    );
+    assert.equal(
+      await page.locator("#performance-summary-export").isEnabled(),
+      true,
+    );
+    const failureProgress = await stored("scratchlab.challenge");
+    const failureEntry = failureProgress.charts["builtin:baby-scratch"];
+    assert.equal(failureEntry.attempts, 1);
+    assert.equal(failureEntry.clears, 0);
+    assert.equal(failureEntry.highestClearedBpm, null);
+    assert.equal(failureEntry.lastAttempt.accuracy, 0);
+    assert.equal(failureEntry.lastAttempt.cleared, false);
+    assert.equal(failureEntry.lastAttempt.valid, true);
+    assert.equal(Number.isFinite(failureEntry.lastAttempt.accuracy), true);
+    assert.equal(await stored("scratchlab.ghost"), null);
+    assert.equal(await stored("scratchlab.replay"), null);
+    const achievements = await stored("scratchlab.achievements");
+    assert.equal(achievements.sessions.length, 1);
+    assert.deepEqual(achievements.earned, {});
+    assert.equal(await stored("scratchlab.beginner-course"), null);
+    assert.deepEqual(warnings, []);
+
+    await page.locator("#challenge-start").click();
+    assert.equal(
+      await page.locator("#challenge-timing-analysis").isVisible(),
+      false,
+    );
+    assert.equal(
+      await page.locator("#performance-summary-export").isDisabled(),
+      true,
+    );
+    await page.clock.runFor(challengeLoopMs);
+    for (let lap = 0; lap < 2; lap++) {
+      await sendBabyScratchLap(page);
+      await page.clock.runFor(challengeLoopMs);
+    }
+    await page.clock.runFor(400);
+
+    assert.equal(
+      await page.locator("#performance-accuracy").textContent(),
+      "100.0%",
+    );
+    assert.equal(
+      await page.locator(".performance-analysis-missing dd").textContent(),
+      "0",
+    );
+    assert.equal(await page.locator("#challenge-attempts").textContent(), "2");
+    assert.equal(await page.locator("#challenge-clears").textContent(), "1");
+    assert.equal(
+      await page.locator("#challenge-last-attempt-result").textContent(),
+      "成功",
+    );
+    const clearedRecording = await stored("scratchlab.performance");
+    assert.equal(clearedRecording.performance.counts.forward, 8);
+    assert.equal(clearedRecording.performance.counts.backward, 8);
+    assert.deepEqual(errors, []);
+    assert.deepEqual(warnings, [
+      "Ghost Best Run could not be saved: e2e-disabled",
+      "Challenge Replay could not be saved: e2e-disabled",
+    ]);
+  } finally {
+    await environment.close();
+  }
+});
+
+Deno.test("BPM Challenge: tempo drift lowers timing, not sequence accuracy", async () => {
+  const environment = await createE2ETestEnvironment();
+  const { page, errors, warnings } = environment;
+  try {
+    await prepareBabyScratchChallenge(page);
+    await sendMidi(page, [0xb0, 7, 0]);
+
+    await runChallengeAttempt(page, () => sendBabyScratchLap(page, 800));
+    assert.equal(
+      await page.locator("#challenge-current-bpm").textContent(),
+      "85",
+    );
+    assert.equal(
+      await page.locator("#performance-accuracy").textContent(),
+      "100.0%",
+    );
+    assert.equal(
+      await page.locator(".performance-analysis-matched dd").textContent(),
+      "16",
+    );
+    assert.equal(
+      await page.locator(".performance-analysis-missing dd").textContent(),
+      "0",
+    );
+    assert.equal(
+      await page.locator(".performance-analysis-extra dd").textContent(),
+      "0",
+    );
+    assert.equal(
+      await page.locator("#challenge-last-attempt-result").textContent(),
+      "成功",
+    );
+    assert.match(
+      await page.locator("#challenge-status").textContent(),
+      /80 BPM クリア！ 一致率 100\.0%/,
+    );
+    const averageError = Number.parseFloat(
+      await page.locator("#challenge-average-error").textContent(),
+    );
+    const timingAccuracy = Number.parseFloat(
+      await page.locator("#challenge-timing-accuracy").textContent(),
+    );
+    assert.ok(Number.isFinite(averageError) && averageError > 100);
+    assert.ok(Number.isFinite(timingAccuracy) && timingAccuracy < 1);
+    assert.deepEqual(errors, []);
+    assert.deepEqual(warnings, [
+      "Ghost Best Run could not be saved: e2e-disabled",
+      "Challenge Replay could not be saved: e2e-disabled",
+    ]);
+  } finally {
+    await environment.close();
+  }
+});
+
+Deno.test(
+  "BPM Challenge: extra fader actions lower accuracy and fail",
+  async () => {
+    const environment = await createE2ETestEnvironment();
+    const { page, errors, warnings } = environment;
+    try {
+      await prepareBabyScratchChallenge(page);
+      await sendMidi(page, [0xb0, 7, 0]);
+
+      await runChallengeAttempt(
+        page,
+        () => sendBabyScratchLap(page, 750, { faderMistake: true }),
+      );
+      assert.equal(
+        await page.locator("#performance-accuracy").textContent(),
+        "80.0%",
+      );
+      assert.equal(
+        await page.locator(".performance-analysis-matched dd").textContent(),
+        "16",
+      );
+      assert.equal(
+        await page.locator(".performance-analysis-missing dd").textContent(),
+        "0",
+      );
+      assert.equal(
+        await page.locator(".performance-analysis-extra dd").textContent(),
+        "4",
+      );
+      assert.match(
+        await page.locator(".controller-overlay-status").textContent(),
+        /Missing 0件 \/ Extra 4件 \/ Initial State Error 0件/,
+      );
+      assert.equal(
+        await page.locator("#challenge-last-attempt-accuracy").textContent(),
+        "80.0%",
+      );
+      assert.equal(
+        await page.locator("#challenge-last-attempt-result").textContent(),
+        "失敗",
+      );
+      assert.match(
+        await page.locator("#challenge-status").textContent(),
+        /一致率 80\.0%。90%以上でクリアです。もう一度挑戦できます。/,
+      );
+      assert.equal(
+        await page.locator("#challenge-attempts").textContent(),
+        "1",
+      );
+      assert.equal(await page.locator("#challenge-clears").textContent(), "0");
+      assert.equal(await page.locator("#challenge-start").isEnabled(), true);
+      assert.deepEqual(errors, []);
+      assert.deepEqual(warnings, []);
+    } finally {
+      await environment.close();
+    }
+  },
+);
