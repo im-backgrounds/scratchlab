@@ -351,7 +351,7 @@ async function prepareBabyScratchChallenge(page) {
   );
 }
 
-async function runChallengeAttempt(page, recordLoop = async () => undefined) {
+async function runChallengeAttempt(page, recordLoop = () => undefined) {
   await page.locator("#challenge-start").click();
   await page.clock.runFor(challengeLoopMs);
   assert.equal(
@@ -631,8 +631,9 @@ Deno.test(
       await prepareBabyScratchChallenge(page);
       await sendMidi(page, [0xb0, 7, 0]);
 
-      await runChallengeAttempt(page, () =>
-        sendBabyScratchLap(page, 750, { faderMistake: true })
+      await runChallengeAttempt(
+        page,
+        () => sendBabyScratchLap(page, 750, { faderMistake: true }),
       );
       assert.equal(
         await page.locator("#performance-accuracy").textContent(),
@@ -666,7 +667,10 @@ Deno.test(
         await page.locator("#challenge-status").textContent(),
         /一致率 80\.0%。90%以上でクリアです。もう一度挑戦できます。/,
       );
-      assert.equal(await page.locator("#challenge-attempts").textContent(), "1");
+      assert.equal(
+        await page.locator("#challenge-attempts").textContent(),
+        "1",
+      );
       assert.equal(await page.locator("#challenge-clears").textContent(), "0");
       assert.equal(await page.locator("#challenge-start").isEnabled(), true);
       assert.deepEqual(errors, []);
