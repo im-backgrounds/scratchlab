@@ -91,8 +91,8 @@ automatically. State explicitly when no documentation update is needed.
 
 When a review requests changes or Deno CI fails, inspect the review threads or
 failed checks, fix the underlying issue on the same PR branch, rerun the
-relevant checks, and request a fresh review. Do not treat an automated
-follow-up comment as evidence that the fix or review has already happened.
+relevant checks, and request a fresh review. Do not treat an automated follow-up
+comment as evidence that the fix or review has already happened.
 
 When working in a local environment, use GitHub CLI (`gh pr create` and
 `gh pr edit`) for PR creation and editing, not interactive PR tools or MCP write
