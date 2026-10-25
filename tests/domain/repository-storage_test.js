@@ -142,21 +142,25 @@ Deno.test("Beginner Course completion can retry after a transient read failure",
   const storage = createStorage();
   const repository = createBeginnerCourseRepository(storage);
   repository.load();
+  assert.equal(repository.complete("baby-scratch").ok, true);
   const before = repository.progress;
   const getItem = storage.getItem;
   storage.getItem = () => {
     throw new Error("read blocked");
   };
 
-  assert.deepEqual(repository.complete("baby-scratch"), {
+  assert.deepEqual(repository.complete("forward-scratch"), {
     ok: false,
     reason: "read-failed",
   });
   assert.equal(repository.progress, before);
 
   storage.getItem = getItem;
-  assert.equal(repository.complete("baby-scratch").ok, true);
-  assert.deepEqual(repository.progress.completedStageIds, ["baby-scratch"]);
+  assert.equal(repository.complete("forward-scratch").ok, true);
+  assert.deepEqual(repository.progress.completedStageIds, [
+    "baby-scratch",
+    "forward-scratch",
+  ]);
 });
 
 Deno.test("Beginner Course corrupt progress blocks completion without overwriting data", () => {
@@ -351,6 +355,20 @@ Deno.test("Beginner Course future-version progress blocks completion", () => {
     reason: "future-version",
   });
   assert.equal(storage.getItem(BEGINNER_COURSE_STORAGE_KEY), future);
+});
+
+Deno.test("Beginner Course corrupt progress blocks completion without overwriting it", () => {
+  const storage = createStorage();
+  const corrupt = "{broken";
+  storage.setItem(BEGINNER_COURSE_STORAGE_KEY, corrupt);
+  const repository = createBeginnerCourseRepository(storage);
+
+  assert.deepEqual(repository.load(), { ok: false, reason: "corrupt" });
+  assert.deepEqual(repository.complete("baby-scratch"), {
+    ok: false,
+    reason: "corrupt",
+  });
+  assert.equal(storage.getItem(BEGINNER_COURSE_STORAGE_KEY), corrupt);
 });
 
 Deno.test("chart backup failure preserves original data and never writes the main key", () => {
