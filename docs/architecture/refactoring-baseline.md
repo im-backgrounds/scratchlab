@@ -7,6 +7,7 @@ making extraction decisions.
 
 ## Analyses
 
+- [App.js responsibility inventory](app-js-analysis.md)
 - [App startup and composition](app-startup.md)
 - [State and actions](state.md)
 - [Challenge flow](challenge.md)
