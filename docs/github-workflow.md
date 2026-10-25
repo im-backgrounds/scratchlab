@@ -292,6 +292,98 @@ by GitHub Actions does not guarantee that a Copilot coding-agent session or a
 new Copilot code review will start. Check the PR and repository's Copilot
 settings and start either action manually if it does not.
 
+### Opt-in Copilot PR automation
+
+`Copilot PR lifecycle` extends the notification-only workflow for explicitly
+opted-in work. Put `automation:auto-merge` on an Issue and assign Copilot. The
+agent's PR must close that Issue, target the default branch, and originate in
+this repository. Alternatively, label the PR after it links the Copilot-assigned
+Issue. Human-authored, fork, unrelated, and unlabelled work is never
+auto-merged. The lifecycle copies the Issue opt-in label to the PR.
+
+The controller reconciles PR events, completed CI/agent runs, manual dispatches,
+and every ten minutes (scheduled runs can be delayed by GitHub):
+
+1. Wait for the agent to finish and a Copilot review of the **current head
+   SHA**. Unresolved review threads or change requests trigger a
+   user-authenticated `@copilot` repair request on the same branch.
+2. After a clean review, dispatch a fresh `Deno CI` run for that exact head and
+   base. Dispatch the workflow from the trusted **default branch**, never the
+   mutable PR branch; its checkout is pinned to the reviewed head input. Verify
+   the workflow run's own SHA equals the expected base SHA. Existing push/PR CI
+   still runs as before, but is not a substitute for this post-review run.
+3. Failed CI triggers a repair request. After a push, wait for a fresh review
+   and run CI again. Each PR gets at most **three** automatic repair requests,
+   at most one per head SHA. Transient CI failures may be verified and the same
+   run retried without changing code.
+4. Require both `Format, check, and test` and `MIDI E2E suite` to actually
+   succeed; skipped, missing, cancelled, stale, and pre-review runs do not
+   qualify. Require an up-to-date base, no conflicts, no unresolved threads, and
+   all GitHub review/merge rules. Mark the draft ready, then squash-merge with
+   an expected-head-SHA guard. Never bypass protection or manufacture an
+   approval.
+
+Copilot reviews normally use `COMMENTED`, not a human approval. For this opt-in
+policy, a current Copilot review with no unresolved findings is the AI review
+gate; required human approvals, if configured, still block merging. For the
+native `ccr-overview-v2` format, require a green verdict heading; ambiguous or
+cautionary summaries stop for a human even with no open threads.
+
+Changes to `.github/`, agent/IDE instructions, `scripts/`, dependency manifests
+and lockfiles, YAML configuration, Dockerfiles, or submodule configuration stop
+automation, including renames out of those paths. Incomplete metadata and a
+repair-limit breach also stop it. The controller applies
+`automation:needs-human` and explains why. A maintainer must inspect these PRs.
+Remove that label only after a deliberate human decision; the three-request
+limit is not reset. To opt out entirely, remove `automation:auto-merge` from
+both the Issue and PR.
+
+#### One-time administrator setup
+
+- Manually review and merge the setup PR; it is deliberately not auto-merged.
+- Enable repository auto-merge and configure required checks on `main`:
+  `Format, check, and test` and `MIDI E2E suite`, bound to GitHub Actions.
+  Require the branch to be up to date, preserve review-thread resolution and
+  existing approval requirements, and allow squash merging.
+- Configure the Copilot code review ruleset to review drafts and every push.
+  This repository-wide review rule also reviews non-opted-in PRs, but does not
+  opt them into automatic repair or merge. The author's plan/policy must support
+  Copilot review. For an already-open PR without a review, request its first
+  Copilot review manually.
+- Store `COPILOT_AUTOMATION_TOKEN` as an Actions repository secret. Use a
+  repository-scoped fine-grained token owned by a write-access user with Copilot
+  access: Contents, Pull requests, Issues, and Actions **read/write**, plus
+  Metadata read. It posts feedback as that user rather than relying on
+  `github-actions[bot]` mentions to start a Copilot session. Do not paste tokens
+  into Issues, PRs, files, or logs; do not reuse a broad CLI credential.
+- Set repository variable `COPILOT_AUTOMATION_ENABLED` to `true` only after the
+  secret and review rule are configured. Missing credentials fail explicitly.
+  Set it to `false` to stop the controller without changing branch protection.
+
+The controller only checks out trusted default-branch code, never PR scripts. CI
+checks out the reviewed SHA with read-only repository permissions and no
+persisted checkout credentials. A privileged token is never given to PR code.
+Dispatched workflow checks attach to the trusted default-branch SHA. The
+controller's separate Actions token has `statuses: write` and `checks: write`:
+it reports `Copilot post-review CI` on the **reviewed PR head** and mirrors each
+verified required job's real result there under its original name and GitHub
+Actions identity. Those checks start queued and succeed only after both actual
+post-review jobs pass. Existing checks are never used as a substitute for those
+jobs and no approval or passing result is manufactured.
+
+The ordinary Copilot workflow-approval setting can stay enabled. Unapproved
+ordinary PR runs do not execute; the controller instead runs trusted CI and
+publishes its verified results to the required PR checks. It never approves
+arbitrary PR-branch workflow code. See GitHub's
+[workflow approval settings](https://docs.github.com/en/copilot/how-tos/use-copilot-agents/cloud-agent/configuring-agent-settings)
+and
+[automatic review configuration](https://docs.github.com/en/copilot/how-tos/copilot-on-github/set-up-copilot/configure-code-review).
+
+This is not a guarantee that Copilot will act: entitlement, quota, token expiry,
+service availability, or a stalled session can leave a PR waiting. Verify the
+first opted-in PR end to end before relying on unattended operation. Errors are
+visible in the `Copilot PR lifecycle` run; no failure is treated as approval.
+
 ## Label Conventions
 
 - Apply exactly one Issue type label: `type:feature`, `type:bug`,

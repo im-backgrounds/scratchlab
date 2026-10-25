@@ -1,8 +1,25 @@
 name: Deno CI
 
+run-name: >-
+  ${{ github.event_name == 'workflow_dispatch' && format('Deno CI PR #{0} @ {1} base {2}', inputs.pr_number, inputs.head_sha, inputs.base_sha) || 'Deno CI' }}
+
 on:
   push:
   pull_request:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "Reviewed PR number"
+        required: true
+        type: string
+      head_sha:
+        description: "Reviewed PR head SHA"
+        required: true
+        type: string
+      base_sha:
+        description: "Base SHA used for post-review CI"
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -14,6 +31,9 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.head_sha || github.sha }}
+          persist-credentials: false
 
       - name: Set up Deno
         uses: denoland/setup-deno@v2
@@ -28,6 +48,11 @@ jobs:
 
       - name: Lint app and tests
         run: deno lint src tests
+
+      - name: Check automation policy
+        run: |
+          deno check .github/scripts/copilot-lifecycle.cjs tests/automation/*.js
+          deno lint .github/scripts
 
       - name: Run tests with scoped coverage
         run: deno task coverage
@@ -64,6 +89,9 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.head_sha || github.sha }}
+          persist-credentials: false
 
       - name: Set up Deno
         uses: denoland/setup-deno@v2
