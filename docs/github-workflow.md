@@ -283,6 +283,15 @@ The current Deno CI workflow runs on pushes and pull requests; consult
 mentioned in the README or PR template is not evidence that it passed—use the
 actual command or GitHub Actions result.
 
+The `Review follow-up` workflow posts one `@copilot` comment per PR head commit
+when a review requests changes or Deno CI fails. The comment asks for the
+feedback to be addressed, relevant checks to be rerun, and another review to be
+requested. It ignores stale commits and does not repeat a comment for the same
+failure type and commit. This is a notification/request only: a comment posted
+by GitHub Actions does not guarantee that a Copilot coding-agent session or a
+new Copilot code review will start. Check the PR and repository's Copilot
+settings and start either action manually if it does not.
+
 ## Label Conventions
 
 - Apply exactly one Issue type label: `type:feature`, `type:bug`,
