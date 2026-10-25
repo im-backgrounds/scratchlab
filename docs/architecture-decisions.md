@@ -36,9 +36,8 @@ size, and deployment costs.
 Use LocalStorage for small, browser-local preferences and progress when
 appropriate. Version persisted formats, validate loaded data, and do not imply
 that local data is backed up or synchronized across devices. Same-origin tabs
-may observe LocalStorage updates through browser `storage` events, but this
-does not provide atomic writes. Consider browser storage limits and user
-deletion.
+may observe LocalStorage updates through browser `storage` events, but this does
+not provide atomic writes. Consider browser storage limits and user deletion.
 
 ## ADR-005: Keep the product serverless by default
 

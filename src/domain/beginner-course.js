@@ -93,9 +93,9 @@ function mergeProgress(...progressValues) {
   const completedStageIds = progressValues.flatMap((item) =>
     item.completedStageIds
   );
-  const updatedAt = [...progressValues].reverse().find((item) =>
-    item.updatedAt
-  )?.updatedAt ?? null;
+  const updatedAt =
+    [...progressValues].reverse().find((item) => item.updatedAt)?.updatedAt ??
+      null;
   return createProgress(completedStageIds, updatedAt);
 }
 
