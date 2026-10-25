@@ -224,6 +224,85 @@ Deno.test("Beginner Course failed writes preserve memory and allow a successful 
   assert.deepEqual(repository.progress.completedStageIds, ["baby-scratch"]);
 });
 
+Deno.test("Beginner Course stale repositories preserve sequentially completed stages", () => {
+  const storage = createStorage();
+  const first = createBeginnerCourseRepository(storage);
+  const stale = createBeginnerCourseRepository(storage);
+  first.load();
+  stale.load();
+
+  assert.equal(first.complete("baby-scratch").ok, true);
+  assert.equal(first.complete("forward-scratch").ok, true);
+  assert.equal(stale.complete("baby-scratch").ok, true);
+
+  const saved = JSON.parse(storage.getItem(BEGINNER_COURSE_STORAGE_KEY));
+  assert.deepEqual(saved.completedStageIds, [
+    "baby-scratch",
+    "forward-scratch",
+  ]);
+  assert.deepEqual(stale.progress.completedStageIds, saved.completedStageIds);
+});
+
+Deno.test("Beginner Course replaying an earlier stage never regresses progress", () => {
+  const storage = createStorage();
+  const repository = createBeginnerCourseRepository(storage);
+  repository.load();
+  repository.complete("baby-scratch");
+  repository.complete("forward-scratch");
+
+  assert.equal(repository.complete("baby-scratch").ok, true);
+  assert.deepEqual(repository.progress.completedStageIds, [
+    "baby-scratch",
+    "forward-scratch",
+  ]);
+});
+
+Deno.test("Beginner Course completion rechecks and protects future-version data", () => {
+  const storage = createStorage();
+  const repository = createBeginnerCourseRepository(storage);
+  repository.load();
+  repository.complete("baby-scratch");
+  const before = repository.progress;
+  const future = JSON.stringify({
+    version: BEGINNER_COURSE_VERSION + 1,
+    courseId: "beginner",
+    completedStageIds: ["baby-scratch"],
+  });
+  storage.setItem(BEGINNER_COURSE_STORAGE_KEY, future);
+  let writes = 0;
+  storage.setItem = () => writes += 1;
+
+  assert.deepEqual(repository.complete("forward-scratch"), {
+    ok: false,
+    reason: "future-version",
+  });
+  assert.equal(repository.progress, before);
+  assert.equal(storage.data.get(BEGINNER_COURSE_STORAGE_KEY), future);
+  assert.equal(writes, 0);
+});
+
+Deno.test("Beginner Course completion read failures preserve memory and stored data", () => {
+  const storage = createStorage();
+  const repository = createBeginnerCourseRepository(storage);
+  repository.load();
+  repository.complete("baby-scratch");
+  const before = repository.progress;
+  const saved = storage.getItem(BEGINNER_COURSE_STORAGE_KEY);
+  storage.getItem = () => {
+    throw new Error("read blocked");
+  };
+  let writes = 0;
+  storage.setItem = () => writes += 1;
+
+  assert.deepEqual(repository.complete("forward-scratch"), {
+    ok: false,
+    reason: "read-failed",
+  });
+  assert.equal(repository.progress, before);
+  assert.equal(saved, storage.data.get(BEGINNER_COURSE_STORAGE_KEY));
+  assert.equal(writes, 0);
+});
+
 Deno.test("Beginner Course future-version progress blocks completion", () => {
   const storage = createStorage();
   const future = JSON.stringify({

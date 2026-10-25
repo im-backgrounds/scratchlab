@@ -1290,6 +1290,17 @@ function renderBeginnerCourse() {
   beginnerCourseView.renderBeginnerCourse();
 }
 
+document.defaultView?.addEventListener("storage", (event) => {
+  if (event.key !== BEGINNER_COURSE_STORAGE_KEY) return;
+  const result = beginnerCourseRepository.load();
+  beginnerCourseMessage = result.ok
+    ? "別のタブでコース進捗が更新されました。"
+    : result.reason === "future-version"
+    ? "新しいバージョンのコース進捗があるため、保存を停止しています。"
+    : "別のタブのコース進捗を読み込めませんでした。";
+  renderBeginnerCourse();
+});
+
 function renderAchievementsPage() {
   renderAchievementView({
     repository: achievementRepository,

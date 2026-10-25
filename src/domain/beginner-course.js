@@ -55,6 +55,50 @@ function createProgress(completedStageIds = [], updatedAt = null) {
   };
 }
 
+function readProgress(raw) {
+  if (raw === null) return { ok: true, progress: createProgress() };
+  try {
+    const data = JSON.parse(raw);
+    if (
+      !data || typeof data !== "object" || Array.isArray(data) ||
+      data.courseId !== "beginner" ||
+      !Number.isInteger(data.version) ||
+      !Array.isArray(data.completedStageIds)
+    ) {
+      return { ok: false, reason: "corrupt" };
+    }
+    if (data.version > BEGINNER_COURSE_VERSION) {
+      return { ok: false, reason: "future-version" };
+    }
+    if (data.version !== BEGINNER_COURSE_VERSION) {
+      return { ok: false, reason: "corrupt" };
+    }
+    const updatedAt = typeof data.updatedAt === "string" &&
+        !Number.isNaN(Date.parse(data.updatedAt))
+      ? data.updatedAt
+      : null;
+    return {
+      ok: true,
+      progress: createProgress(
+        data.completedStageIds.filter((id) => typeof id === "string"),
+        updatedAt,
+      ),
+    };
+  } catch {
+    return { ok: false, reason: "corrupt" };
+  }
+}
+
+function mergeProgress(...progressValues) {
+  const completedStageIds = progressValues.flatMap((item) =>
+    item.completedStageIds
+  );
+  const updatedAt = [...progressValues].reverse().find((item) =>
+    item.updatedAt
+  )?.updatedAt ?? null;
+  return createProgress(completedStageIds, updatedAt);
+}
+
 export function getNextBeginnerStageId(progress) {
   return BEGINNER_COURSE_STAGES.find((stage) =>
     !progress.completedStageIds.includes(stage.id)
@@ -88,37 +132,14 @@ export function createBeginnerCourseRepository(
         return { ok: false, reason: "read-failed" };
       }
       const raw = result.value;
-      if (raw === null) return { ok: true, progress };
-      try {
-        const data = JSON.parse(raw);
-        if (
-          !data || typeof data !== "object" ||
-          data.courseId !== "beginner" ||
-          !Number.isInteger(data.version) ||
-          !Array.isArray(data.completedStageIds)
-        ) {
-          return { ok: false, reason: "corrupt" };
-        }
-        if (data.version > BEGINNER_COURSE_VERSION) {
-          writable = false;
-          blockedReason = "future-version";
-          return { ok: false, reason: "future-version" };
-        }
-        if (data.version !== BEGINNER_COURSE_VERSION) {
-          return { ok: false, reason: "corrupt" };
-        }
-        const updatedAt = typeof data.updatedAt === "string" &&
-            !Number.isNaN(Date.parse(data.updatedAt))
-          ? data.updatedAt
-          : null;
-        progress = createProgress(
-          data.completedStageIds.filter((id) => typeof id === "string"),
-          updatedAt,
-        );
-        return { ok: true, progress };
-      } catch {
-        return { ok: false, reason: "corrupt" };
+      const parsed = readProgress(raw);
+      if (!parsed.ok) {
+        writable = false;
+        blockedReason = parsed.reason;
+        return { ok: false, reason: parsed.reason };
       }
+      progress = mergeProgress(progress, parsed.progress);
+      return { ok: true, progress };
     },
     complete(stageId) {
       if (!storage || !writable) {
@@ -128,8 +149,21 @@ export function createBeginnerCourseRepository(
         stage.id === stageId
       );
       if (stageIndex < 0) return { ok: false, reason: "invalid-stage" };
+      const stored = safeGetItem(storage, BEGINNER_COURSE_STORAGE_KEY);
+      if (!stored.ok) {
+        writable = false;
+        blockedReason = "read-failed";
+        return { ok: false, reason: "read-failed" };
+      }
+      const parsed = readProgress(stored.value);
+      if (!parsed.ok) {
+        writable = false;
+        blockedReason = parsed.reason;
+        return { ok: false, reason: parsed.reason };
+      }
       const completedStageIds = normalizeCompletedStages([
         ...progress.completedStageIds,
+        ...parsed.progress.completedStageIds,
         stageId,
       ]);
       const nextProgress = {
