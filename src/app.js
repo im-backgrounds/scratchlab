@@ -69,6 +69,7 @@ import * as savedCharts from "./ui/saved-charts.js";
 import * as visualizer from "./ui/visualizer.js";
 import {
   BEGINNER_COURSE_STAGES,
+  BEGINNER_COURSE_STORAGE_KEY,
   createBeginnerCourseRepository,
   getNextBeginnerStageId,
 } from "./domain/beginner-course.js";
