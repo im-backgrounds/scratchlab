@@ -1,0 +1,48 @@
+name: Copilot PR lifecycle
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, labeled, unlabeled, reopened, ready_for_review]
+  workflow_run:
+    workflows: ["Deno CI", "Copilot cloud agent"]
+    types: [completed]
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number (leave empty to reconcile all eligible PRs)"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: copilot-pr-lifecycle
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    if: vars.COPILOT_AUTOMATION_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out trusted default-branch automation only
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Reconcile opted-in Copilot PRs
+        uses: actions/github-script@v7
+        env:
+          AUTOMATION_TOKEN: ${{ secrets.COPILOT_AUTOMATION_TOKEN }}
+        with:
+          github-token: ${{ secrets.COPILOT_AUTOMATION_TOKEN || github.token }}
+          script: |
+            if (!process.env.AUTOMATION_TOKEN) {
+              core.setFailed("Set COPILOT_AUTOMATION_TOKEN to a repository-scoped user token before enabling automation.");
+              return;
+            }
+            const { run } = require("./.github/scripts/copilot-lifecycle.cjs");
+            await run({ github, context, core });

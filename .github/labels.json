@@ -1,6 +1,16 @@
 {
   "labels": [
     {
+      "name": "automation:auto-merge",
+      "color": "0E8A16",
+      "description": "Opt in assigned Copilot Issue/PR to guarded review, CI, and squash merge"
+    },
+    {
+      "name": "automation:needs-human",
+      "color": "B60205",
+      "description": "Automatic PR processing stopped; human review is required"
+    },
+    {
       "name": "type:feature",
       "color": "1D76DB",
       "description": "新機能・ユーザー体験の改善"
