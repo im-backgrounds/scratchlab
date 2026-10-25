@@ -50,8 +50,8 @@ function fixture() {
     runs: [{
       id: 20,
       event: "workflow_dispatch",
-      head_sha: sha,
-      head_branch: pull.head.ref,
+      head_sha: base,
+      head_branch: "main",
       display_title: ciTitle(pull),
       created_at: "2026-10-25T12:01:00Z",
       status: "completed",
@@ -218,8 +218,8 @@ Deno.test("a stale base or merge conflict requires repair and fresh review", () 
 Deno.test("CI must match head, base, branch, dispatch event and review time", () => {
   for (
     const mutate of [
-      (s) => s.runs[0].head_sha = base,
-      (s) => s.runs[0].head_branch = "main",
+      (s) => s.runs[0].head_sha = sha,
+      (s) => s.runs[0].head_branch = s.pull.head.ref,
       (s) => s.runs[0].event = "pull_request",
       (s) => s.runs[0].display_title = "other CI",
       (s) => s.pull.base.sha = "c".repeat(40),
@@ -285,6 +285,8 @@ function mockGithub(data, fresh = data.pull) {
       compareCommitsWithBasehead: endpoint("compare", {
         behind_by: data.behind,
       }),
+      listCommitStatusesForRef: endpoint("statuses", []),
+      createCommitStatus: endpoint("status", {}),
     },
     users: {
       getAuthenticated: endpoint("user", { login: "maintainer", type: "User" }),
@@ -354,7 +356,7 @@ Deno.test("reconciliation dispatches exact reviewed head and base", async () => 
     owner: "owner",
     repo: "repo",
     workflow_id: "deno-ci.yml",
-    ref: data.pull.head.ref,
+    ref: "main",
     inputs: { pr_number: "12", head_sha: sha, base_sha: base },
   });
   assert.equal(calls.some((call) => call.name === "merge"), false);
@@ -376,6 +378,9 @@ Deno.test("head, base or opt-in changes before mutation prevent merging", async 
     const mutate of [
       (p) => p.head.sha = base,
       (p) => p.base.sha = sha,
+      (p) => p.base.ref = "release",
+      (p) => p.head.ref = "another-branch",
+      (p) => p.head.repo.full_name = "fork/repo",
       (p) => p.state = "closed",
       (p) => p.labels = [],
       (p) => p.labels.push({ name: "automation:needs-human" }),
@@ -451,4 +456,25 @@ Deno.test("a bot token is rejected before PR mutation", async () => {
     /must belong to a Copilot-enabled user/,
   );
   assert.equal(calls.some((call) => call.name === "merge"), false);
+});
+
+Deno.test("trusted default-branch CI reports success on the reviewed PR head", async () => {
+  const data = fixture();
+  const calls = await reconcile(data);
+  const status = calls.find((call) => call.name === "status").args;
+  assert.equal(status.sha, sha);
+  assert.equal(status.state, "success");
+  assert.equal(status.context, "Copilot post-review CI");
+  const lookup = calls.find((call) => call.name === "runs").args;
+  assert.equal(lookup.branch, "main");
+  data.runs = [];
+  const pending = (await reconcile(data)).find((call) =>
+    call.name === "status"
+  );
+  assert.equal(pending.args.sha, sha);
+  assert.equal(pending.args.state, "pending");
+  data.runs = fixture().runs;
+  data.pull.mergeable_state = "unstable";
+  const passed = (await reconcile(data)).find((call) => call.name === "status");
+  assert.equal(passed.args.state, "success");
 });

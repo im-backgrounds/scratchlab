@@ -308,8 +308,10 @@ and every ten minutes (scheduled runs can be delayed by GitHub):
    SHA**. Unresolved review threads or change requests trigger a
    user-authenticated `@copilot` repair request on the same branch.
 2. After a clean review, dispatch a fresh `Deno CI` run for that exact head and
-   base. Existing push/PR CI still runs as before, but is not a substitute for
-   this post-review run.
+   base. Dispatch the workflow from the trusted **default branch**, never the
+   mutable PR branch; its checkout is pinned to the reviewed head input. Verify
+   the workflow run's own SHA equals the expected base SHA. Existing push/PR CI
+   still runs as before, but is not a substitute for this post-review run.
 3. Failed CI triggers a repair request. After a push, wait for a fresh review
    and run CI again. Each PR gets at most **three** automatic repair requests,
    at most one per head SHA. Transient CI failures may be verified and the same
@@ -359,9 +361,14 @@ both the Issue and PR.
 The controller only checks out trusted default-branch code, never PR scripts. CI
 checks out the reviewed SHA with read-only repository permissions and no
 persisted checkout credentials. A privileged token is never given to PR code.
-The ordinary Copilot workflow-approval setting can stay enabled: post-review CI
-is explicitly dispatched by the authorized controller. Do not automatically
-approve arbitrary workflow runs. See GitHub's
+The controller uses its separate Actions token with `statuses: write` to report
+`Copilot post-review CI` on the **reviewed PR head**, because dispatched
+workflow checks themselves attach to the trusted default-branch SHA. Ordinary PR
+checks remain required by branch protection; this additional status reports the
+controller's independent post-review gate, not a fabricated test result. The
+ordinary Copilot workflow-approval setting can stay enabled: post-review CI is
+explicitly dispatched by the authorized controller. Do not automatically approve
+arbitrary workflow runs. See GitHub's
 [workflow approval settings](https://docs.github.com/en/copilot/how-tos/use-copilot-agents/cloud-agent/configuring-agent-settings)
 and
 [automatic review configuration](https://docs.github.com/en/copilot/how-tos/copilot-on-github/set-up-copilot/configure-code-review).

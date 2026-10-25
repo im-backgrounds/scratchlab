@@ -128,7 +128,7 @@ function decide(snapshot) {
   }
   const run = runs.filter((item) =>
     item.event === "workflow_dispatch" &&
-    item.head_sha === pull.head.sha && item.head_branch === pull.head.ref &&
+    item.head_sha === pull.base.sha && item.head_branch === defaultBranch &&
     item.display_title === ciTitle(pull) &&
     Date.parse(item.created_at) >= Date.parse(review.submitted_at)
   ).sort((a, b) => b.id - a.id)[0];
@@ -163,6 +163,7 @@ function decide(snapshot) {
     return {
       action: "wait",
       reason: "Required human approval is still missing.",
+      ciPassed: true,
     };
   }
   if (pull.draft) return { action: "ready" };
@@ -170,12 +171,44 @@ function decide(snapshot) {
     return {
       action: "wait",
       reason: `Merge is blocked: ${pull.mergeable_state}`,
+      ciPassed: true,
     };
   }
   return { action: "merge" };
 }
 
-async function run({ github, context, core }) {
+async function reportStatus(github, common, pull, decision, context) {
+  const state =
+    decision.ciPassed || ["merge", "ready"].includes(decision.action)
+      ? "success"
+      : ["fix", "stop"].includes(decision.action)
+      ? "failure"
+      : "pending";
+  const description = (decision.reason ??
+    (state === "success"
+      ? "Post-review CI passed."
+      : "Starting post-review CI."))
+    .slice(0, 140);
+  const statusContext = "Copilot post-review CI";
+  const statuses = await github.paginate(
+    github.rest.repos.listCommitStatusesForRef,
+    { ...common, ref: pull.head.sha, per_page: 100 },
+  );
+  const previous = statuses.find((item) => item.context === statusContext);
+  if (previous?.state === state && previous.description === description) return;
+  await github.rest.repos.createCommitStatus({
+    ...common,
+    sha: pull.head.sha,
+    context: statusContext,
+    state,
+    description,
+    target_url: context.runId
+      ? `https://github.com/${common.owner}/${common.repo}/actions/runs/${context.runId}`
+      : `https://github.com/${common.owner}/${common.repo}/pull/${pull.number}`,
+  });
+}
+
+async function run({ github, statusGithub = github, context, core }) {
   const { owner, repo } = context.repo;
   const repository = `${owner}/${repo}`;
   const common = { owner, repo };
@@ -263,7 +296,7 @@ async function run({ github, context, core }) {
     const runs = await github.paginate(github.rest.actions.listWorkflowRuns, {
       ...common,
       workflow_id: "deno-ci.yml",
-      branch: pull.head.ref,
+      branch: defaultBranch,
       event: "workflow_dispatch",
       per_page: 100,
     });
@@ -310,11 +343,14 @@ async function run({ github, context, core }) {
       decision = decide(snapshot);
     }
     core.info(`#${number}: ${decision.action} ${decision.reason ?? ""}`);
-    if (["ignore", "wait"].includes(decision.action)) continue;
+    if (decision.action === "ignore") continue;
     const { data: fresh } = await github.rest.pulls.get(pullArgs);
     if (
       fresh.state !== "open" || fresh.head.sha !== pull.head.sha ||
       fresh.base.sha !== pull.base.sha ||
+      fresh.base.ref !== defaultBranch ||
+      fresh.head.ref !== pull.head.ref ||
+      fresh.head.repo?.full_name !== repository ||
       hasLabel(fresh, BLOCKED) || !hasLabel(fresh, OPT_IN)
     ) {
       core.info(
@@ -322,6 +358,8 @@ async function run({ github, context, core }) {
       );
       continue;
     }
+    await reportStatus(statusGithub, common, pull, decision, context);
+    if (decision.action === "wait") continue;
     if (decision.action === "stop") {
       await github.rest.issues.addLabels({
         ...common,
@@ -350,7 +388,7 @@ async function run({ github, context, core }) {
       await github.rest.actions.createWorkflowDispatch({
         ...common,
         workflow_id: "deno-ci.yml",
-        ref: pull.head.ref,
+        ref: defaultBranch,
         inputs: {
           pr_number: String(number),
           head_sha: pull.head.sha,
