@@ -33,6 +33,8 @@ tempo on my own.
   least 90% event-sequence accuracy. A stage without a BPM target uses the
   selected/default practice tempo and the same accuracy threshold.
 - Persist unlock/completion state locally and retain it across reloads.
+- Preserve completed stages when an older tab saves progress after a newer tab.
+- Reflect another tab's progress after receiving its browser `storage` event.
 - Do not mark an attempt complete when it has no analyzable accuracy.
 
 # UI Requirements
@@ -61,7 +63,10 @@ Course state is stored locally and versioned. Suggested logical shape:
 Use stable stage IDs rather than display names. The ordered catalog maps each ID
 to its chart and optional target BPM. Progress is monotonic: completing a later
 stage implies earlier stages are complete; malformed or unknown IDs are ignored
-during normalization. Do not store transient playback or MIDI state.
+during normalization. Saves re-read and merge the latest valid stored progress
+with in-memory progress before writing. This protects against sequential stale
+tab saves, but does not guarantee atomicity for truly simultaneous writes. Do
+not store transient playback or MIDI state.
 
 # Acceptance Criteria
 
