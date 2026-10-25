@@ -8,8 +8,8 @@
   highest-cleared progress and is not stored independently.
 - [`src/domain/challenge-session.js`](../../src/domain/challenge-session.js)
   provides a pure state machine. It describes an unscored warm-up lap followed
-  by two recorded laps, analysis, and completion; transitions return effects
-  for the caller rather than performing them.
+  by two recorded laps, analysis, and completion; transitions return effects for
+  the caller rather than performing them.
 - [`src/app.js`](../../src/app.js) owns the active chart/run context, playback
   boundaries, recording, cancellation, analysis, result handling, and calls to
   repositories. It applies the session machine's requested effects.

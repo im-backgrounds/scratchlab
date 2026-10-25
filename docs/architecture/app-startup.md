@@ -4,10 +4,10 @@
 
 - [`index.html`](../../index.html) loads `src/app.js` directly as a
   `type="module"` script; there is no build-generated entry point.
-- [`src/app.js`](../../src/app.js) compiles the chart catalog, creates the
-  store and action facade, constructs feature repositories and services, then
-  creates view adapters and event handlers. Startup work is performed by the
-  module itself rather than through one exported bootstrap function.
+- [`src/app.js`](../../src/app.js) compiles the chart catalog, creates the store
+  and action facade, constructs feature repositories and services, then creates
+  view adapters and event handlers. Startup work is performed by the module
+  itself rather than through one exported bootstrap function.
 - The app module connects playback, audio, input handling, Challenge and course
   workflows, persistence, and UI. Feature modules and UI modules reduce some
   responsibilities, but the app remains the composition root and still owns
@@ -22,8 +22,7 @@
   server-side runtime or build step.
 
 Evidence: [`README.md` architecture overview](../../README.md),
-[`src/app.js`](../../src/app.js),
-[`index.html`](../../index.html).
+[`src/app.js`](../../src/app.js), [`index.html`](../../index.html).
 
 ## Proposed future design (not current behavior)
 

@@ -39,8 +39,8 @@ their respective behavior and technical constraints.
 
 These are descriptions of code, not claims that every chart, browser, device, or
 future feature has been fully validated. In particular, the Event Model
-specification and GitHub Issues track remaining verification separately from
-the completed model foundation.
+specification and GitHub Issues track remaining verification separately from the
+completed model foundation.
 
 ## Compatibility constraints before extraction
 
@@ -72,8 +72,8 @@ explicitly revises them:
 
 ## Proposed direction (not current behavior or an approved design)
 
-The analyses identify existing seams that may support later extraction. A
-future design could move composition and workflow coordination behind explicit
+The analyses identify existing seams that may support later extraction. A future
+design could move composition and workflow coordination behind explicit
 interfaces while keeping domain rules independent of DOM rendering. Any such
 proposal should first define ownership of side effects, state transitions,
 storage contracts, and input ordering, then validate those contracts with

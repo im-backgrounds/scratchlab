@@ -3,36 +3,38 @@
 ## Confirmed current behavior
 
 - [`src/domain/chart-storage.js`](../../src/domain/chart-storage.js) detects
-  usable browser LocalStorage. [`src/domain/storage-utils.js`](../../src/domain/storage-utils.js)
-  catches exceptions around `getItem`, `setItem`, and `removeItem`; it does not
-  define a shared repository schema.
+  usable browser LocalStorage.
+  [`src/domain/storage-utils.js`](../../src/domain/storage-utils.js) catches
+  exceptions around `getItem`, `setItem`, and `removeItem`; it does not define a
+  shared repository schema.
 - Feature repositories own their own keys, schemas, validation, migrations,
   normalization, failure states, and future-version protections. The main
   persisted formats include:
 
-| Data | Key | Format/version | Owner |
-| --- | --- | --- | --- |
-| Saved charts and resumable session | `scratchlab.storage` | 1 | [`chart-storage.js`](../../src/domain/chart-storage.js) |
-| Challenge progress | `scratchlab.challenge` | 1 | [`bpm-challenge.js`](../../src/domain/bpm-challenge.js) |
-| Performance records | `scratchlab.performance` | 1 | [`performance.js`](../../src/domain/performance.js) |
-| Beginner Course progress | `scratchlab.beginner-course` | 1 | [`beginner-course.js`](../../src/domain/beginner-course.js) |
-| Achievements | `scratchlab.achievements` | 1 | [`achievement-system.js`](../../src/domain/achievement-system.js) |
-| MIDI mapping | `scratchlab.midi-mapping` | 4 | [`midi-mapping.js`](../../src/domain/midi-mapping.js) |
-| MIDI input preference | `scratchlab.midi-input.v1` | v1 key suffix; no envelope version | [`input-manager.js`](../../src/services/midi/input-manager.js) |
-| Ghost records | `scratchlab.ghost` | 1 | [`ghost-storage.js`](../../src/domain/ghost-storage.js) |
-| Replay records | `scratchlab.replay` | 1 | [`replay-storage.js`](../../src/domain/replay-storage.js) |
+| Data                               | Key                          | Format/version                     | Owner                                                             |
+| ---------------------------------- | ---------------------------- | ---------------------------------- | ----------------------------------------------------------------- |
+| Saved charts and resumable session | `scratchlab.storage`         | 1                                  | [`chart-storage.js`](../../src/domain/chart-storage.js)           |
+| Challenge progress                 | `scratchlab.challenge`       | 1                                  | [`bpm-challenge.js`](../../src/domain/bpm-challenge.js)           |
+| Performance records                | `scratchlab.performance`     | 1                                  | [`performance.js`](../../src/domain/performance.js)               |
+| Beginner Course progress           | `scratchlab.beginner-course` | 1                                  | [`beginner-course.js`](../../src/domain/beginner-course.js)       |
+| Achievements                       | `scratchlab.achievements`    | 1                                  | [`achievement-system.js`](../../src/domain/achievement-system.js) |
+| MIDI mapping                       | `scratchlab.midi-mapping`    | 4                                  | [`midi-mapping.js`](../../src/domain/midi-mapping.js)             |
+| MIDI input preference              | `scratchlab.midi-input.v1`   | v1 key suffix; no envelope version | [`input-manager.js`](../../src/services/midi/input-manager.js)    |
+| Ghost records                      | `scratchlab.ghost`           | 1                                  | [`ghost-storage.js`](../../src/domain/ghost-storage.js)           |
+| Replay records                     | `scratchlab.replay`          | 1                                  | [`replay-storage.js`](../../src/domain/replay-storage.js)         |
 
-- The chart repository stores saved charts and the resumable view/selection/draft
-  session in its versioned envelope. Chart mutations re-read storage before
-  writing and back up corrupt raw chart data before replacing it.
+- The chart repository stores saved charts and the resumable
+  view/selection/draft session in its versioned envelope. Chart mutations
+  re-read storage before writing and back up corrupt raw chart data before
+  replacing it.
 - Ghost and Replay data use separate stores. Ghost records accept the v2
   `eventModelVersion` and persist a Meaning Event timeline; Replay records
   persist a v2 replay context including loop states. See the
   [Ghost foundation](../ghost-foundation.md) and
   [Replay foundation](../replay-foundation.md) for their current integration
   limits.
-- The repositories do not have one uniform migration policy. For example,
-  chart storage has a v0-to-v1 migration, and MIDI mapping has its own migration
+- The repositories do not have one uniform migration policy. For example, chart
+  storage has a v0-to-v1 migration, and MIDI mapping has its own migration
   logic. Future-version data is protected from overwrite where the repository
   reports that status.
 - Application runtime state and Event Model boundary/matching context are not
@@ -40,8 +42,8 @@
   storage formats.
 
 Evidence: [`src/domain/chart-storage.js`](../../src/domain/chart-storage.js),
-[`src/domain/storage-utils.js`](../../src/domain/storage-utils.js),
-the feature repository links above,
+[`src/domain/storage-utils.js`](../../src/domain/storage-utils.js), the feature
+repository links above,
 [`docs/architecture-decisions.md`](../architecture-decisions.md),
 [`docs/event-model-v2.md`](../event-model-v2.md).
 
