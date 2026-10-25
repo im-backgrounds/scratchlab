@@ -308,6 +308,11 @@ function mockGithub(data, fresh = data.pull) {
       listJobsForWorkflowRun: endpoint("jobs", data.jobs),
       createWorkflowDispatch: endpoint("dispatch", {}),
     },
+    checks: {
+      listForRef: endpoint("checkRuns", []),
+      create: endpoint("createCheck", {}),
+      update: endpoint("updateCheck", {}),
+    },
   };
   const github = {
     rest,
@@ -477,4 +482,34 @@ Deno.test("trusted default-branch CI reports success on the reviewed PR head", a
   data.pull.mergeable_state = "unstable";
   const passed = (await reconcile(data)).find((call) => call.name === "status");
   assert.equal(passed.args.state, "success");
+});
+
+Deno.test("verified required-job results are mirrored to the exact PR commit", async () => {
+  const data = fixture();
+  const calls = await reconcile(data);
+  const checks = calls.filter((call) => call.name === "createCheck");
+  assert.equal(checks.length, 2);
+  for (const check of checks) {
+    assert.equal(check.args.head_sha, sha);
+    assert.equal(check.args.status, "completed");
+    assert.equal(check.args.conclusion, "success");
+    assert.match(check.args.external_id, new RegExp(base));
+  }
+  data.runs = [];
+  const queued = (await reconcile(data)).filter((call) =>
+    call.name === "createCheck"
+  );
+  assert.equal(queued.length, 2);
+  assert.equal(queued.every((call) => call.args.status === "queued"), true);
+  assert.equal(queued.every((call) => !call.args.conclusion), true);
+});
+
+Deno.test("an ambiguous native review summary cannot authorize merging", () => {
+  const data = fixture();
+  data.reviews[0].body =
+    "<!-- ccr-overview-v2 -->\n### \u{1f535} Needs a closer look\nNo open issues";
+  assert.equal(decide(data).action, "stop");
+  data.reviews[0].body =
+    "<!-- ccr-overview-v2 -->\n### \u{1f7e2} Looks good\nNo open issues";
+  assert.equal(decide(data).action, "merge");
 });

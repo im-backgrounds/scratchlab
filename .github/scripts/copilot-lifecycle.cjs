@@ -126,6 +126,15 @@ function decide(snapshot) {
         "resolve only threads whose findings are addressed, and push the fixes.",
     );
   }
+  if (
+    review.body?.includes("<!-- ccr-overview-v2 -->") &&
+    !/^### \u{1f7e2} /mu.test(review.body)
+  ) {
+    return {
+      action: "stop",
+      reason: "Copilot's review summary is not an unambiguous clean verdict.",
+    };
+  }
   const run = runs.filter((item) =>
     item.event === "workflow_dispatch" &&
     item.head_sha === pull.base.sha && item.head_branch === defaultBranch &&
@@ -206,6 +215,50 @@ async function reportStatus(github, common, pull, decision, context) {
       ? `https://github.com/${common.owner}/${common.repo}/actions/runs/${context.runId}`
       : `https://github.com/${common.owner}/${common.repo}/pull/${pull.number}`,
   });
+}
+
+async function reportChecks(github, common, snapshot, decision) {
+  if (decision.action !== "ci" && !snapshot.jobs) return;
+  const { pull } = snapshot;
+  const existing = await github.paginate(github.rest.checks.listForRef, {
+    ...common,
+    ref: pull.head.sha,
+    filter: "all",
+    per_page: 100,
+  });
+  for (const name of CHECKS) {
+    const job = snapshot.jobs?.find((item) => item.name === name);
+    const externalId = `scratchlab-post-review:${pull.base.sha}:${name}`;
+    const status = job?.status ?? (job?.conclusion ? "completed" : "queued");
+    const conclusion = status === "completed"
+      ? job.conclusion ?? "action_required"
+      : undefined;
+    const detailsUrl = job?.html_url;
+    const previous = existing.find((item) => item.external_id === externalId);
+    if (
+      previous?.status === status && previous.conclusion === conclusion &&
+      previous.details_url === detailsUrl
+    ) continue;
+    const args = {
+      ...common,
+      name,
+      external_id: externalId,
+      status,
+      ...(conclusion ? { conclusion } : {}),
+      ...(detailsUrl ? { details_url: detailsUrl } : {}),
+      output: {
+        title: `${name}: trusted post-review CI`,
+        summary: job
+          ? `Result mirrored from ${job.html_url} for reviewed head ${pull.head.sha} and base ${pull.base.sha}.`
+          : `Waiting for trusted post-review CI of ${pull.head.sha} against ${pull.base.sha}.`,
+      },
+    };
+    if (previous) {
+      await github.rest.checks.update({ ...args, check_run_id: previous.id });
+    } else {
+      await github.rest.checks.create({ ...args, head_sha: pull.head.sha });
+    }
+  }
 }
 
 async function run({ github, statusGithub = github, context, core }) {
@@ -359,6 +412,7 @@ async function run({ github, statusGithub = github, context, core }) {
       continue;
     }
     await reportStatus(statusGithub, common, pull, decision, context);
+    await reportChecks(statusGithub, common, snapshot, decision);
     if (decision.action === "wait") continue;
     if (decision.action === "stop") {
       await github.rest.issues.addLabels({

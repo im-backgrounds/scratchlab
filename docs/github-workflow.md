@@ -325,7 +325,9 @@ and every ten minutes (scheduled runs can be delayed by GitHub):
 
 Copilot reviews normally use `COMMENTED`, not a human approval. For this opt-in
 policy, a current Copilot review with no unresolved findings is the AI review
-gate; required human approvals, if configured, still block merging.
+gate; required human approvals, if configured, still block merging. For the
+native `ccr-overview-v2` format, require a green verdict heading; ambiguous or
+cautionary summaries stop for a human even with no open threads.
 
 Changes to `.github/`, agent/IDE instructions, `scripts/`, dependency manifests
 and lockfiles, YAML configuration, Dockerfiles, or submodule configuration stop
@@ -361,14 +363,18 @@ both the Issue and PR.
 The controller only checks out trusted default-branch code, never PR scripts. CI
 checks out the reviewed SHA with read-only repository permissions and no
 persisted checkout credentials. A privileged token is never given to PR code.
-The controller uses its separate Actions token with `statuses: write` to report
-`Copilot post-review CI` on the **reviewed PR head**, because dispatched
-workflow checks themselves attach to the trusted default-branch SHA. Ordinary PR
-checks remain required by branch protection; this additional status reports the
-controller's independent post-review gate, not a fabricated test result. The
-ordinary Copilot workflow-approval setting can stay enabled: post-review CI is
-explicitly dispatched by the authorized controller. Do not automatically approve
-arbitrary workflow runs. See GitHub's
+Dispatched workflow checks attach to the trusted default-branch SHA. The
+controller's separate Actions token has `statuses: write` and `checks: write`:
+it reports `Copilot post-review CI` on the **reviewed PR head** and mirrors each
+verified required job's real result there under its original name and GitHub
+Actions identity. Those checks start queued and succeed only after both actual
+post-review jobs pass. Existing checks are never used as a substitute for those
+jobs and no approval or passing result is manufactured.
+
+The ordinary Copilot workflow-approval setting can stay enabled. Unapproved
+ordinary PR runs do not execute; the controller instead runs trusted CI and
+publishes its verified results to the required PR checks. It never approves
+arbitrary PR-branch workflow code. See GitHub's
 [workflow approval settings](https://docs.github.com/en/copilot/how-tos/use-copilot-agents/cloud-agent/configuring-agent-settings)
 and
 [automatic review configuration](https://docs.github.com/en/copilot/how-tos/copilot-on-github/set-up-copilot/configure-code-review).

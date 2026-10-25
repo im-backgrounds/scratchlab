@@ -17,6 +17,7 @@ on:
 permissions:
   contents: read
   statuses: write
+  checks: write
 
 concurrency:
   group: copilot-pr-lifecycle
