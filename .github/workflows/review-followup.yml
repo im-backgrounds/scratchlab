@@ -74,6 +74,12 @@ jobs:
                 core.info(`Ignoring outdated or closed PR #${candidate.number}.`);
                 continue;
               }
+              if (pull.labels.some((label) =>
+                label.name === "automation:auto-merge"
+              )) {
+                core.info("Opted-in PRs are handled by Copilot PR lifecycle.");
+                continue;
+              }
 
               const marker =
                 `<!-- scratchlab-review-followup:${kind}:${candidate.headSha} -->`;
