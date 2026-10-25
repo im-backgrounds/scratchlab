@@ -56,14 +56,14 @@ Integrationで撤去済み。復元や`@deprecated`スタブの追加はしな�
 
 ### B. 回帰テスト・現行共通機能 — 維持
 
-| ファイル・範囲                                                        | 対象                                                 |
-| --------------------------------------------------------------------- | ---------------------------------------------------- |
-| `tests/domain/playback_test.js`、`playback-controller_test.js`        | 境界API、入力増殖防止、再生制御                      |
-| `tests/domain/midi-mapping_test.js`                                   | マッピング、圧縮、停止観測、取消・古いタイマー排除   |
-| `tests/domain/challenge-session_test.js`                              | 進行制御、v2境界・Stop観測、デモから記録への状態保持 |
-| `tests/state/performance-recording_test.js`、`midi-recording_test.js` | 記録・圧縮・保存、v2境界保持                         |
-| `tests/domain/performance_test.js`、`bpm-challenge_test.js`           | 保存とChallengeの既存動作                            |
-| その他のdomain/state/uiテスト                                         | 譜面・Builder・Repository・Storage・描画・入力ログ   |
+| ファイル・範囲                                                                                                               | 対象                                                 |
+| ---------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `tests/domain/playback_test.js`、`tests/domain/playback-controller_test.js`、`tests/application/playback-controller_test.js` | 再生規則・タイマーAPI・アプリケーション再生制御      |
+| `tests/domain/midi-mapping_test.js`                                                                                          | マッピング、圧縮、停止観測、取消・古いタイマー排除   |
+| `tests/domain/challenge-session_test.js`                                                                                     | 進行制御、v2境界・Stop観測、デモから記録への状態保持 |
+| `tests/state/performance-recording_test.js`、`midi-recording_test.js`                                                        | 記録・圧縮・保存、v2境界保持                         |
+| `tests/domain/performance_test.js`、`bpm-challenge_test.js`                                                                  | 保存とChallengeの既存動作                            |
+| その他のdomain/state/uiテスト                                                                                                | 譜面・Builder・Repository・Storage・描画・入力ログ   |
 
 ### C. v1特性・不整合再現テスト — 資料として維持
 

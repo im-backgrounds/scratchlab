@@ -10,9 +10,11 @@
   provides a pure state machine. It describes an unscored warm-up lap followed
   by two recorded laps, analysis, and completion; transitions return effects for
   the caller rather than performing them.
-- [`src/app.js`](../../src/app.js) owns the active chart/run context, playback
-  boundaries, recording, cancellation, analysis, result handling, and calls to
-  repositories. It applies the session machine's requested effects.
+- [`src/application/playback-controller.js`](../../src/application/playback-controller.js)
+  coordinates playback ticks and invokes the Challenge loop-boundary hook.
+  [`src/app.js`](../../src/app.js) owns the active chart/run context, applies
+  the session machine's requested effects, and coordinates recording,
+  cancellation, analysis, result handling, and repository calls.
 - [`src/features/bpm-challenge-view.js`](../../src/features/bpm-challenge-view.js)
   builds the Challenge panel view from progress and session descriptions;
   [`src/ui/challenge.js`](../../src/ui/challenge.js) binds and renders the DOM.
