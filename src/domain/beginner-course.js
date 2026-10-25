@@ -127,8 +127,6 @@ export function createBeginnerCourseRepository(
       }
       const result = safeGetItem(storage, BEGINNER_COURSE_STORAGE_KEY);
       if (!result.ok) {
-        writable = false;
-        blockedReason = "read-failed";
         return { ok: false, reason: "read-failed" };
       }
       const raw = result.value;
@@ -138,6 +136,8 @@ export function createBeginnerCourseRepository(
         blockedReason = parsed.reason;
         return { ok: false, reason: parsed.reason };
       }
+      writable = true;
+      blockedReason = null;
       progress = mergeProgress(progress, parsed.progress);
       return { ok: true, progress };
     },
@@ -151,8 +151,6 @@ export function createBeginnerCourseRepository(
       if (stageIndex < 0) return { ok: false, reason: "invalid-stage" };
       const stored = safeGetItem(storage, BEGINNER_COURSE_STORAGE_KEY);
       if (!stored.ok) {
-        writable = false;
-        blockedReason = "read-failed";
         return { ok: false, reason: "read-failed" };
       }
       const parsed = readProgress(stored.value);
@@ -161,6 +159,8 @@ export function createBeginnerCourseRepository(
         blockedReason = parsed.reason;
         return { ok: false, reason: parsed.reason };
       }
+      writable = true;
+      blockedReason = null;
       const completedStageIds = normalizeCompletedStages([
         ...progress.completedStageIds,
         ...parsed.progress.completedStageIds,

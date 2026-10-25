@@ -122,7 +122,7 @@ Deno.test("chart read exceptions remain corrupt without a backup and permit repl
   );
 });
 
-Deno.test("Beginner Course read-failed blocks later writes even after reads recover", () => {
+Deno.test("Beginner Course recovers after a failed load and successful retry", () => {
   const storage = createStorage();
   const getItem = storage.getItem;
   storage.getItem = () => {
@@ -131,16 +131,46 @@ Deno.test("Beginner Course read-failed blocks later writes even after reads reco
   const repository = createBeginnerCourseRepository(storage);
   const before = repository.progress;
   assert.deepEqual(repository.load(), { ok: false, reason: "read-failed" });
+  assert.equal(repository.progress, before);
   storage.getItem = getItem;
   assert.equal(repository.load().ok, true);
-  let writes = 0;
-  storage.setItem = () => writes += 1;
+  assert.equal(repository.complete("baby-scratch").ok, true);
+  assert.deepEqual(repository.progress.completedStageIds, ["baby-scratch"]);
+});
+
+Deno.test("Beginner Course completion can retry after a transient read failure", () => {
+  const storage = createStorage();
+  const repository = createBeginnerCourseRepository(storage);
+  repository.load();
+  const before = repository.progress;
+  const getItem = storage.getItem;
+  storage.getItem = () => {
+    throw new Error("read blocked");
+  };
+
   assert.deepEqual(repository.complete("baby-scratch"), {
     ok: false,
     reason: "read-failed",
   });
-  assert.equal(writes, 0);
   assert.equal(repository.progress, before);
+
+  storage.getItem = getItem;
+  assert.equal(repository.complete("baby-scratch").ok, true);
+  assert.deepEqual(repository.progress.completedStageIds, ["baby-scratch"]);
+});
+
+Deno.test("Beginner Course corrupt progress blocks completion without overwriting data", () => {
+  const storage = createStorage();
+  const corrupt = "{broken";
+  storage.setItem(BEGINNER_COURSE_STORAGE_KEY, corrupt);
+  const repository = createBeginnerCourseRepository(storage);
+
+  assert.deepEqual(repository.load(), { ok: false, reason: "corrupt" });
+  assert.deepEqual(repository.complete("baby-scratch"), {
+    ok: false,
+    reason: "corrupt",
+  });
+  assert.equal(storage.getItem(BEGINNER_COURSE_STORAGE_KEY), corrupt);
 });
 
 for (
