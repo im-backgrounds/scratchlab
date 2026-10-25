@@ -5,8 +5,8 @@
 - [`src/state/store.js`](../../src/state/store.js) creates initial application
   state and exposes a getter-only state view plus `dispatch`. Its reducer
   returns partial updates; dispatch merges them into the existing state object.
-- Selected collections and builder metadata are frozen when state is created
-  or updated. This is shallow protection of those collections, not a general
+- Selected collections and builder metadata are frozen when state is created or
+  updated. This is shallow protection of those collections, not a general
   immutable-state or transactional system.
 - [`src/state/actions.js`](../../src/state/actions.js) is a facade over
   dispatch. It also compiles and prepares builder edits, so it is not only a
