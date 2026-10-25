@@ -340,13 +340,17 @@ function mockGithub(data, fresh = data.pull) {
   return { github, calls };
 }
 
-async function reconcile(data, fresh) {
+async function reconcile(
+  data,
+  fresh,
+  payload = { inputs: { pr_number: "12" } },
+) {
   const { github, calls } = mockGithub(data, fresh);
   await run({
     github,
     context: {
       repo: { owner: "owner", repo: "repo" },
-      payload: { inputs: { pr_number: "12" } },
+      payload,
     },
     core: { info() {} },
   });
@@ -365,6 +369,23 @@ Deno.test("reconciliation dispatches exact reviewed head and base", async () => 
     inputs: { pr_number: "12", head_sha: sha, base_sha: base },
   });
   assert.equal(calls.some((call) => call.name === "merge"), false);
+});
+
+Deno.test("review events reconcile only the reviewed pull request", async () => {
+  const data = fixture();
+  data.runs = [];
+  const calls = await reconcile(data, undefined, {
+    action: "submitted",
+    pull_request: { number: data.pull.number },
+  });
+  assert.equal(calls.filter((call) => call.name === "pull").length, 2);
+  assert.deepEqual(calls.find((call) => call.name === "dispatch").args, {
+    owner: "owner",
+    repo: "repo",
+    workflow_id: "deno-ci.yml",
+    ref: "main",
+    inputs: { pr_number: "12", head_sha: sha, base_sha: base },
+  });
 });
 
 Deno.test("reconciliation merges with squash and an expected-SHA guard", async () => {
