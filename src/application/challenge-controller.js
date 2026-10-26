@@ -9,6 +9,19 @@ import {
 
 export const CHALLENGE_ANALYSIS_DELAY_MS = 400;
 
+let sessionSequence = 0;
+
+function createChallengeSessionId() {
+  const crypto = globalThis.crypto;
+  if (typeof crypto?.randomUUID === "function") return crypto.randomUUID();
+  if (typeof crypto?.getRandomValues === "function") {
+    const values = crypto.getRandomValues(new Uint32Array(2));
+    return `session-${Date.now().toString(36)}-${values.join("-")}`;
+  }
+  sessionSequence += 1;
+  return `session-${Date.now().toString(36)}-${sessionSequence.toString(36)}`;
+}
+
 export function createChallengeController({
   playback,
   recording,
@@ -17,11 +30,7 @@ export function createChallengeController({
   transport,
   ui,
   isBuilderPlayback = () => false,
-  createSessionId = () =>
-    globalThis.crypto?.randomUUID?.() ??
-      `session-${Date.now().toString(36)}-${
-        Math.random().toString(36).slice(2)
-      }`,
+  createSessionId = createChallengeSessionId,
   setTimer = setTimeout,
   now = () => Date.now(),
   analysisDelayMs = CHALLENGE_ANALYSIS_DELAY_MS,
