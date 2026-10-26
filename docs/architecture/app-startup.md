@@ -8,10 +8,10 @@
   and action facade, constructs feature repositories and services, then creates
   view adapters and event handlers. Startup work is performed by the module
   itself rather than through one exported bootstrap function.
-- The app module connects playback, audio, input handling, Challenge and course
-  workflows, persistence, and UI. Feature modules and UI modules reduce some
-  responsibilities, but the app remains the composition root and still owns
-  cross-feature sequencing.
+- The app module composes the application playback controller with the timer,
+  playback rules, audio, views, and Challenge hooks. It also connects input,
+  Challenge and course workflows, persistence, and UI. The app remains the
+  composition root and owns cross-feature sequencing outside playback ticks.
 - [`src/services/midi/input-manager.js`](../../src/services/midi/input-manager.js)
   manages Web MIDI access, device selection, and message delivery.
   [`src/domain/midi-mapping.js`](../../src/domain/midi-mapping.js) maps messages

@@ -25,8 +25,9 @@ their respective behavior and technical constraints.
   compiles the chart catalog, constructs shared state and repositories, wires
   domain/features/UI/services, registers handlers, and renders the initial UI.
 - `src/state/` provides a small in-memory store and action facade. It does not
-  own the application workflows; `src/app.js` still coordinates playback,
-  Challenge effects, inputs, persistence, and view transitions.
+  own the application workflows; `src/application/playback-controller.js`
+  coordinates playback lifecycle and ticks, while `src/app.js` composes it and
+  coordinates Challenge effects, inputs, persistence, and view transitions.
 - Challenge rules and session transitions have domain modules, but the app
   performs their side effects and joins session state to analysis, repositories,
   and UI.

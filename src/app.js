@@ -24,7 +24,9 @@ import {
   createPerformanceRepository,
   serializePerformance,
 } from "./domain/performance.js";
-import { createPlaybackController } from "./domain/playback-controller.js";
+import {
+  createPlaybackController as createPlaybackTimer,
+} from "./domain/playback-controller.js";
 import {
   createLoopBoundary,
   createLoopState,
@@ -78,6 +80,9 @@ import {
   createAchievementRepository,
 } from "./domain/achievement-system.js";
 import { createPracticeView } from "./features/practice-view.js";
+import {
+  createPlaybackController as createPlaybackOrchestrator,
+} from "./application/playback-controller.js";
 import { createBuilderView } from "./features/builder-view.js";
 import { createBpmChallengeView } from "./features/bpm-challenge-view.js";
 import {
@@ -165,12 +170,6 @@ const beginnerCourseLoad = beginnerCourseRepository.load();
 let activeChallengeKey = null;
 let challengeSession = createChallengeSession();
 let selectedCourseStageId = null;
-let playbackLoopStartedAt = null;
-let playbackLoopNumber = 1;
-let playbackLoopEvents = [];
-let playbackLoopCurrentStep = 0;
-let playbackLoopState = null;
-let playbackLoopStoppedAt = null;
 let beginnerCourseMessage = beginnerCourseLoad.ok
   ? getNextBeginnerStageId(beginnerCourseRepository.progress) === null
     ? "Beginnerコースをすべてクリアしました。"
@@ -208,14 +207,7 @@ const practiceView = createPracticeView({
   getLatestPerformance: () => latestPerformance,
   getAnalysis: performanceView.getAnalysis,
   getGhostOverlayData: (chart) => ghostSelection.getOverlayData(chart),
-  getPlaybackSnapshot: () => ({
-    events: playbackLoopEvents,
-    startedAt: playbackLoopStartedAt,
-    currentStep: playbackLoopCurrentStep,
-    loopNumber: playbackLoopNumber,
-    loopState: playbackLoopState,
-    stoppedAt: playbackLoopStoppedAt,
-  }),
+  getPlaybackSnapshot: () => playbackController.getPlaybackSnapshot(),
   renderBuilderScore: () => builderView.renderBuilderScore(),
 });
 const beginnerCourseView = createBeginnerCourseView({
@@ -292,7 +284,42 @@ const audioMonitorSettings = {
 };
 let youActivityTimer = null;
 let practiceModeEnabled = false;
-const playbackController = createPlaybackController();
+const playbackController = createPlaybackOrchestrator({
+  timer: createPlaybackTimer(),
+  state,
+  actions,
+  getPlaybackChart,
+  playbackRules: {
+    getClickActions,
+    getPlaybackEvent,
+    getScratchActions,
+    shouldSilenceScratch,
+    updatePlaybackCursor,
+  },
+  audio: {
+    initializeAudio,
+    playClickSound,
+    playScratch,
+    silenceActiveScratch,
+  },
+  view: {
+    setPlaybackButton: controls.setPlaybackButton,
+    renderPlaybackProgress: () => practiceView.renderPlaybackProgress(),
+    renderSelectedChart,
+    renderBuilderScore,
+  },
+  challenge: {
+    isLooping: isChallengeLooping,
+    hasSeenTick: () => challengeRun?.tickSeen === true,
+    markTickSeen: () => {
+      if (challengeRun) challengeRun.tickSeen = true;
+    },
+    onLoopBoundary: (now) => {
+      applyChallengeEvent(CHALLENGE_EVENTS.LOOP_END, now);
+    },
+    createLoopState: runtimeLoopState,
+  },
+});
 
 function renderSelectedChart() {
   practiceView.renderSelectedChart();
@@ -322,10 +349,8 @@ function stopInputMonitoring() {
 
 function resetPageState() {
   stopInputMonitoring();
-  stopPlayback();
-  playbackLoopStartedAt = null;
-  playbackLoopEvents = [];
-  playbackLoopCurrentStep = 0;
+  playbackController.stop();
+  playbackController.resetSnapshot();
   abortPerformanceRecording();
   abortChallenge();
   const selectedChart = getSelectedChart();
@@ -393,95 +418,11 @@ function render() {
   renderBeginnerCourse();
 }
 
-/**
- * Performs audio and click actions for the current playback step.
- * @param {object} chart Chart selected for this playback session.
- */
-function playCurrentStep(chart) {
-  const scoreData = chart.scoreData;
-  const scoreGrid = scoreData || chart.scoreGrid;
-  const clickActions = getClickActions(
-    scoreGrid,
-    state.currentStep,
-    state.clickIntervalSteps,
-    state.clickEnabled,
-  );
-  const { activeEvent, eventIndex } = getPlaybackEvent(
-    scoreData,
-    state.currentStep,
-  );
-  if (shouldSilenceScratch(activeEvent)) silenceActiveScratch();
-  if (clickActions.shouldPlay) playClickSound(clickActions.isDownbeat);
-
-  const scratchActions = getScratchActions(
-    scoreData,
-    chart.steps,
-    state.currentStep,
-    state.bpm,
-    eventIndex,
-  );
-  if (scratchActions) {
-    playScratch(
-      scratchActions.soundType,
-      scratchActions.startTick,
-      scratchActions.strokeRunLength,
-      scratchActions.options,
-    );
-  }
-}
-
-/**
- * Refreshes the visible score after the current playback tick.
- */
-function renderPlaybackProgress() {
-  practiceView.renderPlaybackProgress();
-}
-
-/**
- * Processes one playback tick, then renders and advances or ends the cursor.
- */
-function advancePlayback() {
-  const chart = getPlaybackChart();
-  if (!chart.steps.length) return;
-
-  const now = Date.now();
-  const challengeLooping = isChallengeLooping();
-  if (
-    state.currentStep === 0 && playbackLoopState !== null &&
-    playbackLoopState.startTime < now
-  ) {
-    playbackLoopStartedAt = now;
-    playbackLoopNumber += 1;
-    playbackLoopEvents = [];
-    playbackLoopState = runtimeLoopState(now);
-  }
-  if (challengeLooping && challengeRun.tickSeen && state.currentStep === 0) {
-    applyChallengeEvent(CHALLENGE_EVENTS.LOOP_END, now);
-    if (!playbackController.isRunning) return;
-  }
-  if (challengeLooping) challengeRun.tickSeen = true;
-
-  playCurrentStep(chart);
-  renderPlaybackProgress();
-
-  // A challenge always loops; it ends itself after the last recorded loop.
-  const cursor = updatePlaybackCursor(
-    state.currentStep,
-    chart.steps.length,
-    challengeLooping || state.repeat,
-  );
-  playbackLoopCurrentStep = cursor.shouldStop
-    ? state.currentStep
-    : cursor.currentStep;
-  if (cursor.shouldStop) return stopPlayback();
-  actions.setPlaybackState({ currentStep: cursor.currentStep });
-}
-
-function runtimeLoopState(now) {
+function runtimeLoopState(now, loopNumber) {
   const input = eventCompressor.getState();
   return {
     sessionId: challengeRun?.sessionId ?? "practice",
-    loopIndex: playbackLoopNumber,
+    loopIndex: loopNumber,
     phase: challengeSession.phase === CHALLENGE_PHASES.WARMUP
       ? "demo"
       : "recording",
@@ -489,47 +430,6 @@ function runtimeLoopState(now) {
     startDirection: input.currentDirection,
     startFaderState: input.faderState,
   };
-}
-
-function stopPlayback() {
-  if (state.isPlaying) playbackLoopStoppedAt = Date.now();
-  const wasBuilderPlayback = state.isBuilderPlayback;
-  playbackController.stop();
-  silenceActiveScratch();
-  actions.setPlaybackState({ isPlaying: false, currentStep: 0 });
-  controls.setPlaybackButton(false);
-  if (wasBuilderPlayback) {
-    renderBuilderScore();
-  } else {
-    renderSelectedChart();
-  }
-  actions.setPlaybackState({ isBuilderPlayback: false });
-}
-
-function startPlayback(isBuilderPlayback = false) {
-  initializeAudio();
-  playbackLoopStartedAt = Date.now();
-  playbackLoopNumber = 1;
-  playbackLoopEvents = [];
-  playbackLoopCurrentStep = 0;
-  playbackLoopState = runtimeLoopState(playbackLoopStartedAt);
-  playbackLoopStoppedAt = null;
-  actions.setPlaybackState({ isBuilderPlayback });
-  const chart = getPlaybackChart();
-  if (!chart.steps.length) {
-    return;
-  }
-
-  actions.setPlaybackState({ isPlaying: true });
-  controls.setPlaybackButton(true);
-
-  const noteLengthMs = chart.scoreData
-    ? chart.scoreData.tickDurationSeconds * (60000 / state.bpm)
-    : chart.scoreGrid
-    ? (60 / state.bpm) * chart.scoreGrid.beatsPerBar /
-      chart.scoreGrid.ticksPerBar * 1000
-    : (60000 / state.bpm) / 2;
-  playbackController.start(noteLengthMs, advancePlayback);
 }
 
 const storageErrorMessages = {
@@ -742,7 +642,7 @@ function prepareViewSwitch() {
   }
   if (state.builderDraftActive) {
     stopInputMonitoring();
-    stopPlayback();
+    playbackController.stop();
   } else resetPageState();
 }
 
@@ -919,8 +819,7 @@ function recordInputActionEvent(event, runtimeEvent = event) {
     if (state.recordingMidi && challengeRun) {
       challengeRun.recordedTimeline.push(runtimeEvent);
     }
-    if (playbackController.isRunning && !state.isBuilderPlayback) {
-      playbackLoopEvents = [...playbackLoopEvents, runtimeEvent];
+    if (playbackController.recordLoopEvent(runtimeEvent)) {
       renderControllerOverlay(getSelectedChart());
     }
   }
@@ -1605,19 +1504,21 @@ function applyChallengeEvent(event, now = Date.now()) {
   const message = describeSessionStatus(session, challengeRun?.bpm);
   if (message) setChallengeStatus(message);
   if (effect === "start-playback") {
-    stopPlayback();
-    startPlayback(false);
+    playbackController.stop();
+    playbackController.start(false);
   } else if (effect === "start-recording") {
     beginChallengeRecording(now);
   } else if (effect === "next-recording") {
     closeRecordingLoop(challengeRun, now);
     challengeRun.loopStart = recordingBoundary("start", now);
-    playbackLoopState = runtimeLoopState(now);
+    playbackController.setLoopState(
+      runtimeLoopState(now, playbackController.loopNumber),
+    );
     challengeRun.loopEnds.push(now - challengeRun.startedAt);
   } else if (effect === "finish-recording") {
     const run = challengeRun;
     const performance = finishChallengeRecording(run, now);
-    stopPlayback();
+    playbackController.stop();
     setTimeout(() => completeChallenge(performance, run), ANALYZE_DELAY_MS);
   }
   renderChallengePanel();
@@ -1756,7 +1657,7 @@ function abortChallenge(reason = "譜面の切り替えでチャレンジを中�
 }
 
 function cancelChallenge(reason) {
-  stopPlayback();
+  playbackController.stop();
   abortPerformanceRecording();
   abortChallenge(reason);
   renderChallengePanel();
@@ -1772,7 +1673,9 @@ function beginChallengeRecording(now) {
   challengeRun.recordedTimeline = [];
   challengeRun.loopStates = [];
   challengeRun.loopStart = recordingBoundary("start", now);
-  playbackLoopState = runtimeLoopState(now);
+  playbackController.setLoopState(
+    runtimeLoopState(now, playbackController.loopNumber),
+  );
   performanceUi.renderPerformanceRecording(true);
   performanceUi.renderPerformanceStatus(
     "記録中… Lap 2とLap 3を自動で記録します。",
@@ -1816,8 +1719,7 @@ function finishChallengeRecording(run, now) {
     run.loopStates,
     run.bpm,
   );
-  playbackLoopStartedAt = null;
-  playbackLoopEvents = [];
+  playbackController.clearRecordingSnapshot();
   performanceUi.renderPerformanceRecording(false);
   performanceUi.renderPerformance(performance);
   renderPerformanceAnalysis();
@@ -1989,10 +1891,11 @@ audioMonitoringUi.bindAudioMonitoring({
 
 transport.bindTransport({
   onPlay: (isBuilderPlayback) => {
-    if (!playbackController.isRunning) startPlayback(isBuilderPlayback);
-    else if (isSessionRunning(challengeSession)) {
+    if (!playbackController.isRunning) {
+      playbackController.start(isBuilderPlayback);
+    } else if (isSessionRunning(challengeSession)) {
       cancelChallenge("再生の停止でチャレンジを中断しました。");
-    } else stopPlayback();
+    } else playbackController.stop();
   },
   onBpmChange: (value) => {
     if (activeChallengeKey !== null) {
@@ -2003,7 +1906,9 @@ transport.bindTransport({
     updateTransportValues();
     renderChallengePanel();
     renderBeginnerCourse();
-    if (playbackController.isRunning) startPlayback(state.isBuilderPlayback);
+    if (playbackController.isRunning) {
+      playbackController.start(state.isBuilderPlayback);
+    }
   },
   onVolumeChange: (value) => {
     actions.setVolume(value);
