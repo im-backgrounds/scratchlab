@@ -12,9 +12,12 @@
   the caller rather than performing them.
 - [`src/application/playback-controller.js`](../../src/application/playback-controller.js)
   coordinates playback ticks and invokes the Challenge loop-boundary hook.
-  [`src/app.js`](../../src/app.js) owns the active chart/run context, applies
-  the session machine's requested effects, and coordinates recording,
-  cancellation, analysis, result handling, and repository calls.
+  [`src/application/challenge-controller.js`](../../src/application/challenge-controller.js)
+  owns the active attempt, applies pure session transitions, and coordinates
+  playback, recording boundaries, delayed analysis, completion, and abort
+  cleanup through injected ports. [`src/app.js`](../../src/app.js) composes the
+  controller and retains separate BPM Challenge and Beginner Course result
+  policies.
 - [`src/features/bpm-challenge-view.js`](../../src/features/bpm-challenge-view.js)
   builds the Challenge panel view from progress and session descriptions;
   [`src/ui/challenge.js`](../../src/ui/challenge.js) binds and renders the DOM.
@@ -27,12 +30,14 @@ Evidence: [`src/domain/bpm-challenge.js`](../../src/domain/bpm-challenge.js),
 [`src/features/bpm-challenge-view.js`](../../src/features/bpm-challenge-view.js),
 [`docs/feature-specs/bpm-challenge.md`](../feature-specs/bpm-challenge.md).
 
-## Proposed future design (not current behavior)
+## Application orchestration
 
-A future extraction could make the Challenge workflow's effect boundary
-explicit, separating transition decisions from playback, recording, and
-repository calls. The existing pure session machine is a candidate seam; no
-replacement orchestrator or API is specified here.
+The Challenge controller injects playback, recording/performance analysis,
+repositories, transport, and status/rendering ports. Warm-up lap 1 remains
+playback-only; recording starts at lap 2, opens a separate loop at lap 3, and
+finishes before the delayed analysis callback. Abort returns the session to idle
+and makes any pending analysis callback inert. BPM Challenge and Beginner Course
+continue to use their existing, distinct outcome policies.
 
 ## Compatibility constraints
 
