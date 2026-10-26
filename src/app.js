@@ -44,14 +44,9 @@ import * as transport from "./ui/transport.js";
 import * as editor from "./ui/editor.js";
 import * as midiMappingUi from "./ui/midi-mapping.js";
 import {
-  CHALLENGE_EVENTS,
   CHALLENGE_PHASES,
-  createChallengeSession,
   describeSessionProgress,
-  describeSessionStatus,
-  isSessionRunning,
   RECORDING_LOOPS,
-  transitionSession,
 } from "./domain/challenge-session.js";
 import {
   createChallengeRepository,
@@ -83,6 +78,7 @@ import { createPracticeView } from "./features/practice-view.js";
 import {
   createPlaybackController as createPlaybackOrchestrator,
 } from "./application/playback-controller.js";
+import { createChallengeController } from "./application/challenge-controller.js";
 import { createBuilderView } from "./features/builder-view.js";
 import { createBpmChallengeView } from "./features/bpm-challenge-view.js";
 import {
@@ -167,8 +163,6 @@ let achievementMessage = "";
 const beginnerCourseRepository = createBeginnerCourseRepository();
 const beginnerCourseLoad = beginnerCourseRepository.load();
 // Only the challenged chart is kept; the BPM is derived from saved progress.
-let activeChallengeKey = null;
-let challengeSession = createChallengeSession();
 let selectedCourseStageId = null;
 let beginnerCourseMessage = beginnerCourseLoad.ok
   ? getNextBeginnerStageId(beginnerCourseRepository.progress) === null
@@ -179,10 +173,6 @@ let beginnerCourseMessage = beginnerCourseLoad.ok
   : beginnerCourseLoad.reason === "unavailable"
   ? "このブラウザーではコース進捗を保存できません。"
   : "コース進捗を読み込めませんでした。";
-// {bpm, startedAt, loopEnds, tickSeen} of the attempt in progress.
-let challengeRun = null;
-const ANALYZE_DELAY_MS = 400;
-
 const performanceView = createPerformanceView({
   getSelectedChart,
   getLatestPerformance: () => latestPerformance,
@@ -216,19 +206,19 @@ const beginnerCourseView = createBeginnerCourseView({
   repository: beginnerCourseRepository,
   getNextStageId: getNextBeginnerStageId,
   getSelectedChart,
-  isSessionRunning: () => isSessionRunning(challengeSession),
+  isSessionRunning: () => challengeController.isRunning(),
   beginnerCourseUi,
   getMessage: () => beginnerCourseMessage,
 });
 const bpmChallengeView = createBpmChallengeView({
   getChallengeChartKey,
-  getActiveChallengeKey: () => activeChallengeKey,
+  getActiveChallengeKey: () => challengeController.getActiveChallengeKey(),
   getSelectedChart,
   challengeRepository,
   describeChallenge,
   challengeUi,
   describeSessionProgress,
-  getChallengeSession: () => challengeSession,
+  getChallengeSession: () => challengeController.getSession(),
   getBeginnerCourseStage: (stageId) => beginnerCourseView.getStage(stageId),
   getTimingAnalysis: (chartKey) =>
     chartKey === latestChallengeTimingChartKey
@@ -309,16 +299,48 @@ const playbackController = createPlaybackOrchestrator({
     renderBuilderScore,
   },
   challenge: {
-    isLooping: isChallengeLooping,
-    hasSeenTick: () => challengeRun?.tickSeen === true,
-    markTickSeen: () => {
-      if (challengeRun) challengeRun.tickSeen = true;
-    },
-    onLoopBoundary: (now) => {
-      applyChallengeEvent(CHALLENGE_EVENTS.LOOP_END, now);
-    },
+    isLooping: () => challengeController.isLooping(),
+    hasSeenTick: () => challengeController.hasSeenTick(),
+    markTickSeen: () => challengeController.markTickSeen(),
+    onLoopBoundary: (now) => challengeController.onLoopBoundary(now),
     createLoopState: runtimeLoopState,
   },
+});
+
+const challengeController = createChallengeController({
+  playback: playbackController,
+  recording: {
+    start: beginChallengeRecording,
+    closeLoop: closeRecordingLoop,
+    startNextLoop: startNextChallengeLoop,
+    finish: finishChallengeRecording,
+    abort: abortPerformanceRecording,
+  },
+  analysis: {
+    complete: (performance, run, context) =>
+      evaluateChallengeAttempt(performance, run, context),
+  },
+  repositories: {
+    challenge: challengeRepository,
+    beginnerCourse: beginnerCourseRepository,
+    achievement: achievementRepository,
+  },
+  transport: {
+    setBpm: actions.setBpm,
+    updateValues: updateTransportValues,
+  },
+  ui: {
+    setChallengeStatus,
+    renderChallengePanel,
+    renderBeginnerCourse,
+    onRecordingStart: () => {
+      performanceUi.renderPerformanceRecording(true);
+      performanceUi.renderPerformanceStatus(
+        "記録中… Lap 2とLap 3を自動で記録します。",
+      );
+    },
+  },
+  isBuilderPlayback: () => state.isBuilderPlayback,
 });
 
 function renderSelectedChart() {
@@ -351,8 +373,7 @@ function resetPageState() {
   stopInputMonitoring();
   playbackController.stop();
   playbackController.resetSnapshot();
-  abortPerformanceRecording();
-  abortChallenge();
+  challengeController.abort();
   const selectedChart = getSelectedChart();
   actions.resetForChart(selectedChart);
 
@@ -420,10 +441,11 @@ function render() {
 
 function runtimeLoopState(now, loopNumber) {
   const input = eventCompressor.getState();
+  const run = challengeController.getRun();
   return {
-    sessionId: challengeRun?.sessionId ?? "practice",
+    sessionId: run?.sessionId ?? "practice",
     loopIndex: loopNumber,
-    phase: challengeSession.phase === CHALLENGE_PHASES.WARMUP
+    phase: challengeController.getSession().phase === CHALLENGE_PHASES.WARMUP
       ? "demo"
       : "recording",
     startTime: now,
@@ -637,7 +659,7 @@ function deleteSavedChart(id) {
  */
 function prepareViewSwitch() {
   setPracticeModeEnabled(false);
-  if (isSessionRunning(challengeSession)) {
+  if (challengeController.isRunning()) {
     cancelChallenge("ページの切り替えでチャレンジを中断しました。");
   }
   if (state.builderDraftActive) {
@@ -816,6 +838,7 @@ function recordInputActionEvent(event, runtimeEvent = event) {
     performanceEventCount += 1;
     inputEventLog.appendPerformanceEvent(performanceEvent);
     if (state.recordingMidi) actions.recordMidiAction(performanceEvent);
+    const challengeRun = challengeController.getRun();
     if (state.recordingMidi && challengeRun) {
       challengeRun.recordedTimeline.push(runtimeEvent);
     }
@@ -1279,11 +1302,6 @@ function setChallengeStatus(message) {
   bpmChallengeView.setStatus(message);
 }
 
-function createChallengeSessionId() {
-  return globalThis.crypto?.randomUUID?.() ??
-    `session-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
-}
-
 function describeAttemptResult(outcome, bpm, accuracy) {
   if (!outcome.ok) {
     return outcome.reason === "unavailable"
@@ -1307,8 +1325,13 @@ function describeAttemptResult(outcome, bpm, accuracy) {
     : `${bpm} BPM: 一致率 ${percent}。90%以上でクリアです。もう一度挑戦できます。`;
 }
 
-function recordPracticeAchievement(run, accuracy, cleared) {
-  const result = achievementRepository.recordSession({
+function recordPracticeAchievement(
+  run,
+  accuracy,
+  cleared,
+  repository = achievementRepository,
+) {
+  const result = repository.recordSession({
     id: run.sessionId,
     pattern: getSelectedChart().id,
     bpm: run.bpm,
@@ -1332,15 +1355,8 @@ function recordPracticeAchievement(run, accuracy, cleared) {
   return "";
 }
 
-function isChallengeLooping() {
-  return challengeRun !== null && !state.isBuilderPlayback &&
-    (challengeSession.phase === CHALLENGE_PHASES.WARMUP ||
-      challengeSession.phase === CHALLENGE_PHASES.RECORDING);
-}
-
-function evaluateChallengeAttempt(performance, run) {
-  const chartKey = activeChallengeKey;
-  activeChallengeKey = null;
+function evaluateChallengeAttempt(performance, run, context) {
+  const { chartKey, repositories } = context;
   const chart = getSelectedChart();
   if (chartKey === null || chartKey !== getChallengeChartKey()) {
     renderChallengePanel();
@@ -1377,7 +1393,12 @@ function evaluateChallengeAttempt(performance, run) {
     const validPractice = analysis.accuracy !== null &&
       isDurationValid(performance.durationMs, expectedDurationMs);
     const achievementError = validPractice
-      ? recordPracticeAchievement(run, analysis.accuracy, false)
+      ? recordPracticeAchievement(
+        run,
+        analysis.accuracy,
+        false,
+        repositories.achievement,
+      )
       : "";
     if (analysis.accuracy === null) {
       beginnerCourseMessage =
@@ -1392,7 +1413,7 @@ function evaluateChallengeAttempt(performance, run) {
         analysis.accuracy.toFixed(1)
       }%。90%以上でクリアです。もう一度練習できます。`;
     } else {
-      const result = beginnerCourseRepository.complete(stage.id);
+      const result = repositories.beginnerCourse.complete(stage.id);
       if (!result.ok) {
         beginnerCourseMessage = result.reason === "future-version"
           ? "新しいバージョンのコース進捗があるため、完了を保存できません。"
@@ -1425,7 +1446,7 @@ function evaluateChallengeAttempt(performance, run) {
   performanceUi.renderPerformanceSummaryAvailability(
     latestChallengeSummary !== null,
   );
-  const outcome = challengeRepository.recordAttempt(chartKey, {
+  const outcome = repositories.challenge.recordAttempt(chartKey, {
     bpm: run.bpm,
     accuracy: analysis.accuracy,
     actualDurationMs: performance.durationMs,
@@ -1467,6 +1488,7 @@ function evaluateChallengeAttempt(performance, run) {
       run,
       analysis.accuracy,
       outcome.result.cleared,
+      repositories.achievement,
     );
     if (achievementError) {
       setChallengeStatus(`${resultMessage} ${achievementError}`);
@@ -1494,72 +1516,28 @@ function evaluateChallengeAttempt(performance, run) {
   }
 }
 
-/**
- * Feeds one event to the challenge state machine and performs the side
- * effect of the transition it caused.
- */
-function applyChallengeEvent(event, now = Date.now()) {
-  const { session, effect } = transitionSession(challengeSession, event);
-  challengeSession = session;
-  const message = describeSessionStatus(session, challengeRun?.bpm);
-  if (message) setChallengeStatus(message);
-  if (effect === "start-playback") {
-    playbackController.stop();
-    playbackController.start(false);
-  } else if (effect === "start-recording") {
-    beginChallengeRecording(now);
-  } else if (effect === "next-recording") {
-    closeRecordingLoop(challengeRun, now);
-    challengeRun.loopStart = recordingBoundary("start", now);
-    playbackController.setLoopState(
-      runtimeLoopState(now, playbackController.loopNumber),
-    );
-    challengeRun.loopEnds.push(now - challengeRun.startedAt);
-  } else if (effect === "finish-recording") {
-    const run = challengeRun;
-    const performance = finishChallengeRecording(run, now);
-    playbackController.stop();
-    setTimeout(() => completeChallenge(performance, run), ANALYZE_DELAY_MS);
-  }
-  renderChallengePanel();
-  renderBeginnerCourse();
-}
-
-function completeChallenge(performance, run) {
-  if (challengeSession.phase !== CHALLENGE_PHASES.ANALYZING) return;
-  evaluateChallengeAttempt(performance, run);
-  challengeRun = null;
-  applyChallengeEvent(CHALLENGE_EVENTS.ANALYZED);
-}
-
 function startChallenge() {
   const view = renderChallengePanel();
-  if (!view.canStart || isSessionRunning(challengeSession)) return;
+  if (!view.canStart || challengeController.isRunning()) return;
   if (!hasChallengeInputs()) return;
   if (midiLearnAction) {
     midiLearnAction = null;
     renderMidiMappingPanel();
   }
-  activeChallengeKey = getChallengeChartKey();
-  latestChallengeAnalysisChartKey = null;
-  latestChallengeSummary = null;
-  performanceUi.renderPerformanceSummaryAvailability(false);
-  latestChallengeTimingAnalysis = null;
-  latestChallengeTimingChartKey = null;
-  recordedRawCount = 0;
-  actions.setMidiState({ recordingMidi: false });
-  actions.clearMidiRecord();
-  challengeRun = {
-    sessionId: createChallengeSessionId(),
-    courseStageId: null,
+  challengeController.start({
+    chartKey: getChallengeChartKey(),
     bpm: view.currentBpm,
-    startedAt: null,
-    loopEnds: [],
-    tickSeen: false,
-  };
-  actions.setBpm(view.currentBpm);
-  updateTransportValues();
-  applyChallengeEvent(CHALLENGE_EVENTS.START);
+    beforeStart: () => {
+      latestChallengeAnalysisChartKey = null;
+      latestChallengeSummary = null;
+      performanceUi.renderPerformanceSummaryAvailability(false);
+      latestChallengeTimingAnalysis = null;
+      latestChallengeTimingChartKey = null;
+      recordedRawCount = 0;
+      actions.setMidiState({ recordingMidi: false });
+      actions.clearMidiRecord();
+    },
+  });
 }
 
 function hasChallengeInputs(report = setChallengeStatus) {
@@ -1601,7 +1579,7 @@ function startBeginnerCourseAttempt() {
     beginnerCourseMessage = "先に次の課題を選択してください。";
     return renderBeginnerCourse();
   }
-  if (isSessionRunning(challengeSession)) return;
+  if (challengeController.isRunning()) return;
   if (
     !hasChallengeInputs((message) => {
       beginnerCourseMessage = message;
@@ -1613,20 +1591,15 @@ function startBeginnerCourseAttempt() {
     renderMidiMappingPanel();
   }
   const bpm = stage.targetBpm ?? state.bpm;
-  activeChallengeKey = getChallengeChartKey();
-  challengeRun = {
-    sessionId: createChallengeSessionId(),
+  challengeController.start({
+    chartKey: getChallengeChartKey(),
     courseStageId: stage.id,
     bpm,
-    startedAt: null,
-    loopEnds: [],
-    tickSeen: false,
-  };
-  actions.setBpm(bpm);
-  updateTransportValues();
-  beginnerCourseMessage = `${stage.name}に挑戦中です。`;
-  renderBeginnerCourse();
-  applyChallengeEvent(CHALLENGE_EVENTS.START);
+    afterStart: () => {
+      beginnerCourseMessage = `${stage.name}に挑戦中です。`;
+      renderBeginnerCourse();
+    },
+  });
 }
 
 function resetChallengeProgress() {
@@ -1643,50 +1616,27 @@ function resetChallengeProgress() {
   );
 }
 
-// Drops an unfinished challenge and releases the BPM slider. Called when the
-// page state is reset (chart switch) or the user leaves the practice view.
-function abortChallenge(reason = "譜面の切り替えでチャレンジを中断しました。") {
-  const wasRunning = isSessionRunning(challengeSession);
-  activeChallengeKey = null;
-  challengeRun = null;
-  challengeSession = transitionSession(
-    challengeSession,
-    CHALLENGE_EVENTS.ABORT,
-  ).session;
-  setChallengeStatus(wasRunning ? reason : "");
-}
-
 function cancelChallenge(reason) {
-  playbackController.stop();
-  abortPerformanceRecording();
-  abortChallenge(reason);
-  renderChallengePanel();
-  renderBeginnerCourse();
+  challengeController.cancel(reason);
 }
 
-function beginChallengeRecording(now) {
+function beginChallengeRecording(run, now, loopIndex) {
   recordedRawCount = 0;
   actions.clearMidiRecord();
   actions.setMidiState({ recordingMidi: true });
-  challengeRun.startedAt = now;
-  challengeRun.loopEnds = [];
-  challengeRun.recordedTimeline = [];
-  challengeRun.loopStates = [];
-  challengeRun.loopStart = recordingBoundary("start", now);
-  playbackController.setLoopState(
-    runtimeLoopState(now, playbackController.loopNumber),
-  );
-  performanceUi.renderPerformanceRecording(true);
-  performanceUi.renderPerformanceStatus(
-    "記録中… Lap 2とLap 3を自動で記録します。",
-  );
+  run.startedAt = now;
+  run.loopEnds = [];
+  run.recordedTimeline = [];
+  run.loopStates = [];
+  run.loopStart = recordingBoundary("start", now, run, loopIndex);
+  return runtimeLoopState(now, playbackController.loopNumber);
 }
 
-function recordingBoundary(edge, now, loopIndex = challengeSession.take) {
+function recordingBoundary(edge, now, run, loopIndex) {
   return createLoopBoundary({
     edge,
     time: now,
-    sessionId: challengeRun.sessionId,
+    sessionId: run.sessionId,
     loopIndex,
     phase: "recording",
     inputState: eventCompressor.getState(),
@@ -1697,9 +1647,14 @@ function closeRecordingLoop(run, now) {
   run.loopStates.push(
     createLoopState(
       run.loopStart,
-      recordingBoundary("end", now, run.loopStart.loopIndex),
+      recordingBoundary("end", now, run, run.loopStart.loopIndex),
     ),
   );
+}
+
+function startNextChallengeLoop(run, now, loopIndex) {
+  run.loopStart = recordingBoundary("start", now, run, loopIndex);
+  return runtimeLoopState(now, playbackController.loopNumber);
 }
 
 function finishChallengeRecording(run, now) {
@@ -1774,7 +1729,7 @@ const challengeAbortDialog = document.getElementById(
 );
 const challengeNavigation = createChallengeNavigation({
   dialog: challengeAbortDialog,
-  isChallengeRunning: () => isSessionRunning(challengeSession),
+  isChallengeRunning: () => challengeController.isRunning(),
   beforeSwitch: prepareViewSwitch,
   onConfirmedInterruption: () => {
     const message =
@@ -1893,12 +1848,12 @@ transport.bindTransport({
   onPlay: (isBuilderPlayback) => {
     if (!playbackController.isRunning) {
       playbackController.start(isBuilderPlayback);
-    } else if (isSessionRunning(challengeSession)) {
+    } else if (challengeController.isRunning()) {
       cancelChallenge("再生の停止でチャレンジを中断しました。");
     } else playbackController.stop();
   },
   onBpmChange: (value) => {
-    if (activeChallengeKey !== null) {
+    if (challengeController.getActiveChallengeKey() !== null) {
       updateTransportValues();
       return;
     }
